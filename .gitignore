@@ -1,0 +1,28 @@
+# Database (local only, rebuilt from pipeline)
+data/impact.db
+data/impact.db-wal
+data/impact.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

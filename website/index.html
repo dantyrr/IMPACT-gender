@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMPACT — Independent Metrics for Publication Analysis and Citation Tracking</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>IMPACT</h1>
+        <p class="subtitle">Independent Metrics for Publication Analysis and Citation Tracking</p>
+        <p class="tagline">Open-source rolling journal impact factors computed from PubMed &amp; iCite data</p>
+    </div>
+    <nav>
+        <a href="#journals" class="nav-link active" data-section="journals">Journal Metrics</a>
+        <a href="#compare" class="nav-link" data-section="compare">Compare</a>
+        <a href="#author" class="nav-link" data-section="author">Author Metrics</a>
+        <a href="#about" class="nav-link" data-section="about">About</a>
+    </nav>
+</header>
+
+<main>
+
+    <!-- ============ JOURNAL METRICS ============ -->
+    <section id="journals" class="section active">
+        <h2>Journal Impact Factor Trends</h2>
+        <p class="section-desc">Search for a journal to see its rolling 24-month impact factor over time.</p>
+
+        <div class="search-bar">
+            <input type="text" id="journal-search" placeholder="Search journals..." autocomplete="off">
+        </div>
+
+        <div id="journal-cards" class="card-grid"></div>
+
+        <div id="journal-detail" class="detail-panel" style="display:none;">
+            <button class="back-btn" id="back-to-list">&larr; Back to list</button>
+            <h3 id="detail-title"></h3>
+
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <span class="metric-value" id="metric-if">—</span>
+                    <span class="metric-label">IMPACT Rolling IF</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="metric-official">—</span>
+                    <span class="metric-label">Official JIF 2024</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="metric-diff">—</span>
+                    <span class="metric-label">Difference</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="metric-papers">—</span>
+                    <span class="metric-label">Papers (24-mo)</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="metric-reviews">—</span>
+                    <span class="metric-label">Review %</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="journal-chart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="papers-chart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ COMPARE ============ -->
+    <section id="compare" class="section">
+        <h2>Compare Journals</h2>
+        <p class="section-desc">Select journals to overlay their rolling IF trends.</p>
+
+        <div id="compare-checkboxes" class="checkbox-grid"></div>
+
+        <div class="chart-container">
+            <canvas id="compare-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- ============ AUTHOR METRICS ============ -->
+    <section id="author" class="section">
+        <h2>Author Metrics</h2>
+        <p class="section-desc">
+            Enter a list of PubMed IDs (PMIDs) to analyze citation performance.
+            <em>Note: Papers must be in the IMPACT database (from tracked journals).</em>
+        </p>
+
+        <div class="search-bar">
+            <input type="text" id="pmid-input" placeholder="Enter PMIDs separated by commas (e.g., 38009535, 38031718)">
+            <button id="author-analyze-btn">Analyze</button>
+        </div>
+
+        <div id="author-results" style="display:none;">
+            <div class="metrics-row">
+                <div class="metric-card">
+                    <span class="metric-value" id="author-papers">—</span>
+                    <span class="metric-label">Papers</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="author-cites">—</span>
+                    <span class="metric-label">Total Citations</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="author-avg">—</span>
+                    <span class="metric-label">Avg Citations/Paper</span>
+                </div>
+            </div>
+            <div id="author-table-container"></div>
+        </div>
+    </section>
+
+    <!-- ============ ABOUT ============ -->
+    <section id="about" class="section">
+        <h2>About IMPACT</h2>
+        <div class="about-content">
+            <h3>What is IMPACT?</h3>
+            <p>
+                IMPACT (Independent Metrics for Publication Analysis and Citation Tracking)
+                is an open-source tool that computes rolling 24-month journal impact factors
+                using freely available data from PubMed and NIH iCite, providing a transparent
+                alternative to Clarivate's proprietary Journal Impact Factor.
+            </p>
+
+            <h3>How is the Rolling IF Calculated?</h3>
+            <p>
+                For each target month, IMPACT computes:
+            </p>
+            <div class="formula-box">
+                Rolling IF = Citations received in 12-month window / Research articles published in preceding 24-month window
+            </div>
+            <p>
+                This mirrors the official JIF methodology but uses a rolling monthly window
+                instead of a fixed calendar year, providing more timely and granular metrics.
+            </p>
+
+            <h3>Data Sources</h3>
+            <p>
+                <strong>PubMed E-utilities</strong> — Paper discovery, metadata, and publication types.<br>
+                <strong>NIH iCite API</strong> — Citation data including cited_by lists for historical reconstruction.
+            </p>
+
+            <h3>Review-Excluded IF</h3>
+            <p>
+                IMPACT also computes an IF excluding review articles from both the numerator
+                and denominator. This helps detect "review inflation" — when journals boost
+                their IF by publishing highly-cited review articles.
+            </p>
+
+            <h3>Open Source</h3>
+            <p>
+                All code and data are available on
+                <a href="https://github.com/dantyrr/IMPACT" target="_blank">GitHub</a>.
+                Contributions welcome!
+            </p>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>
+        IMPACT is open-source software by
+        <a href="https://github.com/dantyrr" target="_blank">Daniel Tyrrell</a>.
+        Data from <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank">PubMed</a> &amp;
+        <a href="https://icite.od.nih.gov/" target="_blank">NIH iCite</a>.
+    </p>
+    <p>Last updated: <span id="last-updated">—</span></p>
+</footer>
+
+<script src="js/data-loader.js"></script>
+<script src="js/chart-manager.js"></script>
+<script src="js/ui-helpers.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 class IciteFetcher:
     """Fetches citation data from the NIH iCite API."""
 
-    MAX_BATCH_SIZE = 1000  # iCite limit per request
+    # iCite accepts up to 1000 PMIDs, but GET URL length limits cause
+    # 414 errors with large batches. 200 keeps URLs safely short.
+    MAX_BATCH_SIZE = 200
 
     def __init__(self):
         self.min_interval = 1.0 / ICITE_RATE_LIMIT

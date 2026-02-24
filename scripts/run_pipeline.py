@@ -110,7 +110,9 @@ def main():
         parts = args.years.split("-")
         year_start, year_end = int(parts[0]), int(parts[1])
     else:
-        year_start = now.year - 2
+        # Default: fetch 5 years of history to ensure the 24-month paper window
+        # is populated for the rolling IF calculation
+        year_start = now.year - 4
         year_end = now.year
 
     # Initialize components

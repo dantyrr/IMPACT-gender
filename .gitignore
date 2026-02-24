@@ -14,8 +14,9 @@ build/
 .venv/
 venv/
 
-# Environment
+# Environment & API keys
 .env
+API_key/
 
 # OS
 .DS_Store

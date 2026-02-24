@@ -7,6 +7,7 @@ Run after the data pipeline has populated the database.
 import sys
 import os
 import logging
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -48,12 +49,12 @@ def main():
 
         logger.info(f"Computing timeseries for {name}...")
 
-        # Compute from Jan 2022 to Jan 2026
-        # (need papers from 2019 onwards for the 24-month window)
+        # Compute from Jan 2022 to current month
+        now = datetime.now()
         timeseries = calc.compute_and_store_timeseries(
             journal_id=jid,
             start_year=2022, start_month=1,
-            end_year=2026, end_month=1,
+            end_year=now.year, end_month=now.month,
         )
 
         if not timeseries:

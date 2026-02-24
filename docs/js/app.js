@@ -267,12 +267,43 @@ class IMPACTApp {
 
     // ---- Author Metrics ----
 
+    // NLM journal abbreviations → slug mapping for our tracked journals
+    static get NLM_MAP() {
+        return {
+            'n engl j med': 'nejm',
+            'new england journal of medicine': 'nejm',
+            'lancet': 'lancet',
+            'the lancet': 'lancet',
+            'jama': 'jama',
+            'ann intern med': 'annals-internal-medicine',
+            'annals of internal medicine': 'annals-internal-medicine',
+            'nat med': 'nature-medicine',
+            'nature medicine': 'nature-medicine',
+            'cell': 'cell',
+            'sci transl med': 'science-translational-medicine',
+            'science translational medicine': 'science-translational-medicine',
+            'circulation': 'circulation',
+            'blood': 'blood',
+            'immunity': 'immunity',
+            'nat immunol': 'nature-immunology',
+            'nature immunology': 'nature-immunology',
+            'gastroenterology': 'gastroenterology',
+            'gut': 'gut',
+            'aging cell': 'aging-cell',
+            'j clin invest': 'jci',
+            'journal of clinical investigation': 'jci',
+            'nat aging': 'nature-aging',
+            'nature aging': 'nature-aging',
+            'elife': 'elife',
+            'j am heart assoc': 'jaha',
+            'journal of the american heart association': 'jaha',
+        };
+    }
+
     setupAuthor() {
         document.getElementById('author-analyze-btn').addEventListener('click', () => {
             this.analyzeAuthor();
         });
-
-        // Enter key support
         document.getElementById('pmid-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.analyzeAuthor();
         });
@@ -285,89 +316,149 @@ class IMPACTApp {
         const pmids = input.split(/[\s,]+/).map(s => s.trim()).filter(s => s && /^\d+$/.test(s));
         if (pmids.length === 0) return;
 
-        const results = document.getElementById('author-results');
-        results.style.display = 'block';
+        const resultsEl = document.getElementById('author-results');
+        const tableContainer = document.getElementById('author-table-container');
+        resultsEl.style.display = 'block';
+        tableContainer.innerHTML = '<p class="loading-text">Fetching citation data from iCite...</p>';
+        document.getElementById('author-chart-container').style.display = 'none';
+        ['author-papers', 'author-cites', 'author-avg', 'author-weighted-if'].forEach(id => {
+            document.getElementById(id).textContent = '—';
+        });
 
-        // Load all journal data
-        const allJournals = [];
-        for (const j of this.journals) {
-            try {
-                let data = this.journalDataCache[j.slug];
-                if (!data) {
-                    data = await dataLoader.loadJournal(j.slug);
-                    this.journalDataCache[j.slug] = data;
-                }
-                allJournals.push(data);
-            } catch (e) {
-                console.error(`Error loading ${j.slug}:`, e);
-            }
-        }
+        // Step 1: fetch paper metadata from iCite
+        const iciteMap = await this._fetchICite(pmids);
 
-        // For each PMID, find which journal it belongs to and get the IF
-        // at the time closest to publication
-        const foundPapers = [];
-        const notFound = [];
+        // Step 2: for each PMID, compute 24-month citations
+        const paperResults = [];
+        const cutoffYear = new Date().getFullYear() - 2;
 
         for (const pmid of pmids) {
-            let found = false;
-            for (const jdata of allJournals) {
-                // Check the latest snapshot for paper info
-                // Since we don't have per-paper data in the JSON, we note the journal
-                // and use the latest IF as a proxy
-                const latest = jdata.latest || {};
-                // We can at least associate the PMID with a journal based on the index
-                // For now, we'll show journal-level metrics
+            const paper = iciteMap[String(pmid)];
+            if (!paper) {
+                paperResults.push({ pmid, found: false });
+                continue;
             }
 
-            // Since per-paper data isn't in the JSON exports, we'll show what we can
-            foundPapers.push({
-                pmid: pmid,
-                found: true  // placeholder
+            const citedBy = paper.cited_by || [];
+            let cit24mo = 0;
+            let approx = false;
+
+            if (citedBy.length > 0) {
+                tableContainer.innerHTML = `<p class="loading-text">Fetching citation dates for PMID ${pmid} (${citedBy.length} citations)…</p>`;
+                const fetchList = citedBy.length > 600 ? citedBy.slice(-600) : citedBy;
+                if (citedBy.length > 600) approx = true;
+                const citedByMap = await this._fetchICite(fetchList);
+                const recentCount = Object.values(citedByMap).filter(p => p.year >= cutoffYear).length;
+                cit24mo = approx
+                    ? Math.round(recentCount * citedBy.length / fetchList.length)
+                    : recentCount;
+            }
+
+            const journalMatch = this._matchJournal(paper.journal);
+            paperResults.push({
+                pmid,
+                found: true,
+                title: paper.title || '',
+                journal: paper.journal || '—',
+                year: paper.year || '—',
+                total_citations: paper.citation_count || 0,
+                citations_24mo: cit24mo,
+                approx,
+                journal_name: journalMatch ? journalMatch.name : null,
+                journal_rate: journalMatch ? journalMatch.latest_if : null,
             });
         }
 
-        // Show aggregate metrics
-        // For now: show per-journal breakdown of what's tracked
-        document.getElementById('author-papers').textContent = pmids.length;
-        document.getElementById('author-cites').textContent = '—';
-        document.getElementById('author-avg').textContent = '—';
-        document.getElementById('author-weighted-if').textContent = '—';
+        // Summary metrics
+        const found = paperResults.filter(p => p.found);
+        const totalCites = found.reduce((s, p) => s + p.total_citations, 0);
+        const avg24mo = found.length > 0
+            ? found.reduce((s, p) => s + p.citations_24mo, 0) / found.length
+            : 0;
 
-        // Show available journals info
-        const tableContainer = document.getElementById('author-table-container');
-        tableContainer.innerHTML = '';
+        document.getElementById('author-papers').textContent = `${found.length} / ${pmids.length}`;
+        document.getElementById('author-cites').textContent = UIHelpers.formatInt(totalCites);
+        document.getElementById('author-avg').textContent = found.length > 0 ? UIHelpers.formatIF(totalCites / found.length) : '—';
+        document.getElementById('author-weighted-if').textContent = found.length > 0 ? UIHelpers.formatIF(avg24mo) : '—';
 
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'author-info-box';
-        infoDiv.innerHTML = `
-            <p><strong>PMID lookup:</strong> ${pmids.join(', ')}</p>
-            <p>Per-paper citation data requires the full database. The static site currently
-            shows journal-level aggregate metrics. To get per-paper data, run the IMPACT
-            pipeline locally:</p>
-            <pre>python scripts/author_lookup.py --pmids ${pmids.slice(0, 3).join(',')}</pre>
-            <p>The following journals are tracked in IMPACT:</p>
-        `;
+        this._renderAuthorTable(tableContainer, paperResults);
 
-        const journalTable = UIHelpers.createTable(
-            allJournals.map(j => ({
-                journal: j.journal,
-                rolling_if: (j.latest || {}).rolling_if,
-                papers: (j.latest || {}).paper_count,
-                citations: (j.latest || {}).citation_count,
-            })),
-            [
-                { key: 'journal', label: 'Journal' },
-                { key: 'rolling_if', label: 'Current Citation Rate', format: UIHelpers.formatIF },
-                { key: 'papers', label: 'Papers Tracked', format: UIHelpers.formatInt },
-                { key: 'citations', label: 'Citations', format: UIHelpers.formatInt },
-            ]
-        );
+        if (found.length > 0) {
+            document.getElementById('author-chart-container').style.display = 'block';
+            chartManager.createAuthorChart('author-chart', found);
+        }
+    }
 
-        tableContainer.appendChild(infoDiv);
-        tableContainer.appendChild(journalTable);
+    async _fetchICite(pmids) {
+        if (!pmids || pmids.length === 0) return {};
+        const out = {};
+        const batchSize = 200;
+        for (let i = 0; i < pmids.length; i += batchSize) {
+            const batch = pmids.slice(i, i + batchSize);
+            try {
+                const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${batch.join(',')}`);
+                if (!resp.ok) continue;
+                const json = await resp.json();
+                const items = Array.isArray(json) ? json : (json.data || []);
+                items.forEach(p => { out[String(p.pmid)] = p; });
+            } catch (e) {
+                console.error('iCite fetch error:', e);
+            }
+        }
+        return out;
+    }
 
-        // Hide chart for now since we don't have per-paper data in static JSON
-        document.getElementById('author-chart-container').style.display = 'none';
+    _matchJournal(journalStr) {
+        if (!journalStr) return null;
+        const s = journalStr.toLowerCase().trim();
+        const slug = IMPACTApp.NLM_MAP[s];
+        if (slug) {
+            return this.journals.find(j => j.slug === slug) || null;
+        }
+        // Fallback: partial string match against names/abbreviations
+        for (const j of this.journals) {
+            const name = j.name.toLowerCase();
+            const abbr = (j.abbreviation || '').toLowerCase();
+            if (s === name || s === abbr || name.includes(s) || (abbr && abbr.includes(s))) {
+                return j;
+            }
+        }
+        return null;
+    }
+
+    _renderAuthorTable(container, paperResults) {
+        container.innerHTML = '';
+        const found = paperResults.filter(p => p.found);
+
+        if (found.length === 0) {
+            container.innerHTML = '<p class="error-text">No papers found in iCite. Check that the PMIDs are valid.</p>';
+            return;
+        }
+
+        const rows = paperResults.map(p => ({
+            pmid: p.pmid,
+            title: p.found ? (p.title.length > 60 ? p.title.slice(0, 60) + '…' : p.title) : 'Not found',
+            journal: p.found ? p.journal : '—',
+            year: p.found ? String(p.year) : '—',
+            cit24mo: p.found ? `${p.approx ? '~' : ''}${p.citations_24mo}` : '—',
+            total: p.found ? p.total_citations : null,
+            journal_rate: p.found ? p.journal_rate : null,
+        }));
+
+        container.appendChild(UIHelpers.createTable(rows, [
+            { key: 'pmid', label: 'PMID' },
+            { key: 'title', label: 'Title' },
+            { key: 'journal', label: 'Journal' },
+            { key: 'year', label: 'Year' },
+            { key: 'cit24mo', label: '24-mo Citations' },
+            { key: 'total', label: 'Total Citations', format: UIHelpers.formatInt },
+            { key: 'journal_rate', label: 'Journal 24-mo Rate', format: UIHelpers.formatIF },
+        ]));
+
+        const note = document.createElement('p');
+        note.className = 'data-note';
+        note.textContent = '24-mo Citations: citations received from papers published in the last ~24 months. ~ = estimate (>600 citations sampled). Journal 24-mo Rate: rolling citation rate for tracked journals (from IMPACT database).';
+        container.appendChild(note);
     }
 
     // ---- About Section — Journal List ----

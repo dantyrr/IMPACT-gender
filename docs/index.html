@@ -131,8 +131,8 @@
     <section id="author" class="section">
         <h2>Author Metrics</h2>
         <p class="section-desc">
-            Enter a list of PubMed IDs (PMIDs) to analyze citation performance.
-            <em>Note: Papers must be in the IMPACT database (from tracked journals).</em>
+            Enter one or more PubMed IDs (PMIDs) to see each paper's rolling 24-month citation count
+            and compare it to the journal's 24-month citation rate. Citation data is fetched live from NIH iCite.
         </p>
 
         <div class="search-bar">
@@ -148,15 +148,15 @@
                 </div>
                 <div class="metric-card">
                     <span class="metric-value" id="author-cites">—</span>
-                    <span class="metric-label">Total Citations</span>
+                    <span class="metric-label">Total Citations (all time)</span>
                 </div>
                 <div class="metric-card">
                     <span class="metric-value" id="author-avg">—</span>
-                    <span class="metric-label">Avg Citations/Paper</span>
+                    <span class="metric-label">Avg Total Citations / Paper</span>
                 </div>
                 <div class="metric-card">
                     <span class="metric-value" id="author-weighted-if">—</span>
-                    <span class="metric-label">Weighted Avg Citation Rate</span>
+                    <span class="metric-label">Avg 24-mo Citations / Paper</span>
                 </div>
             </div>
             <div class="chart-container" id="author-chart-container" style="display:none;">

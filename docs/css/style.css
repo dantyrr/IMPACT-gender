@@ -335,6 +335,26 @@ canvas {
     color: white;
 }
 
+/* ---- Author Utilities ---- */
+
+.loading-text {
+    color: var(--text-light);
+    font-style: italic;
+    padding: 0.75rem 0;
+}
+
+.error-text {
+    color: var(--danger);
+    padding: 0.75rem 0;
+}
+
+.data-note {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-top: 0.75rem;
+    line-height: 1.5;
+}
+
 /* ---- Author Info ---- */
 
 .author-info-box {

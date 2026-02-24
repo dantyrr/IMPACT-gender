@@ -397,7 +397,8 @@ class ChartManager {
     }
 
     /**
-     * Create an author/PMID-level bar chart.
+     * Create a per-paper citation chart comparing 24-mo citations to journal benchmark.
+     * papers: [{pmid, year, journal, citations_24mo, journal_rate, journal_name}]
      */
     createAuthorChart(canvasId, papers) {
         const ctx = document.getElementById(canvasId);
@@ -405,43 +406,45 @@ class ChartManager {
 
         this._destroy(canvasId);
 
-        // Sort by journal for grouping
-        const sorted = [...papers].sort((a, b) => a.journal.localeCompare(b.journal));
-        const labels = sorted.map(p => `PMID ${p.pmid}`);
-
-        // Color by journal
-        const journalColors = {};
-        let colorIdx = 0;
-        sorted.forEach(p => {
-            if (!(p.journal in journalColors)) {
-                journalColors[p.journal] = this.palette[colorIdx % this.palette.length];
-                colorIdx++;
+        const labels = papers.map(p => `${p.pmid} (${p.year})`);
+        const datasets = [
+            {
+                label: '24-mo Citations (this paper)',
+                data: papers.map(p => p.citations_24mo),
+                backgroundColor: 'rgba(26, 82, 118, 0.7)',
+                borderColor: this.palette[0],
+                borderWidth: 1,
             }
-        });
+        ];
+
+        if (papers.some(p => p.journal_rate != null)) {
+            datasets.push({
+                label: 'Journal 24-mo Rate (benchmark)',
+                data: papers.map(p => p.journal_rate),
+                backgroundColor: 'rgba(39, 174, 96, 0.5)',
+                borderColor: this.palette[1],
+                borderWidth: 1,
+            });
+        }
+
+        const horizontal = papers.length > 5;
 
         this.charts[canvasId] = new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Journal Citation Rate at Pub Date',
-                    data: sorted.map(p => p.journal_if),
-                    backgroundColor: sorted.map(p => journalColors[p.journal] + '99'),
-                    borderColor: sorted.map(p => journalColors[p.journal]),
-                    borderWidth: 1,
-                }]
-            },
+            data: { labels, datasets },
             options: {
                 responsive: true,
-                indexAxis: papers.length > 10 ? 'y' : 'x',
+                indexAxis: horizontal ? 'y' : 'x',
                 plugins: {
-                    title: { display: true, text: 'Journal Citation Rate at Publication Date', font: { size: 14 } },
-                    legend: { display: false },
+                    title: { display: true, text: '24-Month Citations: Paper vs Journal Benchmark', font: { size: 14 } },
+                    legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
                             afterLabel: (ctx) => {
-                                const p = sorted[ctx.dataIndex];
-                                return `Journal: ${p.journal}\nPublished: ${p.pub_date}`;
+                                const p = papers[ctx.dataIndex];
+                                return p.journal_name
+                                    ? `Journal: ${p.journal} (matched: ${p.journal_name})`
+                                    : `Journal: ${p.journal}`;
                             }
                         }
                     }

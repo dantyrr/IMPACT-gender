@@ -411,6 +411,44 @@ canvas {
     accent-color: var(--primary);
 }
 
+/* ---- Journal Trends Comparison Panel ---- */
+
+.jc-selector-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.jc-selector-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.jc-selector-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.color-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    vertical-align: middle;
+    margin: 0 3px 1px 3px;
+}
+
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+}
+
 /* ---- About ---- */
 
 .about-content {

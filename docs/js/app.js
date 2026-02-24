@@ -11,6 +11,7 @@ class IMPACTApp {
         this.currentType = 'all';
         this.compareMetric = 'rolling_if';
         this.compareWindow = 'timeseries';
+        this.jcWindow = 'timeseries';
         this.init();
     }
 
@@ -21,6 +22,7 @@ class IMPACTApp {
             this.setupNavigation();
             this.renderJournalCards(this.journals);
             this.setupSearch();
+            this.setupJournalTrendsPanel();
             this.setupCompare();
             this.setupAuthor();
             this.setupAboutJournalList();
@@ -80,12 +82,130 @@ class IMPACTApp {
         });
     }
 
+    // ---- Journal Trends Comparison ----
+
+    setupJournalTrendsPanel() {
+        const container = document.getElementById('jc-journal-checkboxes');
+        this.journals.forEach((journal, idx) => {
+            const color = chartManager.palette[idx % chartManager.palette.length];
+            const label = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = journal.slug;
+            cb.addEventListener('change', () => this.updateJournalsTrendsChart());
+            const dot = document.createElement('span');
+            dot.className = 'color-dot';
+            dot.style.background = color;
+            label.appendChild(cb);
+            label.appendChild(dot);
+            label.appendChild(document.createTextNode(journal.name));
+            container.appendChild(label);
+        });
+
+        document.querySelectorAll('#jc-type-checkboxes input').forEach(cb => {
+            cb.addEventListener('change', () => this.updateJournalsTrendsChart());
+        });
+
+        this._setupToggleGroup('jc-window-toggle', (windowKey) => {
+            this.jcWindow = windowKey;
+            this.updateJournalsTrendsChart();
+        }, 'data-window');
+    }
+
+    async updateJournalsTrendsChart() {
+        const checkedJournals = Array.from(
+            document.querySelectorAll('#jc-journal-checkboxes input:checked')
+        ).map(cb => cb.value);
+
+        const checkedTypes = Array.from(
+            document.querySelectorAll('#jc-type-checkboxes input:checked')
+        ).map(cb => cb.value);
+
+        const chartContainer = document.getElementById('jc-chart-container');
+        const hint = document.getElementById('jc-hint');
+
+        if (checkedJournals.length === 0 || checkedTypes.length === 0) {
+            chartManager._destroy('jc-chart');
+            chartContainer.style.display = 'none';
+            hint.style.display = '';
+            return;
+        }
+
+        const journalsData = [];
+        for (const slug of checkedJournals) {
+            let data = this.journalDataCache[slug];
+            if (!data) {
+                try {
+                    data = await dataLoader.loadJournal(slug);
+                    this.journalDataCache[slug] = data;
+                } catch (e) {
+                    console.error(`Error loading ${slug}:`, e);
+                    continue;
+                }
+            }
+            journalsData.push(data);
+        }
+
+        if (journalsData.length === 0) return;
+
+        hint.style.display = 'none';
+        chartContainer.style.display = 'block';
+
+        const typeDashes = {
+            all: [], research: [8, 4], review: [4, 4],
+            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
+        };
+        const typeLabels = {
+            all: 'All Articles', research: 'Research', review: 'Reviews',
+            editorial: 'Editorials', letter: 'Letters', other: 'Other',
+        };
+
+        const multiJournal = journalsData.length > 1;
+        const multiType = checkedTypes.length > 1;
+        const series = [];
+
+        journalsData.forEach(jData => {
+            const jIdx = this.journals.findIndex(j => j.slug === jData.slug);
+            const color = chartManager.palette[jIdx % chartManager.palette.length];
+            const raw = jData[this.jcWindow] || jData.timeseries;
+            const startIdx = raw.findIndex(d => d.papers > 0);
+            const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
+
+            checkedTypes.forEach(typeKey => {
+                const values = ts.map(entry => {
+                    if (typeKey === 'all') return entry.rolling_if;
+                    if (typeKey === 'research') return entry.rolling_if_no_reviews;
+                    const bt = entry.by_type && entry.by_type[typeKey];
+                    return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
+                });
+
+                let label;
+                if (multiJournal && multiType) {
+                    label = `${jData.journal} — ${typeLabels[typeKey]}`;
+                } else if (multiJournal) {
+                    label = jData.journal;
+                } else {
+                    label = typeLabels[typeKey];
+                }
+
+                series.push({
+                    label,
+                    color,
+                    dash: typeDashes[typeKey] || [],
+                    months: ts.map(d => d.month),
+                    values,
+                });
+            });
+        });
+
+        chartManager.createMultiSeriesChart('jc-chart', series);
+    }
+
     // ---- Journal Detail ----
 
     async showJournalDetail(slug) {
         const container = document.getElementById('journal-detail');
-        const cards = document.getElementById('journal-cards');
-        const search = document.querySelector('#journals .search-bar');
+        const journalsMain = document.getElementById('journals-main');
 
         try {
             let data = this.journalDataCache[slug];
@@ -96,9 +216,8 @@ class IMPACTApp {
 
             this.currentJournalSlug = slug;
 
-            // Hide cards, show detail
-            cards.style.display = 'none';
-            search.style.display = 'none';
+            // Hide browse + comparison panel, show detail
+            journalsMain.style.display = 'none';
             container.style.display = 'block';
 
             // Title
@@ -152,8 +271,7 @@ class IMPACTApp {
             // Back button
             document.getElementById('back-to-list').onclick = () => {
                 container.style.display = 'none';
-                cards.style.display = '';
-                search.style.display = '';
+                journalsMain.style.display = '';
                 this.currentJournalSlug = null;
             };
 

@@ -28,13 +28,54 @@
     <!-- ============ JOURNAL METRICS ============ -->
     <section id="journals" class="section active">
         <h2>Journal Citation Rate Trends</h2>
-        <p class="section-desc">Search for a journal to see its rolling 24-month citation rate over time.</p>
+        <p class="section-desc">Compare citation rate trends across journals and article types, or browse individual journals below.</p>
 
-        <div class="search-bar">
-            <input type="text" id="journal-search" placeholder="Search journals..." autocomplete="off">
-        </div>
+        <div id="journals-main">
 
-        <div id="journal-cards" class="card-grid"></div>
+            <!-- Trends comparison panel -->
+            <div id="jc-panel">
+                <div class="chart-controls">
+                    <span class="chart-controls-label">Window:</span>
+                    <div class="toggle-group" id="jc-window-toggle">
+                        <button class="toggle-btn" data-window="timeseries_12mo">12-month</button>
+                        <button class="toggle-btn active" data-window="timeseries">24-month</button>
+                        <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
+                    </div>
+                </div>
+                <div class="jc-selector-row">
+                    <div class="jc-selector-group">
+                        <div class="jc-selector-label">Article Types</div>
+                        <div id="jc-type-checkboxes" class="checkbox-grid">
+                            <label><input type="checkbox" value="all" checked> All Articles</label>
+                            <label><input type="checkbox" value="research"> Research</label>
+                            <label><input type="checkbox" value="review"> Reviews</label>
+                            <label><input type="checkbox" value="editorial"> Editorials</label>
+                            <label><input type="checkbox" value="letter"> Letters</label>
+                            <label><input type="checkbox" value="other"> Other</label>
+                        </div>
+                    </div>
+                    <div class="jc-selector-group" style="flex:2;">
+                        <div class="jc-selector-label">Journals</div>
+                        <div id="jc-journal-checkboxes" class="checkbox-grid"></div>
+                    </div>
+                </div>
+                <p id="jc-hint" class="data-note">Select one or more journals above to display citation trends.</p>
+                <div class="chart-container" id="jc-chart-container" style="display:none;">
+                    <canvas id="jc-chart"></canvas>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+
+            <!-- Browse section -->
+            <div id="journals-browse">
+                <div class="search-bar">
+                    <input type="text" id="journal-search" placeholder="Search journals..." autocomplete="off">
+                </div>
+                <div id="journal-cards" class="card-grid"></div>
+            </div>
+
+        </div><!-- /#journals-main -->
 
         <div id="journal-detail" class="detail-panel" style="display:none;">
             <button class="back-btn" id="back-to-list">&larr; Back to list</button>
@@ -113,7 +154,7 @@
                 <canvas id="papers-chart"></canvas>
             </div>
         </div>
-    </section>
+    </section><!-- /#journals -->
 
     <!-- ============ COMPARE ============ -->
     <section id="compare" class="section">

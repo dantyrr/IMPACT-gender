@@ -443,6 +443,71 @@ class ChartManager {
         });
     }
 
+    /**
+     * Create a multi-series chart with per-journal colors and per-type dash patterns.
+     * series: [{label, color, dash, months, values}]
+     */
+    createMultiSeriesChart(canvasId, series) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        this._destroy(canvasId);
+
+        // Build a unified sorted month axis across all series
+        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+
+        const datasets = series.map(s => {
+            const monthToIdx = new Map(s.months.map((m, i) => [m, i]));
+            const data = allMonths.map(m => {
+                const i = monthToIdx.get(m);
+                return i !== undefined ? s.values[i] : null;
+            });
+            return {
+                label: s.label,
+                data,
+                borderColor: s.color,
+                borderWidth: 2.5,
+                borderDash: s.dash || [],
+                tension: 0.3,
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                spanGaps: true,
+            };
+        });
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: allMonths, datasets },
+            options: {
+                responsive: true,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    title: { display: true, text: 'Citation Rate Trends', font: { size: 14 } },
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const v = ctx.parsed.y;
+                                return v != null ? `${ctx.dataset.label}: ${v.toFixed(2)}` : null;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Month' },
+                        ticks: { maxTicksLimit: 12 },
+                    },
+                    y: {
+                        title: { display: true, text: 'Citation Rate' },
+                        beginAtZero: false,
+                    }
+                }
+            }
+        });
+    }
+
     _destroy(canvasId) {
         if (this.charts[canvasId]) {
             this.charts[canvasId].destroy();

@@ -25,11 +25,26 @@ logger = logging.getLogger("compute")
 
 # Official 2024 JIFs for comparison
 OFFICIAL_JIFS = {
-    "1474-9718": 8.0,
-    "0021-9738": 13.3,
-    "2662-8465": 17.0,
-    "2050-084X": 6.4,
-    "2047-9980": 5.0,
+    # Original 5
+    "1474-9718": 8.0,    # Aging Cell
+    "0021-9738": 13.3,   # JCI
+    "2662-8465": 17.0,   # Nature Aging
+    "2050-084X": 6.4,    # eLife
+    "2047-9980": 5.0,    # JAHA
+    # New journals (2023 JIF; 2024 values pending release)
+    "0028-4793": 96.2,   # NEJM
+    "0140-6736": 168.9,  # The Lancet
+    "0098-7484": 63.1,   # JAMA
+    "0003-4819": 39.2,   # Annals of Internal Medicine
+    "1078-8956": 82.9,   # Nature Medicine
+    "0092-8674": 64.5,   # Cell
+    "1946-6234": 17.1,   # Science Translational Medicine
+    "0009-7322": 37.8,   # Circulation
+    "0006-4971": 20.3,   # Blood
+    "1074-7613": 32.4,   # Immunity
+    "1529-2908": 27.7,   # Nature Immunology
+    "0016-5085": 29.4,   # Gastroenterology
+    "0017-5749": 24.5,   # Gut
 }
 
 

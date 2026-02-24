@@ -81,7 +81,7 @@ const UIHelpers = {
             <h4>${journal.name}</h4>
             <div class="card-if">
                 ${this.formatIF(journal.latest_if)}
-                <small>rolling IF</small>
+                <small>24-mo citation rate</small>
             </div>
             <div class="card-stats">
                 <span>Official JIF: ${journal.official_jif != null ? this.formatIF(journal.official_jif) : 'N/A'}</span>

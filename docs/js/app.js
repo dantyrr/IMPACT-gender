@@ -253,8 +253,8 @@ class IMPACTApp {
 
         const columns = [
             { key: 'journal', label: 'Journal' },
-            { key: 'rolling_if', label: 'Rolling IF', format: UIHelpers.formatIF },
-            { key: 'if_no_reviews', label: 'IF (No Rev)', format: UIHelpers.formatIF },
+            { key: 'rolling_if', label: 'Citation Rate', format: UIHelpers.formatIF },
+            { key: 'if_no_reviews', label: 'Rate (No Rev)', format: UIHelpers.formatIF },
             { key: 'official_jif', label: 'Official JIF', format: UIHelpers.formatIF },
             { key: 'papers', label: 'Papers', format: UIHelpers.formatInt },
             { key: 'citations', label: 'Citations', format: UIHelpers.formatInt },
@@ -357,7 +357,7 @@ class IMPACTApp {
             })),
             [
                 { key: 'journal', label: 'Journal' },
-                { key: 'rolling_if', label: 'Current Rolling IF', format: UIHelpers.formatIF },
+                { key: 'rolling_if', label: 'Current Citation Rate', format: UIHelpers.formatIF },
                 { key: 'papers', label: 'Papers Tracked', format: UIHelpers.formatInt },
                 { key: 'citations', label: 'Citations', format: UIHelpers.formatInt },
             ]
@@ -388,7 +388,7 @@ class IMPACTApp {
                 { key: 'name', label: 'Journal' },
                 { key: 'abbr', label: 'Abbreviation' },
                 { key: 'issn', label: 'ISSN' },
-                { key: 'latest_if', label: 'IMPACT IF', format: UIHelpers.formatIF },
+                { key: 'latest_if', label: 'Citation Rate', format: UIHelpers.formatIF },
                 { key: 'official_jif', label: 'Official JIF', format: UIHelpers.formatIF },
             ]
         );

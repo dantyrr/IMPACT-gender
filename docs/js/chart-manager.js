@@ -31,7 +31,7 @@ class ChartManager {
 
         if (mode === 'both' || mode === 'all') {
             datasets.push({
-                label: 'Rolling IF (all articles)',
+                label: 'Citation Rate (all articles)',
                 data: data.map(d => d.rolling_if),
                 borderColor: this.palette[0],
                 backgroundColor: 'rgba(26, 82, 118, 0.08)',
@@ -45,7 +45,7 @@ class ChartManager {
 
         if (mode === 'both' || mode === 'no-reviews') {
             datasets.push({
-                label: 'Rolling IF (research only)',
+                label: 'Citation Rate (research only)',
                 data: data.map(d => d.rolling_if_no_reviews),
                 borderColor: this.palette[1],
                 backgroundColor: 'rgba(39, 174, 96, 0.08)',
@@ -79,7 +79,7 @@ class ChartManager {
                 responsive: true,
                 interaction: { intersect: false, mode: 'index' },
                 plugins: {
-                    title: { display: true, text: 'Rolling 24-Month Impact Factor', font: { size: 14 } },
+                    title: { display: true, text: 'Rolling 24-Month Citation Rate', font: { size: 14 } },
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
@@ -93,7 +93,7 @@ class ChartManager {
                         ticks: { maxTicksLimit: 12 },
                     },
                     y: {
-                        title: { display: true, text: 'Impact Factor' },
+                        title: { display: true, text: 'Citation Rate' },
                         beginAtZero: false,
                     }
                 }
@@ -329,8 +329,8 @@ class ChartManager {
         this._destroy(canvasId);
 
         const metricLabels = {
-            rolling_if: 'Rolling IF',
-            rolling_if_no_reviews: 'IF (No Reviews)',
+            rolling_if: 'Citation Rate',
+            rolling_if_no_reviews: 'Citation Rate (Research Only)',
             citations: 'Citations',
             papers: 'Papers'
         };
@@ -424,7 +424,7 @@ class ChartManager {
             data: {
                 labels,
                 datasets: [{
-                    label: 'Journal Rolling IF at Pub Date',
+                    label: 'Journal Citation Rate at Pub Date',
                     data: sorted.map(p => p.journal_if),
                     backgroundColor: sorted.map(p => journalColors[p.journal] + '99'),
                     borderColor: sorted.map(p => journalColors[p.journal]),
@@ -435,7 +435,7 @@ class ChartManager {
                 responsive: true,
                 indexAxis: papers.length > 10 ? 'y' : 'x',
                 plugins: {
-                    title: { display: true, text: 'Journal Rolling IF at Publication Date', font: { size: 14 } },
+                    title: { display: true, text: 'Journal Citation Rate at Publication Date', font: { size: 14 } },
                     legend: { display: false },
                     tooltip: {
                         callbacks: {

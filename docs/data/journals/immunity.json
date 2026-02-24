@@ -1,0 +1,468 @@
+{
+  "journal": "Immunity",
+  "slug": "immunity",
+  "issn": "1074-7613",
+  "last_updated": "2026-02-24",
+  "official_jif_2024": 32.4,
+  "latest": {
+    "month": "2026-02",
+    "rolling_if": 32.945,
+    "rolling_if_no_reviews": 22.339,
+    "paper_count": 473,
+    "research_count": 292,
+    "review_count": 181,
+    "citation_count": 9620
+  },
+  "timeseries": [
+    {
+      "month": "2022-01",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-02",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-03",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-04",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-05",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-06",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-07",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-08",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-09",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-10",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-11",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2022-12",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0
+    },
+    {
+      "month": "2023-01",
+      "rolling_if": 20.667,
+      "rolling_if_no_reviews": 10.778,
+      "papers": 16,
+      "research": 9,
+      "reviews": 7,
+      "citations": 186
+    },
+    {
+      "month": "2023-02",
+      "rolling_if": 19.833,
+      "rolling_if_no_reviews": 12.833,
+      "papers": 34,
+      "research": 18,
+      "reviews": 16,
+      "citations": 357
+    },
+    {
+      "month": "2023-03",
+      "rolling_if": 17.034,
+      "rolling_if_no_reviews": 12.345,
+      "papers": 51,
+      "research": 29,
+      "reviews": 22,
+      "citations": 494
+    },
+    {
+      "month": "2023-04",
+      "rolling_if": 14.514,
+      "rolling_if_no_reviews": 10.73,
+      "papers": 66,
+      "research": 37,
+      "reviews": 29,
+      "citations": 537
+    },
+    {
+      "month": "2023-05",
+      "rolling_if": 14.419,
+      "rolling_if_no_reviews": 10.837,
+      "papers": 80,
+      "research": 43,
+      "reviews": 37,
+      "citations": 620
+    },
+    {
+      "month": "2023-06",
+      "rolling_if": 34.111,
+      "rolling_if_no_reviews": 24.278,
+      "papers": 100,
+      "research": 54,
+      "reviews": 46,
+      "citations": 1842
+    },
+    {
+      "month": "2023-07",
+      "rolling_if": 31.453,
+      "rolling_if_no_reviews": 22.734,
+      "papers": 120,
+      "research": 64,
+      "reviews": 56,
+      "citations": 2013
+    },
+    {
+      "month": "2023-08",
+      "rolling_if": 31.676,
+      "rolling_if_no_reviews": 23.757,
+      "papers": 136,
+      "research": 74,
+      "reviews": 62,
+      "citations": 2344
+    },
+    {
+      "month": "2023-09",
+      "rolling_if": 31.81,
+      "rolling_if_no_reviews": 22.857,
+      "papers": 158,
+      "research": 84,
+      "reviews": 74,
+      "citations": 2672
+    },
+    {
+      "month": "2023-10",
+      "rolling_if": 30.421,
+      "rolling_if_no_reviews": 21.821,
+      "papers": 176,
+      "research": 95,
+      "reviews": 81,
+      "citations": 2890
+    },
+    {
+      "month": "2023-11",
+      "rolling_if": 29.019,
+      "rolling_if_no_reviews": 20.813,
+      "papers": 197,
+      "research": 107,
+      "reviews": 90,
+      "citations": 3105
+    },
+    {
+      "month": "2023-12",
+      "rolling_if": 27.815,
+      "rolling_if_no_reviews": 19.832,
+      "papers": 218,
+      "research": 119,
+      "reviews": 99,
+      "citations": 3310
+    },
+    {
+      "month": "2024-01",
+      "rolling_if": 26.938,
+      "rolling_if_no_reviews": 19.408,
+      "papers": 236,
+      "research": 130,
+      "reviews": 106,
+      "citations": 3502
+    },
+    {
+      "month": "2024-02",
+      "rolling_if": 25.308,
+      "rolling_if_no_reviews": 18.28,
+      "papers": 256,
+      "research": 143,
+      "reviews": 113,
+      "citations": 3619
+    },
+    {
+      "month": "2024-03",
+      "rolling_if": 24.232,
+      "rolling_if_no_reviews": 17.632,
+      "papers": 277,
+      "research": 155,
+      "reviews": 122,
+      "citations": 3756
+    },
+    {
+      "month": "2024-04",
+      "rolling_if": 23.677,
+      "rolling_if_no_reviews": 17.36,
+      "papers": 294,
+      "research": 164,
+      "reviews": 130,
+      "citations": 3883
+    },
+    {
+      "month": "2024-05",
+      "rolling_if": 22.345,
+      "rolling_if_no_reviews": 16.35,
+      "papers": 316,
+      "research": 177,
+      "reviews": 139,
+      "citations": 3955
+    },
+    {
+      "month": "2024-06",
+      "rolling_if": 32.547,
+      "rolling_if_no_reviews": 23.125,
+      "papers": 336,
+      "research": 192,
+      "reviews": 144,
+      "citations": 6249
+    },
+    {
+      "month": "2024-07",
+      "rolling_if": 31.546,
+      "rolling_if_no_reviews": 22.72,
+      "papers": 357,
+      "research": 207,
+      "reviews": 150,
+      "citations": 6530
+    },
+    {
+      "month": "2024-08",
+      "rolling_if": 30.829,
+      "rolling_if_no_reviews": 22.518,
+      "papers": 378,
+      "research": 222,
+      "reviews": 156,
+      "citations": 6844
+    },
+    {
+      "month": "2024-09",
+      "rolling_if": 30.24,
+      "rolling_if_no_reviews": 22.253,
+      "papers": 398,
+      "research": 233,
+      "reviews": 165,
+      "citations": 7046
+    },
+    {
+      "month": "2024-10",
+      "rolling_if": 31.347,
+      "rolling_if_no_reviews": 21.921,
+      "papers": 418,
+      "research": 242,
+      "reviews": 176,
+      "citations": 7586
+    },
+    {
+      "month": "2024-11",
+      "rolling_if": 30.886,
+      "rolling_if_no_reviews": 21.701,
+      "papers": 435,
+      "research": 254,
+      "reviews": 181,
+      "citations": 7845
+    },
+    {
+      "month": "2024-12",
+      "rolling_if": 30.143,
+      "rolling_if_no_reviews": 21.317,
+      "papers": 452,
+      "research": 265,
+      "reviews": 187,
+      "citations": 7988
+    },
+    {
+      "month": "2025-01",
+      "rolling_if": 27.921,
+      "rolling_if_no_reviews": 20.737,
+      "papers": 453,
+      "research": 266,
+      "reviews": 187,
+      "citations": 7427
+    },
+    {
+      "month": "2025-02",
+      "rolling_if": 26.843,
+      "rolling_if_no_reviews": 19.76,
+      "papers": 452,
+      "research": 267,
+      "reviews": 185,
+      "citations": 7167
+    },
+    {
+      "month": "2025-03",
+      "rolling_if": 25.734,
+      "rolling_if_no_reviews": 18.652,
+      "papers": 453,
+      "research": 267,
+      "reviews": 186,
+      "citations": 6871
+    },
+    {
+      "month": "2025-04",
+      "rolling_if": 26.284,
+      "rolling_if_no_reviews": 18.625,
+      "papers": 459,
+      "research": 264,
+      "reviews": 195,
+      "citations": 6939
+    },
+    {
+      "month": "2025-05",
+      "rolling_if": 24.8,
+      "rolling_if_no_reviews": 17.522,
+      "papers": 464,
+      "research": 270,
+      "reviews": 194,
+      "citations": 6696
+    },
+    {
+      "month": "2025-06",
+      "rolling_if": 41.047,
+      "rolling_if_no_reviews": 26.353,
+      "papers": 465,
+      "research": 275,
+      "reviews": 190,
+      "citations": 11288
+    },
+    {
+      "month": "2025-07",
+      "rolling_if": 41.562,
+      "rolling_if_no_reviews": 26.572,
+      "papers": 467,
+      "research": 276,
+      "reviews": 191,
+      "citations": 11471
+    },
+    {
+      "month": "2025-08",
+      "rolling_if": 40.315,
+      "rolling_if_no_reviews": 25.244,
+      "papers": 475,
+      "research": 279,
+      "reviews": 196,
+      "citations": 11248
+    },
+    {
+      "month": "2025-09",
+      "rolling_if": 38.574,
+      "rolling_if_no_reviews": 25.183,
+      "papers": 474,
+      "research": 284,
+      "reviews": 190,
+      "citations": 10955
+    },
+    {
+      "month": "2025-10",
+      "rolling_if": 38.472,
+      "rolling_if_no_reviews": 25.234,
+      "papers": 475,
+      "research": 286,
+      "reviews": 189,
+      "citations": 11003
+    },
+    {
+      "month": "2025-11",
+      "rolling_if": 37.269,
+      "rolling_if_no_reviews": 24.657,
+      "papers": 471,
+      "research": 286,
+      "reviews": 185,
+      "citations": 10659
+    },
+    {
+      "month": "2025-12",
+      "rolling_if": 36.08,
+      "rolling_if_no_reviews": 24.247,
+      "papers": 470,
+      "research": 287,
+      "reviews": 183,
+      "citations": 10355
+    },
+    {
+      "month": "2026-01",
+      "rolling_if": 34.446,
+      "rolling_if_no_reviews": 23.211,
+      "papers": 473,
+      "research": 289,
+      "reviews": 184,
+      "citations": 9955
+    },
+    {
+      "month": "2026-02",
+      "rolling_if": 32.945,
+      "rolling_if_no_reviews": 22.339,
+      "papers": 473,
+      "research": 292,
+      "reviews": 181,
+      "citations": 9620
+    }
+  ]
+}

@@ -13,7 +13,7 @@
     <div class="header-content">
         <h1>IMPACT</h1>
         <p class="subtitle">Independent Metrics for Publication Analysis and Citation Tracking</p>
-        <p class="tagline">Open-source rolling journal impact factors computed from PubMed &amp; iCite data</p>
+        <p class="tagline">Open-source rolling 24-month journal citation rates computed from PubMed &amp; iCite data</p>
     </div>
     <nav>
         <a href="#journals" class="nav-link active" data-section="journals">Journal Metrics</a>
@@ -27,8 +27,8 @@
 
     <!-- ============ JOURNAL METRICS ============ -->
     <section id="journals" class="section active">
-        <h2>Journal Impact Factor Trends</h2>
-        <p class="section-desc">Search for a journal to see its rolling 24-month impact factor over time.</p>
+        <h2>Journal Citation Rate Trends</h2>
+        <p class="section-desc">Search for a journal to see its rolling 24-month citation rate over time.</p>
 
         <div class="search-bar">
             <input type="text" id="journal-search" placeholder="Search journals..." autocomplete="off">
@@ -43,7 +43,7 @@
             <div class="metrics-row">
                 <div class="metric-card">
                     <span class="metric-value" id="metric-if">—</span>
-                    <span class="metric-label">IMPACT Rolling IF</span>
+                    <span class="metric-label">Rolling 24-mo Citation Rate</span>
                 </div>
                 <div class="metric-card">
                     <span class="metric-value" id="metric-official">—</span>
@@ -67,7 +67,7 @@
             <div class="chart-controls">
                 <span class="chart-controls-label">Show:</span>
                 <div class="toggle-group" id="if-chart-toggle">
-                    <button class="toggle-btn active" data-mode="both">All + No Reviews</button>
+                    <button class="toggle-btn active" data-mode="both">All + Research Only</button>
                     <button class="toggle-btn" data-mode="all">All Articles</button>
                     <button class="toggle-btn" data-mode="no-reviews">Research Only</button>
                 </div>
@@ -110,8 +110,8 @@
         <div class="chart-controls">
             <span class="chart-controls-label">Metric:</span>
             <div class="toggle-group" id="compare-metric-toggle">
-                <button class="toggle-btn active" data-mode="rolling_if">Rolling IF</button>
-                <button class="toggle-btn" data-mode="rolling_if_no_reviews">IF (No Reviews)</button>
+                <button class="toggle-btn active" data-mode="rolling_if">Citation Rate</button>
+                <button class="toggle-btn" data-mode="rolling_if_no_reviews">Citation Rate (Research Only)</button>
                 <button class="toggle-btn" data-mode="citations">Citations</button>
                 <button class="toggle-btn" data-mode="papers">Papers</button>
             </div>
@@ -156,7 +156,7 @@
                 </div>
                 <div class="metric-card">
                     <span class="metric-value" id="author-weighted-if">—</span>
-                    <span class="metric-label">Weighted Avg IF</span>
+                    <span class="metric-label">Weighted Avg Citation Rate</span>
                 </div>
             </div>
             <div class="chart-container" id="author-chart-container" style="display:none;">
@@ -173,17 +173,17 @@
             <h3>What is IMPACT?</h3>
             <p>
                 IMPACT (Independent Metrics for Publication Analysis and Citation Tracking)
-                is an open-source tool that computes rolling 24-month journal impact factors
+                is an open-source tool that computes rolling 24-month journal citation rates
                 using freely available data from PubMed and NIH iCite, providing a transparent
                 alternative to Clarivate's proprietary Journal Impact Factor.
             </p>
 
-            <h3>How is the Rolling IF Calculated?</h3>
+            <h3>How is the Rolling 24-Month Citation Rate Calculated?</h3>
             <p>
                 For each target month, IMPACT computes:
             </p>
             <div class="formula-box">
-                Rolling IF = Citations received in 12-month window / Research articles published in preceding 24-month window
+                Citation Rate = Citations received in 12-month window / Research articles published in preceding 24-month window
             </div>
             <p>
                 This mirrors the official JIF methodology but uses a rolling monthly window
@@ -196,11 +196,11 @@
                 <strong>NIH iCite API</strong> — Citation data including cited_by lists for historical reconstruction.
             </p>
 
-            <h3>Review-Excluded IF</h3>
+            <h3>Review-Excluded Citation Rate</h3>
             <p>
-                IMPACT also computes an IF excluding review articles from both the numerator
+                IMPACT also computes a citation rate excluding review articles from both the numerator
                 and denominator. This helps detect "review inflation" — when journals boost
-                their IF by publishing highly-cited review articles.
+                their metrics by publishing highly-cited review articles.
             </p>
 
             <h3>Tracked Journals</h3>

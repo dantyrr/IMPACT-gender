@@ -1,6 +1,6 @@
 {
-  "generated": "2026-02-23T22:12:02",
-  "journal_count": 5,
+  "generated": "2026-02-24T09:30:17",
+  "journal_count": 18,
   "journals": [
     {
       "slug": "aging-cell",
@@ -11,6 +11,94 @@
       "latest_if_no_reviews": 7.32,
       "official_jif": 8.0,
       "paper_count": 573,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "annals-internal-medicine",
+      "name": "Annals of Internal Medicine",
+      "issn": "0003-4819",
+      "abbreviation": "Ann Intern Med",
+      "latest_if": 7.686,
+      "latest_if_no_reviews": 5.597,
+      "official_jif": 39.2,
+      "paper_count": 1158,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "blood",
+      "name": "Blood",
+      "issn": "0006-4971",
+      "abbreviation": "Blood",
+      "latest_if": 11.753,
+      "latest_if_no_reviews": 9.727,
+      "official_jif": 20.3,
+      "paper_count": 1667,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "cell",
+      "name": "Cell",
+      "issn": "0092-8674",
+      "abbreviation": "Cell",
+      "latest_if": 39.662,
+      "latest_if_no_reviews": 29.444,
+      "official_jif": 64.5,
+      "paper_count": 998,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "circulation",
+      "name": "Circulation",
+      "issn": "0009-7322",
+      "abbreviation": "Circulation",
+      "latest_if": 26.672,
+      "latest_if_no_reviews": 13.011,
+      "official_jif": 37.8,
+      "paper_count": 1140,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "gastroenterology",
+      "name": "Gastroenterology",
+      "issn": "0016-5085",
+      "abbreviation": "Gastroenterology",
+      "latest_if": 10.975,
+      "latest_if_no_reviews": 7.761,
+      "official_jif": 29.4,
+      "paper_count": 1029,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "gut",
+      "name": "Gut",
+      "issn": "0017-5749",
+      "abbreviation": "Gut",
+      "latest_if": 18.641,
+      "latest_if_no_reviews": 14.134,
+      "official_jif": 24.5,
+      "paper_count": 642,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "immunity",
+      "name": "Immunity",
+      "issn": "1074-7613",
+      "abbreviation": "Immunity",
+      "latest_if": 32.945,
+      "latest_if_no_reviews": 22.339,
+      "official_jif": 32.4,
+      "paper_count": 473,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "jama",
+      "name": "JAMA",
+      "issn": "0098-7484",
+      "abbreviation": "JAMA",
+      "latest_if": 13.307,
+      "latest_if_no_reviews": 9.02,
+      "official_jif": 63.1,
+      "paper_count": 3258,
       "latest_month": "2026-02"
     },
     {
@@ -44,6 +132,61 @@
       "latest_if_no_reviews": 13.356,
       "official_jif": 17.0,
       "paper_count": 419,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nature-immunology",
+      "name": "Nature Immunology",
+      "issn": "1529-2908",
+      "abbreviation": "Nat Immunol",
+      "latest_if": 15.92,
+      "latest_if_no_reviews": 12.581,
+      "official_jif": 27.7,
+      "paper_count": 653,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nature-medicine",
+      "name": "Nature Medicine",
+      "issn": "1078-8956",
+      "abbreviation": "Nat Med",
+      "latest_if": 32.225,
+      "latest_if_no_reviews": 28.13,
+      "official_jif": 82.9,
+      "paper_count": 1368,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nejm",
+      "name": "New England Journal of Medicine",
+      "issn": "0028-4793",
+      "abbreviation": "NEJM",
+      "latest_if": 38.162,
+      "latest_if_no_reviews": 33.788,
+      "official_jif": 96.2,
+      "paper_count": 2731,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "science-translational-medicine",
+      "name": "Science Translational Medicine",
+      "issn": "1946-6234",
+      "abbreviation": "Sci Transl Med",
+      "latest_if": 15.925,
+      "latest_if_no_reviews": 14.415,
+      "official_jif": 17.1,
+      "paper_count": 602,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "lancet",
+      "name": "The Lancet",
+      "issn": "0140-6736",
+      "abbreviation": "Lancet",
+      "latest_if": 28.345,
+      "latest_if_no_reviews": 19.756,
+      "official_jif": 168.9,
+      "paper_count": 2989,
       "latest_month": "2026-02"
     },
     {

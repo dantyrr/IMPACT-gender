@@ -13,10 +13,10 @@ class ChartManager {
     }
 
     /**
-     * Create a journal IF time series chart with mode switching.
-     * mode: 'both' | 'all' | 'no-reviews'
+     * Create a journal citation rate time series chart.
+     * rateLabel: label shown on the legend (e.g. 'Citation Rate (Research)')
      */
-    createJournalChart(canvasId, timeseries, officialJif, mode = 'both') {
+    createJournalChart(canvasId, timeseries, officialJif, rateLabel = 'Citation Rate') {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -27,36 +27,19 @@ class ChartManager {
         const data = startIdx >= 0 ? timeseries.slice(startIdx) : timeseries;
         const labels = data.map(d => d.month);
 
-        const datasets = [];
-
-        if (mode === 'both' || mode === 'all') {
-            datasets.push({
-                label: 'Citation Rate (all articles)',
+        const datasets = [
+            {
+                label: rateLabel,
                 data: data.map(d => d.rolling_if),
                 borderColor: this.palette[0],
                 backgroundColor: 'rgba(26, 82, 118, 0.08)',
                 borderWidth: 2.5,
                 tension: 0.3,
-                fill: mode === 'all',
+                fill: true,
                 pointRadius: 0,
                 pointHoverRadius: 5,
-            });
-        }
-
-        if (mode === 'both' || mode === 'no-reviews') {
-            datasets.push({
-                label: 'Citation Rate (research only)',
-                data: data.map(d => d.rolling_if_no_reviews),
-                borderColor: this.palette[1],
-                backgroundColor: 'rgba(39, 174, 96, 0.08)',
-                borderWidth: mode === 'no-reviews' ? 2.5 : 2,
-                borderDash: mode === 'both' ? [6, 3] : [],
-                tension: 0.3,
-                fill: mode === 'no-reviews',
-                pointRadius: 0,
-                pointHoverRadius: 5,
-            });
-        }
+            }
+        ];
 
         // Official JIF reference line
         if (officialJif) {
@@ -79,7 +62,7 @@ class ChartManager {
                 responsive: true,
                 interaction: { intersect: false, mode: 'index' },
                 plugins: {
-                    title: { display: true, text: 'Rolling 24-Month Citation Rate', font: { size: 14 } },
+                    title: { display: true, text: 'Rolling Citation Rate', font: { size: 14 } },
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
@@ -320,9 +303,10 @@ class ChartManager {
 
     /**
      * Create comparison chart (multiple journals overlaid).
-     * metric: 'rolling_if' | 'rolling_if_no_reviews' | 'citations' | 'papers'
+     * metric:    'rolling_if' | 'rolling_if_no_reviews' | 'citations' | 'papers'
+     * windowKey: 'timeseries' | 'timeseries_12mo' | 'timeseries_5yr'
      */
-    createComparisonChart(canvasId, journalsData, metric = 'rolling_if') {
+    createComparisonChart(canvasId, journalsData, metric = 'rolling_if', windowKey = 'timeseries') {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -340,16 +324,18 @@ class ChartManager {
         // Use the longest timeseries for labels, filtering out zero-data months
         let longestLabels = [];
         journalsData.forEach(j => {
-            const startIdx = j.timeseries.findIndex(d => d.papers > 0);
-            const data = startIdx >= 0 ? j.timeseries.slice(startIdx) : j.timeseries;
+            const ts = j[windowKey] || j.timeseries;
+            const startIdx = ts.findIndex(d => d.papers > 0);
+            const data = startIdx >= 0 ? ts.slice(startIdx) : ts;
             if (data.length > longestLabels.length) {
                 longestLabels = data.map(d => d.month);
             }
         });
 
         const datasets = journalsData.map((j, i) => {
-            const startIdx = j.timeseries.findIndex(d => d.papers > 0);
-            const data = startIdx >= 0 ? j.timeseries.slice(startIdx) : j.timeseries;
+            const ts = j[windowKey] || j.timeseries;
+            const startIdx = ts.findIndex(d => d.papers > 0);
+            const data = startIdx >= 0 ? ts.slice(startIdx) : ts;
             return {
                 label: j.journal,
                 data: data.map(d => d[metric]),

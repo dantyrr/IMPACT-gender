@@ -64,13 +64,15 @@ def main():
 
         logger.info(f"Computing timeseries for {name}...")
 
-        # Compute from Jan 2022 to current month
+        # Compute all three window variants from Jan 2022 to current month
         now = datetime.now()
-        timeseries = calc.compute_and_store_timeseries(
+        window_data = calc.compute_all_window_timeseries(
             journal_id=jid,
             start_year=2022, start_month=1,
             end_year=now.year, end_month=now.month,
         )
+
+        timeseries = window_data["default"]
 
         if not timeseries:
             logger.warning(f"  No data for {name}")
@@ -84,12 +86,14 @@ def main():
             f"citations: {latest['citation_count']}"
         )
 
-        # Export journal JSON
+        # Export journal JSON with all window variants
         exporter.export_journal(
             slug=slug,
             name=name,
             issn=issn,
             timeseries=timeseries,
+            timeseries_12mo=window_data["12mo"],
+            timeseries_5yr=window_data["5yr"],
             official_if=OFFICIAL_JIFS.get(issn),
         )
 

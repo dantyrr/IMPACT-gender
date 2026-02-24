@@ -7,7 +7,10 @@ class IMPACTApp {
         this.journals = [];
         this.journalDataCache = {};
         this.currentJournalSlug = null;
+        this.currentWindow = 'timeseries';
+        this.currentType = 'all';
         this.compareMetric = 'rolling_if';
+        this.compareWindow = 'timeseries';
         this.init();
     }
 
@@ -123,14 +126,28 @@ class IMPACTApp {
                 diffEl.style.color = diff >= 0 ? '#27ae60' : '#e74c3c';
             }
 
+            // Reset window/type state for new journal
+            this.currentWindow = 'timeseries';
+            this.currentType = 'all';
+            this._citationMode = 'total';
+
+            // Sync toggle button active states
+            document.querySelectorAll('#window-toggle .toggle-btn').forEach(b =>
+                b.classList.toggle('active', b.getAttribute('data-window') === 'timeseries')
+            );
+            document.querySelectorAll('#type-toggle .toggle-btn').forEach(b =>
+                b.classList.toggle('active', b.getAttribute('data-type') === 'all')
+            );
+
             // Setup toggle controls
             this.setupDetailToggles(data);
 
             // Initial charts
-            chartManager.createJournalChart('journal-chart', data.timeseries, officialIf, 'both');
-            chartManager.createCitationChart('citation-chart', data.timeseries, 'total');
-            chartManager.createCompositionChart('composition-chart', data.timeseries);
-            chartManager.createPapersChart('papers-chart', data.timeseries);
+            const ts = this._getDisplayTimeseries(data);
+            chartManager.createJournalChart('journal-chart', ts, officialIf, 'Citation Rate — All Articles (24-month)');
+            chartManager.createCitationChart('citation-chart', ts, 'total');
+            chartManager.createCompositionChart('composition-chart', ts);
+            chartManager.createPapersChart('papers-chart', ts);
 
             // Back button
             document.getElementById('back-to-list').onclick = () => {
@@ -145,19 +162,82 @@ class IMPACTApp {
         }
     }
 
-    setupDetailToggles(data) {
-        // IF chart toggle
-        this._setupToggleGroup('if-chart-toggle', (mode) => {
-            chartManager.createJournalChart('journal-chart', data.timeseries, data.official_jif_2024, mode);
-        });
+    // ---- Display timeseries helper ----
 
-        // Citation chart toggle
-        this._setupToggleGroup('citation-chart-toggle', (mode) => {
-            chartManager.createCitationChart('citation-chart', data.timeseries, mode);
+    /**
+     * Return the timeseries array for the currently selected window, with
+     * rolling_if values recomputed for the selected article type.
+     */
+    _getDisplayTimeseries(data) {
+        const raw = data[this.currentWindow] || data.timeseries;
+        const typeKey = this.currentType;
+
+        if (typeKey === 'all') {
+            return raw;
+        }
+
+        return raw.map(entry => {
+            let rate;
+            if (typeKey === 'research') {
+                rate = entry.rolling_if_no_reviews;
+            } else {
+                const bt = entry.by_type && entry.by_type[typeKey];
+                rate = (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : 0;
+            }
+            return Object.assign({}, entry, { rolling_if: rate, rolling_if_no_reviews: rate });
         });
     }
 
-    _setupToggleGroup(containerId, callback) {
+    _typeLabel(typeKey) {
+        const labels = {
+            all: 'All Articles', research: 'Research',
+            review: 'Reviews', editorial: 'Editorials',
+            letter: 'Letters', other: 'Other',
+        };
+        return labels[typeKey] || typeKey;
+    }
+
+    _windowLabel(windowKey) {
+        const labels = {
+            timeseries: '24-month', timeseries_12mo: '12-month', timeseries_5yr: '5-yr (yr 2–6)',
+        };
+        return labels[windowKey] || windowKey;
+    }
+
+    setupDetailToggles(data) {
+        const redraw = () => {
+            const ts = this._getDisplayTimeseries(data);
+            const rateLabel = `Citation Rate — ${this._typeLabel(this.currentType)} (${this._windowLabel(this.currentWindow)})`;
+            chartManager.createJournalChart('journal-chart', ts, data.official_jif_2024, rateLabel);
+            chartManager.createCitationChart('citation-chart', ts, this._citationChartMode());
+            chartManager.createCompositionChart('composition-chart', ts);
+            chartManager.createPapersChart('papers-chart', ts);
+        };
+
+        // Window toggle
+        this._setupToggleGroup('window-toggle', (windowKey) => {
+            this.currentWindow = windowKey;
+            redraw();
+        }, 'data-window');
+
+        // Article type toggle
+        this._setupToggleGroup('type-toggle', (typeKey) => {
+            this.currentType = typeKey;
+            redraw();
+        }, 'data-type');
+
+        // Citation chart mode toggle (independent)
+        this._setupToggleGroup('citation-chart-toggle', (mode) => {
+            this._citationMode = mode;
+            chartManager.createCitationChart('citation-chart', this._getDisplayTimeseries(data), mode);
+        });
+    }
+
+    _citationChartMode() {
+        return this._citationMode || 'total';
+    }
+
+    _setupToggleGroup(containerId, callback, dataAttr = 'data-mode') {
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -170,7 +250,7 @@ class IMPACTApp {
             newBtn.addEventListener('click', () => {
                 container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
                 newBtn.classList.add('active');
-                callback(newBtn.dataset.mode);
+                callback(newBtn.getAttribute(dataAttr));
             });
         });
     }
@@ -191,6 +271,12 @@ class IMPACTApp {
             label.appendChild(document.createTextNode(journal.name));
             container.appendChild(label);
         });
+
+        // Window toggle
+        this._setupToggleGroup('compare-window-toggle', (windowKey) => {
+            this.compareWindow = windowKey;
+            this.updateComparison();
+        }, 'data-window');
 
         // Metric toggle
         this._setupToggleGroup('compare-metric-toggle', (mode) => {
@@ -226,7 +312,7 @@ class IMPACTApp {
             }
         }
 
-        chartManager.createComparisonChart('compare-chart', journalsData, this.compareMetric);
+        chartManager.createComparisonChart('compare-chart', journalsData, this.compareMetric, this.compareWindow);
 
         // Build comparison summary table
         if (tableContainer) {
@@ -328,9 +414,8 @@ class IMPACTApp {
         // Step 1: fetch paper metadata from iCite
         const iciteMap = await this._fetchICite(pmids);
 
-        // Step 2: for each PMID, compute 24-month citations
+        // Step 2: for each PMID, compute 24-month citations from publication date
         const paperResults = [];
-        const cutoffYear = new Date().getFullYear() - 2;
 
         for (const pmid of pmids) {
             const paper = iciteMap[String(pmid)];
@@ -339,33 +424,52 @@ class IMPACTApp {
                 continue;
             }
 
+            const paperPubYear = paper.year;
             const citedBy = paper.cited_by || [];
             let cit24mo = 0;
             let approx = false;
 
-            if (citedBy.length > 0) {
+            if (citedBy.length > 0 && paperPubYear) {
                 tableContainer.innerHTML = `<p class="loading-text">Fetching citation dates for PMID ${pmid} (${citedBy.length} citations)…</p>`;
                 const fetchList = citedBy.length > 600 ? citedBy.slice(-600) : citedBy;
                 if (citedBy.length > 600) approx = true;
                 const citedByMap = await this._fetchICite(fetchList);
-                const recentCount = Object.values(citedByMap).filter(p => p.year >= cutoffYear).length;
+                // Count citations received in the 24 months after publication
+                const recentCount = Object.values(citedByMap).filter(
+                    p => p.year != null && p.year >= paperPubYear && p.year < paperPubYear + 2
+                ).length;
                 cit24mo = approx
                     ? Math.round(recentCount * citedBy.length / fetchList.length)
                     : recentCount;
             }
 
+            // Get time-matched journal benchmark (journal rate ~24 months after publication)
             const journalMatch = this._matchJournal(paper.journal);
+            let journalRate = null;
+            let journalRateMonth = null;
+            if (journalMatch && paperPubYear) {
+                const targetMonth = `${paperPubYear + 2}-01`;
+                const rateInfo = await this._getJournalRateForPeriod(journalMatch.slug, targetMonth);
+                if (rateInfo) {
+                    journalRate = rateInfo.rate;
+                    journalRateMonth = rateInfo.month;
+                } else {
+                    journalRate = journalMatch.latest_if;
+                }
+            }
+
             paperResults.push({
                 pmid,
                 found: true,
                 title: paper.title || '',
                 journal: paper.journal || '—',
-                year: paper.year || '—',
+                year: paperPubYear || '—',
                 total_citations: paper.citation_count || 0,
                 citations_24mo: cit24mo,
                 approx,
                 journal_name: journalMatch ? journalMatch.name : null,
-                journal_rate: journalMatch ? journalMatch.latest_if : null,
+                journal_rate: journalRate,
+                journal_rate_month: journalRateMonth,
             });
         }
 
@@ -387,6 +491,38 @@ class IMPACTApp {
             document.getElementById('author-chart-container').style.display = 'block';
             chartManager.createAuthorChart('author-chart', found);
         }
+    }
+
+    /**
+     * Load a journal's full timeseries and find the rolling citation rate
+     * entry closest to targetMonth (YYYY-MM). Returns {rate, month} or null.
+     */
+    async _getJournalRateForPeriod(slug, targetMonth) {
+        let jData = this.journalDataCache[slug];
+        if (!jData) {
+            try {
+                jData = await dataLoader.loadJournal(slug);
+                this.journalDataCache[slug] = jData;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        const ts = jData.timeseries || [];
+        const target = new Date(targetMonth + '-01').getTime();
+        let best = null;
+        let bestDist = Infinity;
+
+        for (const t of ts) {
+            if (!t.rolling_if || t.rolling_if === 0 || !t.papers) continue;
+            const dist = Math.abs(new Date(t.month + '-01').getTime() - target);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = t;
+            }
+        }
+
+        return best ? { rate: best.rolling_if, month: best.month } : null;
     }
 
     async _fetchICite(pmids) {
@@ -443,21 +579,23 @@ class IMPACTApp {
             cit24mo: p.found ? `${p.approx ? '~' : ''}${p.citations_24mo}` : '—',
             total: p.found ? p.total_citations : null,
             journal_rate: p.found ? p.journal_rate : null,
+            benchmark_month: p.found ? (p.journal_rate_month || (p.journal_rate != null ? 'latest' : '—')) : '—',
         }));
 
         container.appendChild(UIHelpers.createTable(rows, [
             { key: 'pmid', label: 'PMID' },
             { key: 'title', label: 'Title' },
             { key: 'journal', label: 'Journal' },
-            { key: 'year', label: 'Year' },
+            { key: 'year', label: 'Published' },
             { key: 'cit24mo', label: '24-mo Citations' },
             { key: 'total', label: 'Total Citations', format: UIHelpers.formatInt },
-            { key: 'journal_rate', label: 'Journal 24-mo Rate', format: UIHelpers.formatIF },
+            { key: 'journal_rate', label: 'Journal Rate (benchmark)', format: UIHelpers.formatIF },
+            { key: 'benchmark_month', label: 'Benchmark month' },
         ]));
 
         const note = document.createElement('p');
         note.className = 'data-note';
-        note.textContent = '24-mo Citations: citations received from papers published in the last ~24 months. ~ = estimate (>600 citations sampled). Journal 24-mo Rate: rolling citation rate for tracked journals (from IMPACT database).';
+        note.textContent = '24-mo Citations: citations received in the 24 months after the paper\'s publication year (from iCite). ~ = estimate (>600 citations sampled). Journal Rate (benchmark): the journal\'s rolling citation rate at approximately 24 months after the paper was published — the same period when most of the paper\'s 24-mo citations were accumulating.';
         container.appendChild(note);
     }
 

@@ -24,8 +24,27 @@ class JSONExporter:
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.journals_dir, exist_ok=True)
 
+    @staticmethod
+    def _format_timeseries(timeseries: List[Dict]) -> List[Dict]:
+        """Convert raw calculator snapshots to compact JSON-ready dicts."""
+        return [
+            {
+                "month": s["month"],
+                "rolling_if": s["rolling_if"],
+                "rolling_if_no_reviews": s["rolling_if_no_reviews"],
+                "papers": s["paper_count"],
+                "research": s.get("research_count", 0),
+                "reviews": s["review_count"],
+                "citations": s["citation_count"],
+                "by_type": s.get("by_type", {}),
+            }
+            for s in timeseries
+        ]
+
     def export_journal(self, slug: str, name: str, issn: str,
                        timeseries: List[Dict],
+                       timeseries_12mo: List[Dict] = None,
+                       timeseries_5yr: List[Dict] = None,
                        official_if: float = None) -> str:
         """
         Export a journal's full timeseries to a JSON file.
@@ -34,13 +53,14 @@ class JSONExporter:
             slug: URL-friendly journal name (e.g., 'aging-cell')
             name: Full journal name
             issn: Journal ISSN
-            timeseries: List of monthly snapshot dicts from ImpactCalculator
+            timeseries: 24-mo window monthly snapshots (default)
+            timeseries_12mo: 12-mo paper window snapshots (optional)
+            timeseries_5yr: 5-yr yr2-6 paper window snapshots (optional)
             official_if: Official JIF for comparison (optional)
 
         Returns:
             Path to the exported file
         """
-        # Get the latest data point
         latest = timeseries[-1] if timeseries else {}
 
         data = {
@@ -58,19 +78,13 @@ class JSONExporter:
                 "review_count": latest.get("review_count", 0),
                 "citation_count": latest.get("citation_count", 0),
             },
-            "timeseries": [
-                {
-                    "month": s["month"],
-                    "rolling_if": s["rolling_if"],
-                    "rolling_if_no_reviews": s["rolling_if_no_reviews"],
-                    "papers": s["paper_count"],
-                    "research": s.get("research_count", 0),
-                    "reviews": s["review_count"],
-                    "citations": s["citation_count"],
-                }
-                for s in timeseries
-            ],
+            "timeseries": self._format_timeseries(timeseries),
         }
+
+        if timeseries_12mo is not None:
+            data["timeseries_12mo"] = self._format_timeseries(timeseries_12mo)
+        if timeseries_5yr is not None:
+            data["timeseries_5yr"] = self._format_timeseries(timeseries_5yr)
 
         filepath = os.path.join(self.journals_dir, f"{slug}.json")
         with open(filepath, "w") as f:

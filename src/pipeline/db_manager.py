@@ -242,6 +242,29 @@ class DatabaseManager:
         )
         return cursor.fetchone()["cnt"]
 
+    def count_papers_and_citations_by_type(self, journal_id: int,
+                                            paper_start: str, paper_end: str,
+                                            cite_start: str, cite_end: str) -> List[Dict]:
+        """
+        Return per-pub_type paper counts and citation counts for papers published
+        in [paper_start, paper_end] with citations counted in [cite_start, cite_end].
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """SELECT p.pub_type,
+                      COUNT(DISTINCT p.pmid) AS paper_count,
+                      COUNT(c.id) AS citation_count
+               FROM papers p
+               LEFT JOIN citations c
+                   ON c.cited_pmid = p.pmid
+                   AND c.citing_date >= ? AND c.citing_date <= ?
+               WHERE p.journal_id = ?
+                 AND p.pub_date >= ? AND p.pub_date <= ?
+               GROUP BY p.pub_type""",
+            (cite_start, cite_end, journal_id, paper_start, paper_end),
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
     def get_citation_count_for_paper(self, pmid: int) -> int:
         """Total citation count for a paper (all time)."""
         cursor = self.conn.cursor()

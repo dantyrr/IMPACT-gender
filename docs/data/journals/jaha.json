@@ -21,7 +21,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-02",
@@ -30,7 +31,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-03",
@@ -39,7 +41,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-04",
@@ -48,7 +51,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-05",
@@ -57,7 +61,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-06",
@@ -66,7 +71,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-07",
@@ -75,7 +81,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-08",
@@ -84,7 +91,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-09",
@@ -93,7 +101,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-10",
@@ -102,7 +111,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-11",
@@ -111,7 +121,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2022-12",
@@ -120,7 +131,8 @@
       "papers": 0,
       "research": 0,
       "reviews": 0,
-      "citations": 0
+      "citations": 0,
+      "by_type": {}
     },
     {
       "month": "2023-01",
@@ -129,7 +141,37 @@
       "papers": 65,
       "research": 61,
       "reviews": 4,
-      "citations": 146
+      "citations": 146,
+      "by_type": {
+        "research": {
+          "papers": 57,
+          "citations": 107
+        },
+        "review": {
+          "papers": 5,
+          "citations": 37
+        },
+        "editorial": {
+          "papers": 3,
+          "citations": 2
+        },
+        "letter": {
+          "papers": 0,
+          "citations": 0
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 0,
+          "citations": 0
+        }
+      }
     },
     {
       "month": "2023-02",
@@ -138,7 +180,37 @@
       "papers": 137,
       "research": 125,
       "reviews": 12,
-      "citations": 285
+      "citations": 285,
+      "by_type": {
+        "research": {
+          "papers": 116,
+          "citations": 233
+        },
+        "review": {
+          "papers": 9,
+          "citations": 48
+        },
+        "editorial": {
+          "papers": 8,
+          "citations": 4
+        },
+        "letter": {
+          "papers": 3,
+          "citations": 0
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 1,
+          "citations": 0
+        }
+      }
     },
     {
       "month": "2023-03",
@@ -147,7 +219,37 @@
       "papers": 241,
       "research": 222,
       "reviews": 19,
-      "citations": 417
+      "citations": 417,
+      "by_type": {
+        "research": {
+          "papers": 206,
+          "citations": 354
+        },
+        "review": {
+          "papers": 12,
+          "citations": 52
+        },
+        "editorial": {
+          "papers": 13,
+          "citations": 5
+        },
+        "letter": {
+          "papers": 8,
+          "citations": 6
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 2,
+          "citations": 0
+        }
+      }
     },
     {
       "month": "2023-04",
@@ -156,7 +258,37 @@
       "papers": 354,
       "research": 318,
       "reviews": 36,
-      "citations": 542
+      "citations": 542,
+      "by_type": {
+        "research": {
+          "papers": 292,
+          "citations": 452
+        },
+        "review": {
+          "papers": 23,
+          "citations": 71
+        },
+        "editorial": {
+          "papers": 21,
+          "citations": 7
+        },
+        "letter": {
+          "papers": 15,
+          "citations": 12
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 3,
+          "citations": 0
+        }
+      }
     },
     {
       "month": "2023-05",
@@ -165,7 +297,37 @@
       "papers": 444,
       "research": 390,
       "reviews": 54,
-      "citations": 648
+      "citations": 648,
+      "by_type": {
+        "research": {
+          "papers": 357,
+          "citations": 542
+        },
+        "review": {
+          "papers": 29,
+          "citations": 80
+        },
+        "editorial": {
+          "papers": 31,
+          "citations": 12
+        },
+        "letter": {
+          "papers": 18,
+          "citations": 14
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 0
+        }
+      }
     },
     {
       "month": "2023-06",
@@ -174,7 +336,37 @@
       "papers": 543,
       "research": 475,
       "reviews": 68,
-      "citations": 2374
+      "citations": 2374,
+      "by_type": {
+        "research": {
+          "papers": 435,
+          "citations": 1962
+        },
+        "review": {
+          "papers": 38,
+          "citations": 331
+        },
+        "editorial": {
+          "papers": 41,
+          "citations": 39
+        },
+        "letter": {
+          "papers": 20,
+          "citations": 41
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
     },
     {
       "month": "2023-07",
@@ -183,7 +375,37 @@
       "papers": 625,
       "research": 550,
       "reviews": 75,
-      "citations": 2605
+      "citations": 2605,
+      "by_type": {
+        "research": {
+          "papers": 500,
+          "citations": 2152
+        },
+        "review": {
+          "papers": 46,
+          "citations": 361
+        },
+        "editorial": {
+          "papers": 44,
+          "citations": 42
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 49
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
     },
     {
       "month": "2023-08",
@@ -192,7 +414,37 @@
       "papers": 707,
       "research": 620,
       "reviews": 87,
-      "citations": 2906
+      "citations": 2906,
+      "by_type": {
+        "research": {
+          "papers": 567,
+          "citations": 2404
+        },
+        "review": {
+          "papers": 50,
+          "citations": 404
+        },
+        "editorial": {
+          "papers": 50,
+          "citations": 47
+        },
+        "letter": {
+          "papers": 27,
+          "citations": 49
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 13,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2023-09",
@@ -201,7 +453,37 @@
       "papers": 804,
       "research": 701,
       "reviews": 103,
-      "citations": 3201
+      "citations": 3201,
+      "by_type": {
+        "research": {
+          "papers": 643,
+          "citations": 2621
+        },
+        "review": {
+          "papers": 56,
+          "citations": 479
+        },
+        "editorial": {
+          "papers": 54,
+          "citations": 49
+        },
+        "letter": {
+          "papers": 32,
+          "citations": 50
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 19,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2023-10",
@@ -210,7 +492,37 @@
       "papers": 893,
       "research": 774,
       "reviews": 119,
-      "citations": 3421
+      "citations": 3421,
+      "by_type": {
+        "research": {
+          "papers": 713,
+          "citations": 2786
+        },
+        "review": {
+          "papers": 61,
+          "citations": 517
+        },
+        "editorial": {
+          "papers": 61,
+          "citations": 61
+        },
+        "letter": {
+          "papers": 35,
+          "citations": 55
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 23,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2023-11",
@@ -219,7 +531,37 @@
       "papers": 953,
       "research": 822,
       "reviews": 131,
-      "citations": 3577
+      "citations": 3577,
+      "by_type": {
+        "research": {
+          "papers": 760,
+          "citations": 2925
+        },
+        "review": {
+          "papers": 63,
+          "citations": 525
+        },
+        "editorial": {
+          "papers": 68,
+          "citations": 69
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 56
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2023-12",
@@ -228,7 +570,37 @@
       "papers": 1030,
       "research": 884,
       "reviews": 146,
-      "citations": 3721
+      "citations": 3721,
+      "by_type": {
+        "research": {
+          "papers": 820,
+          "citations": 3038
+        },
+        "review": {
+          "papers": 72,
+          "citations": 553
+        },
+        "editorial": {
+          "papers": 76,
+          "citations": 72
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 56
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2024-01",
@@ -237,7 +609,37 @@
       "papers": 1101,
       "research": 946,
       "reviews": 155,
-      "citations": 3883
+      "citations": 3883,
+      "by_type": {
+        "research": {
+          "papers": 877,
+          "citations": 3178
+        },
+        "review": {
+          "papers": 77,
+          "citations": 571
+        },
+        "editorial": {
+          "papers": 83,
+          "citations": 74
+        },
+        "letter": {
+          "papers": 38,
+          "citations": 58
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2024-02",
@@ -246,7 +648,37 @@
       "papers": 1193,
       "research": 1023,
       "reviews": 170,
-      "citations": 4053
+      "citations": 4053,
+      "by_type": {
+        "research": {
+          "papers": 951,
+          "citations": 3329
+        },
+        "review": {
+          "papers": 81,
+          "citations": 586
+        },
+        "editorial": {
+          "papers": 91,
+          "citations": 76
+        },
+        "letter": {
+          "papers": 40,
+          "citations": 60
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 30,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2024-03",
@@ -255,7 +687,37 @@
       "papers": 1283,
       "research": 1094,
       "reviews": 189,
-      "citations": 4194
+      "citations": 4194,
+      "by_type": {
+        "research": {
+          "papers": 1018,
+          "citations": 3450
+        },
+        "review": {
+          "papers": 87,
+          "citations": 601
+        },
+        "editorial": {
+          "papers": 97,
+          "citations": 78
+        },
+        "letter": {
+          "papers": 42,
+          "citations": 63
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 39,
+          "citations": 2
+        }
+      }
     },
     {
       "month": "2024-04",
@@ -264,7 +726,37 @@
       "papers": 1365,
       "research": 1162,
       "reviews": 203,
-      "citations": 4289
+      "citations": 4289,
+      "by_type": {
+        "research": {
+          "papers": 1079,
+          "citations": 3517
+        },
+        "review": {
+          "papers": 90,
+          "citations": 616
+        },
+        "editorial": {
+          "papers": 98,
+          "citations": 79
+        },
+        "letter": {
+          "papers": 49,
+          "citations": 74
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 49,
+          "citations": 3
+        }
+      }
     },
     {
       "month": "2024-05",
@@ -273,7 +765,37 @@
       "papers": 1434,
       "research": 1220,
       "reviews": 214,
-      "citations": 4339
+      "citations": 4339,
+      "by_type": {
+        "research": {
+          "papers": 1131,
+          "citations": 3561
+        },
+        "review": {
+          "papers": 93,
+          "citations": 619
+        },
+        "editorial": {
+          "papers": 101,
+          "citations": 79
+        },
+        "letter": {
+          "papers": 54,
+          "citations": 76
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 55,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-06",
@@ -282,7 +804,37 @@
       "papers": 1519,
       "research": 1294,
       "reviews": 225,
-      "citations": 7282
+      "citations": 7282,
+      "by_type": {
+        "research": {
+          "papers": 1199,
+          "citations": 5939
+        },
+        "review": {
+          "papers": 100,
+          "citations": 1082
+        },
+        "editorial": {
+          "papers": 106,
+          "citations": 138
+        },
+        "letter": {
+          "papers": 56,
+          "citations": 119
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 58,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-07",
@@ -291,7 +843,37 @@
       "papers": 1613,
       "research": 1383,
       "reviews": 230,
-      "citations": 7675
+      "citations": 7675,
+      "by_type": {
+        "research": {
+          "papers": 1278,
+          "citations": 6261
+        },
+        "review": {
+          "papers": 105,
+          "citations": 1137
+        },
+        "editorial": {
+          "papers": 109,
+          "citations": 146
+        },
+        "letter": {
+          "papers": 62,
+          "citations": 127
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 59,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-08",
@@ -300,7 +882,37 @@
       "papers": 1690,
       "research": 1446,
       "reviews": 244,
-      "citations": 7926
+      "citations": 7926,
+      "by_type": {
+        "research": {
+          "papers": 1334,
+          "citations": 6455
+        },
+        "review": {
+          "papers": 110,
+          "citations": 1189
+        },
+        "editorial": {
+          "papers": 114,
+          "citations": 147
+        },
+        "letter": {
+          "papers": 67,
+          "citations": 131
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 65,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-09",
@@ -309,7 +921,37 @@
       "papers": 1789,
       "research": 1527,
       "reviews": 262,
-      "citations": 8297
+      "citations": 8297,
+      "by_type": {
+        "research": {
+          "papers": 1408,
+          "citations": 6768
+        },
+        "review": {
+          "papers": 118,
+          "citations": 1226
+        },
+        "editorial": {
+          "papers": 127,
+          "citations": 154
+        },
+        "letter": {
+          "papers": 69,
+          "citations": 145
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 67,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-10",
@@ -318,7 +960,37 @@
       "papers": 1873,
       "research": 1596,
       "reviews": 277,
-      "citations": 8543
+      "citations": 8543,
+      "by_type": {
+        "research": {
+          "papers": 1475,
+          "citations": 6959
+        },
+        "review": {
+          "papers": 123,
+          "citations": 1276
+        },
+        "editorial": {
+          "papers": 136,
+          "citations": 159
+        },
+        "letter": {
+          "papers": 69,
+          "citations": 145
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 70,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-11",
@@ -327,7 +999,37 @@
       "papers": 1968,
       "research": 1678,
       "reviews": 290,
-      "citations": 8736
+      "citations": 8736,
+      "by_type": {
+        "research": {
+          "papers": 1550,
+          "citations": 7090
+        },
+        "review": {
+          "papers": 135,
+          "citations": 1335
+        },
+        "editorial": {
+          "papers": 141,
+          "citations": 162
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 145
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 72,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2024-12",
@@ -336,7 +1038,37 @@
       "papers": 2058,
       "research": 1758,
       "reviews": 300,
-      "citations": 8976
+      "citations": 8976,
+      "by_type": {
+        "research": {
+          "papers": 1620,
+          "citations": 7290
+        },
+        "review": {
+          "papers": 147,
+          "citations": 1375
+        },
+        "editorial": {
+          "papers": 147,
+          "citations": 162
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 145
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 74,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2025-01",
@@ -345,7 +1077,37 @@
       "papers": 2099,
       "research": 1790,
       "reviews": 309,
-      "citations": 8739
+      "citations": 8739,
+      "by_type": {
+        "research": {
+          "papers": 1654,
+          "citations": 7084
+        },
+        "review": {
+          "papers": 149,
+          "citations": 1346
+        },
+        "editorial": {
+          "papers": 151,
+          "citations": 160
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 145
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 75,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2025-02",
@@ -354,7 +1116,37 @@
       "papers": 2156,
       "research": 1844,
       "reviews": 312,
-      "citations": 8523
+      "citations": 8523,
+      "by_type": {
+        "research": {
+          "papers": 1707,
+          "citations": 6881
+        },
+        "review": {
+          "papers": 153,
+          "citations": 1340
+        },
+        "editorial": {
+          "papers": 150,
+          "citations": 157
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 141
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 76,
+          "citations": 4
+        }
+      }
     },
     {
       "month": "2025-03",
@@ -363,7 +1155,37 @@
       "papers": 2168,
       "research": 1844,
       "reviews": 324,
-      "citations": 8261
+      "citations": 8261,
+      "by_type": {
+        "research": {
+          "papers": 1705,
+          "citations": 6597
+        },
+        "review": {
+          "papers": 165,
+          "citations": 1370
+        },
+        "editorial": {
+          "papers": 152,
+          "citations": 164
+        },
+        "letter": {
+          "papers": 65,
+          "citations": 127
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 81,
+          "citations": 3
+        }
+      }
     },
     {
       "month": "2025-04",
@@ -372,7 +1194,37 @@
       "papers": 2155,
       "research": 1832,
       "reviews": 323,
-      "citations": 7784
+      "citations": 7784,
+      "by_type": {
+        "research": {
+          "papers": 1699,
+          "citations": 6273
+        },
+        "review": {
+          "papers": 163,
+          "citations": 1229
+        },
+        "editorial": {
+          "papers": 152,
+          "citations": 161
+        },
+        "letter": {
+          "papers": 58,
+          "citations": 118
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 83,
+          "citations": 3
+        }
+      }
     },
     {
       "month": "2025-05",
@@ -381,7 +1233,37 @@
       "papers": 2207,
       "research": 1892,
       "reviews": 315,
-      "citations": 7416
+      "citations": 7416,
+      "by_type": {
+        "research": {
+          "papers": 1752,
+          "citations": 5950
+        },
+        "review": {
+          "papers": 170,
+          "citations": 1208
+        },
+        "editorial": {
+          "papers": 146,
+          "citations": 133
+        },
+        "letter": {
+          "papers": 62,
+          "citations": 122
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 77,
+          "citations": 3
+        }
+      }
     },
     {
       "month": "2025-06",
@@ -390,7 +1272,37 @@
       "papers": 2198,
       "research": 1888,
       "reviews": 310,
-      "citations": 12532
+      "citations": 12532,
+      "by_type": {
+        "research": {
+          "papers": 1748,
+          "citations": 9819
+        },
+        "review": {
+          "papers": 167,
+          "citations": 2332
+        },
+        "editorial": {
+          "papers": 141,
+          "citations": 206
+        },
+        "letter": {
+          "papers": 65,
+          "citations": 162
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 77,
+          "citations": 13
+        }
+      }
     },
     {
       "month": "2025-07",
@@ -399,7 +1311,37 @@
       "papers": 2203,
       "research": 1895,
       "reviews": 308,
-      "citations": 12431
+      "citations": 12431,
+      "by_type": {
+        "research": {
+          "papers": 1760,
+          "citations": 9754
+        },
+        "review": {
+          "papers": 163,
+          "citations": 2296
+        },
+        "editorial": {
+          "papers": 140,
+          "citations": 205
+        },
+        "letter": {
+          "papers": 61,
+          "citations": 161
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 79,
+          "citations": 15
+        }
+      }
     },
     {
       "month": "2025-08",
@@ -408,7 +1350,37 @@
       "papers": 2251,
       "research": 1942,
       "reviews": 309,
-      "citations": 12547
+      "citations": 12547,
+      "by_type": {
+        "research": {
+          "papers": 1800,
+          "citations": 9793
+        },
+        "review": {
+          "papers": 167,
+          "citations": 2351
+        },
+        "editorial": {
+          "papers": 143,
+          "citations": 220
+        },
+        "letter": {
+          "papers": 66,
+          "citations": 168
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 75,
+          "citations": 15
+        }
+      }
     },
     {
       "month": "2025-09",
@@ -417,7 +1389,37 @@
       "papers": 2247,
       "research": 1937,
       "reviews": 310,
-      "citations": 12345
+      "citations": 12345,
+      "by_type": {
+        "research": {
+          "papers": 1792,
+          "citations": 9679
+        },
+        "review": {
+          "papers": 169,
+          "citations": 2250
+        },
+        "editorial": {
+          "papers": 153,
+          "citations": 231
+        },
+        "letter": {
+          "papers": 63,
+          "citations": 170
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 70,
+          "citations": 15
+        }
+      }
     },
     {
       "month": "2025-10",
@@ -426,7 +1428,37 @@
       "papers": 2256,
       "research": 1951,
       "reviews": 305,
-      "citations": 12243
+      "citations": 12243,
+      "by_type": {
+        "research": {
+          "papers": 1806,
+          "citations": 9639
+        },
+        "review": {
+          "papers": 172,
+          "citations": 2227
+        },
+        "editorial": {
+          "papers": 150,
+          "citations": 211
+        },
+        "letter": {
+          "papers": 60,
+          "citations": 151
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 68,
+          "citations": 15
+        }
+      }
     },
     {
       "month": "2025-11",
@@ -435,7 +1467,37 @@
       "papers": 2319,
       "research": 2019,
       "reviews": 300,
-      "citations": 12287
+      "citations": 12287,
+      "by_type": {
+        "research": {
+          "papers": 1870,
+          "citations": 9693
+        },
+        "review": {
+          "papers": 179,
+          "citations": 2233
+        },
+        "editorial": {
+          "papers": 146,
+          "citations": 204
+        },
+        "letter": {
+          "papers": 59,
+          "citations": 149
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 65,
+          "citations": 8
+        }
+      }
     },
     {
       "month": "2025-12",
@@ -444,7 +1506,37 @@
       "papers": 2316,
       "research": 2024,
       "reviews": 292,
-      "citations": 12172
+      "citations": 12172,
+      "by_type": {
+        "research": {
+          "papers": 1875,
+          "citations": 9643
+        },
+        "review": {
+          "papers": 174,
+          "citations": 2175
+        },
+        "editorial": {
+          "papers": 143,
+          "citations": 197
+        },
+        "letter": {
+          "papers": 59,
+          "citations": 149
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 65,
+          "citations": 8
+        }
+      }
     },
     {
       "month": "2026-01",
@@ -453,7 +1545,37 @@
       "papers": 2341,
       "research": 2047,
       "reviews": 294,
-      "citations": 11845
+      "citations": 11845,
+      "by_type": {
+        "research": {
+          "papers": 1902,
+          "citations": 9388
+        },
+        "review": {
+          "papers": 173,
+          "citations": 2123
+        },
+        "editorial": {
+          "papers": 144,
+          "citations": 182
+        },
+        "letter": {
+          "papers": 57,
+          "citations": 144
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 65,
+          "citations": 8
+        }
+      }
     },
     {
       "month": "2026-02",
@@ -462,7 +1584,2897 @@
       "papers": 2337,
       "research": 2047,
       "reviews": 290,
-      "citations": 11410
+      "citations": 11410,
+      "by_type": {
+        "research": {
+          "papers": 1904,
+          "citations": 8999
+        },
+        "review": {
+          "papers": 173,
+          "citations": 2089
+        },
+        "editorial": {
+          "papers": 144,
+          "citations": 176
+        },
+        "letter": {
+          "papers": 55,
+          "citations": 139
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 61,
+          "citations": 7
+        }
+      }
+    }
+  ],
+  "timeseries_12mo": [
+    {
+      "month": "2022-01",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-02",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-03",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-04",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-05",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-06",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-07",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-08",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-09",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-10",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-11",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-12",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-01",
+      "rolling_if": 2.393,
+      "rolling_if_no_reviews": 2.262,
+      "papers": 65,
+      "research": 61,
+      "reviews": 4,
+      "citations": 146,
+      "by_type": {
+        "research": {
+          "papers": 57,
+          "citations": 107
+        },
+        "review": {
+          "papers": 5,
+          "citations": 37
+        },
+        "editorial": {
+          "papers": 3,
+          "citations": 2
+        },
+        "letter": {
+          "papers": 0,
+          "citations": 0
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 0,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2023-02",
+      "rolling_if": 2.28,
+      "rolling_if_no_reviews": 2.152,
+      "papers": 137,
+      "research": 125,
+      "reviews": 12,
+      "citations": 285,
+      "by_type": {
+        "research": {
+          "papers": 116,
+          "citations": 233
+        },
+        "review": {
+          "papers": 9,
+          "citations": 48
+        },
+        "editorial": {
+          "papers": 8,
+          "citations": 4
+        },
+        "letter": {
+          "papers": 3,
+          "citations": 0
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 1,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2023-03",
+      "rolling_if": 1.878,
+      "rolling_if_no_reviews": 1.797,
+      "papers": 241,
+      "research": 222,
+      "reviews": 19,
+      "citations": 417,
+      "by_type": {
+        "research": {
+          "papers": 206,
+          "citations": 354
+        },
+        "review": {
+          "papers": 12,
+          "citations": 52
+        },
+        "editorial": {
+          "papers": 13,
+          "citations": 5
+        },
+        "letter": {
+          "papers": 8,
+          "citations": 6
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 2,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2023-04",
+      "rolling_if": 1.704,
+      "rolling_if_no_reviews": 1.613,
+      "papers": 354,
+      "research": 318,
+      "reviews": 36,
+      "citations": 542,
+      "by_type": {
+        "research": {
+          "papers": 292,
+          "citations": 452
+        },
+        "review": {
+          "papers": 23,
+          "citations": 71
+        },
+        "editorial": {
+          "papers": 21,
+          "citations": 7
+        },
+        "letter": {
+          "papers": 15,
+          "citations": 12
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 3,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2023-05",
+      "rolling_if": 1.662,
+      "rolling_if_no_reviews": 1.569,
+      "papers": 444,
+      "research": 390,
+      "reviews": 54,
+      "citations": 648,
+      "by_type": {
+        "research": {
+          "papers": 357,
+          "citations": 542
+        },
+        "review": {
+          "papers": 29,
+          "citations": 80
+        },
+        "editorial": {
+          "papers": 31,
+          "citations": 12
+        },
+        "letter": {
+          "papers": 18,
+          "citations": 14
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2023-06",
+      "rolling_if": 4.998,
+      "rolling_if_no_reviews": 4.564,
+      "papers": 543,
+      "research": 475,
+      "reviews": 68,
+      "citations": 2374,
+      "by_type": {
+        "research": {
+          "papers": 435,
+          "citations": 1962
+        },
+        "review": {
+          "papers": 38,
+          "citations": 331
+        },
+        "editorial": {
+          "papers": 41,
+          "citations": 39
+        },
+        "letter": {
+          "papers": 20,
+          "citations": 41
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2023-07",
+      "rolling_if": 4.736,
+      "rolling_if_no_reviews": 4.345,
+      "papers": 625,
+      "research": 550,
+      "reviews": 75,
+      "citations": 2605,
+      "by_type": {
+        "research": {
+          "papers": 500,
+          "citations": 2152
+        },
+        "review": {
+          "papers": 46,
+          "citations": 361
+        },
+        "editorial": {
+          "papers": 44,
+          "citations": 42
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 49
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2023-08",
+      "rolling_if": 4.687,
+      "rolling_if_no_reviews": 4.308,
+      "papers": 707,
+      "research": 620,
+      "reviews": 87,
+      "citations": 2906,
+      "by_type": {
+        "research": {
+          "papers": 567,
+          "citations": 2404
+        },
+        "review": {
+          "papers": 50,
+          "citations": 404
+        },
+        "editorial": {
+          "papers": 50,
+          "citations": 47
+        },
+        "letter": {
+          "papers": 27,
+          "citations": 49
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 13,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2023-09",
+      "rolling_if": 4.566,
+      "rolling_if_no_reviews": 4.157,
+      "papers": 804,
+      "research": 701,
+      "reviews": 103,
+      "citations": 3201,
+      "by_type": {
+        "research": {
+          "papers": 643,
+          "citations": 2621
+        },
+        "review": {
+          "papers": 56,
+          "citations": 479
+        },
+        "editorial": {
+          "papers": 54,
+          "citations": 49
+        },
+        "letter": {
+          "papers": 32,
+          "citations": 50
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 19,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2023-10",
+      "rolling_if": 4.42,
+      "rolling_if_no_reviews": 3.984,
+      "papers": 893,
+      "research": 774,
+      "reviews": 119,
+      "citations": 3421,
+      "by_type": {
+        "research": {
+          "papers": 713,
+          "citations": 2786
+        },
+        "review": {
+          "papers": 61,
+          "citations": 517
+        },
+        "editorial": {
+          "papers": 61,
+          "citations": 61
+        },
+        "letter": {
+          "papers": 35,
+          "citations": 55
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 23,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2023-11",
+      "rolling_if": 4.352,
+      "rolling_if_no_reviews": 3.922,
+      "papers": 953,
+      "research": 822,
+      "reviews": 131,
+      "citations": 3577,
+      "by_type": {
+        "research": {
+          "papers": 760,
+          "citations": 2925
+        },
+        "review": {
+          "papers": 63,
+          "citations": 525
+        },
+        "editorial": {
+          "papers": 68,
+          "citations": 69
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 56
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2023-12",
+      "rolling_if": 4.209,
+      "rolling_if_no_reviews": 3.778,
+      "papers": 1030,
+      "research": 884,
+      "reviews": 146,
+      "citations": 3721,
+      "by_type": {
+        "research": {
+          "papers": 820,
+          "citations": 3038
+        },
+        "review": {
+          "papers": 72,
+          "citations": 553
+        },
+        "editorial": {
+          "papers": 76,
+          "citations": 72
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 56
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2024-01",
+      "rolling_if": 3.941,
+      "rolling_if_no_reviews": 3.513,
+      "papers": 1036,
+      "research": 885,
+      "reviews": 151,
+      "citations": 3488,
+      "by_type": {
+        "research": {
+          "papers": 820,
+          "citations": 2852
+        },
+        "review": {
+          "papers": 72,
+          "citations": 503
+        },
+        "editorial": {
+          "papers": 80,
+          "citations": 73
+        },
+        "letter": {
+          "papers": 38,
+          "citations": 58
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2024-02",
+      "rolling_if": 3.673,
+      "rolling_if_no_reviews": 3.264,
+      "papers": 1056,
+      "research": 898,
+      "reviews": 158,
+      "citations": 3298,
+      "by_type": {
+        "research": {
+          "papers": 835,
+          "citations": 2683
+        },
+        "review": {
+          "papers": 72,
+          "citations": 490
+        },
+        "editorial": {
+          "papers": 83,
+          "citations": 69
+        },
+        "letter": {
+          "papers": 37,
+          "citations": 54
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 29,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2024-03",
+      "rolling_if": 3.455,
+      "rolling_if_no_reviews": 3.031,
+      "papers": 1042,
+      "research": 872,
+      "reviews": 170,
+      "citations": 3013,
+      "by_type": {
+        "research": {
+          "papers": 812,
+          "citations": 2406
+        },
+        "review": {
+          "papers": 75,
+          "citations": 495
+        },
+        "editorial": {
+          "papers": 84,
+          "citations": 67
+        },
+        "letter": {
+          "papers": 34,
+          "citations": 44
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 37,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-04",
+      "rolling_if": 3.091,
+      "rolling_if_no_reviews": 2.75,
+      "papers": 1011,
+      "research": 844,
+      "reviews": 167,
+      "citations": 2609,
+      "by_type": {
+        "research": {
+          "papers": 787,
+          "citations": 2130
+        },
+        "review": {
+          "papers": 67,
+          "citations": 373
+        },
+        "editorial": {
+          "papers": 77,
+          "citations": 60
+        },
+        "letter": {
+          "papers": 34,
+          "citations": 44
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 46,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2024-05",
+      "rolling_if": 2.767,
+      "rolling_if_no_reviews": 2.448,
+      "papers": 990,
+      "research": 830,
+      "reviews": 160,
+      "citations": 2297,
+      "by_type": {
+        "research": {
+          "papers": 774,
+          "citations": 1864
+        },
+        "review": {
+          "papers": 64,
+          "citations": 348
+        },
+        "editorial": {
+          "papers": 70,
+          "citations": 43
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 39
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 46,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2024-06",
+      "rolling_if": 5.413,
+      "rolling_if_no_reviews": 4.768,
+      "papers": 976,
+      "research": 819,
+      "reviews": 157,
+      "citations": 4433,
+      "by_type": {
+        "research": {
+          "papers": 764,
+          "citations": 3568
+        },
+        "review": {
+          "papers": 62,
+          "citations": 694
+        },
+        "editorial": {
+          "papers": 65,
+          "citations": 89
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 79
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 49,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2024-07",
+      "rolling_if": 5.366,
+      "rolling_if_no_reviews": 4.727,
+      "papers": 988,
+      "research": 833,
+      "reviews": 155,
+      "citations": 4470,
+      "by_type": {
+        "research": {
+          "papers": 778,
+          "citations": 3604
+        },
+        "review": {
+          "papers": 59,
+          "citations": 685
+        },
+        "editorial": {
+          "papers": 65,
+          "citations": 97
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 81
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 50,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2024-08",
+      "rolling_if": 5.259,
+      "rolling_if_no_reviews": 4.586,
+      "papers": 983,
+      "research": 826,
+      "reviews": 157,
+      "citations": 4344,
+      "by_type": {
+        "research": {
+          "papers": 767,
+          "citations": 3484
+        },
+        "review": {
+          "papers": 60,
+          "citations": 681
+        },
+        "editorial": {
+          "papers": 64,
+          "citations": 93
+        },
+        "letter": {
+          "papers": 40,
+          "citations": 84
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 52,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2024-09",
+      "rolling_if": 5.121,
+      "rolling_if_no_reviews": 4.506,
+      "papers": 985,
+      "research": 826,
+      "reviews": 159,
+      "citations": 4230,
+      "by_type": {
+        "research": {
+          "papers": 765,
+          "citations": 3438
+        },
+        "review": {
+          "papers": 62,
+          "citations": 599
+        },
+        "editorial": {
+          "papers": 73,
+          "citations": 97
+        },
+        "letter": {
+          "papers": 37,
+          "citations": 95
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 48,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-10",
+      "rolling_if": 4.979,
+      "rolling_if_no_reviews": 4.406,
+      "papers": 980,
+      "research": 822,
+      "reviews": 158,
+      "citations": 4093,
+      "by_type": {
+        "research": {
+          "papers": 762,
+          "citations": 3339
+        },
+        "review": {
+          "papers": 62,
+          "citations": 583
+        },
+        "editorial": {
+          "papers": 75,
+          "citations": 86
+        },
+        "letter": {
+          "papers": 34,
+          "citations": 84
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 47,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-11",
+      "rolling_if": 4.658,
+      "rolling_if_no_reviews": 4.111,
+      "papers": 1015,
+      "research": 856,
+      "reviews": 159,
+      "citations": 3987,
+      "by_type": {
+        "research": {
+          "papers": 790,
+          "citations": 3220
+        },
+        "review": {
+          "papers": 72,
+          "citations": 612
+        },
+        "editorial": {
+          "papers": 73,
+          "citations": 73
+        },
+        "letter": {
+          "papers": 34,
+          "citations": 82
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 46,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2024-12",
+      "rolling_if": 4.462,
+      "rolling_if_no_reviews": 3.981,
+      "papers": 1028,
+      "research": 874,
+      "reviews": 154,
+      "citations": 3900,
+      "by_type": {
+        "research": {
+          "papers": 800,
+          "citations": 3167
+        },
+        "review": {
+          "papers": 75,
+          "citations": 586
+        },
+        "editorial": {
+          "papers": 71,
+          "citations": 65
+        },
+        "letter": {
+          "papers": 34,
+          "citations": 82
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 48,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2025-01",
+      "rolling_if": 4.084,
+      "rolling_if_no_reviews": 3.621,
+      "papers": 1063,
+      "research": 905,
+      "reviews": 158,
+      "citations": 3696,
+      "by_type": {
+        "research": {
+          "papers": 834,
+          "citations": 2986
+        },
+        "review": {
+          "papers": 77,
+          "citations": 578
+        },
+        "editorial": {
+          "papers": 71,
+          "citations": 53
+        },
+        "letter": {
+          "papers": 32,
+          "citations": 79
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 49,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2025-02",
+      "rolling_if": 3.626,
+      "rolling_if_no_reviews": 3.198,
+      "papers": 1100,
+      "research": 946,
+      "reviews": 154,
+      "citations": 3430,
+      "by_type": {
+        "research": {
+          "papers": 872,
+          "citations": 2753
+        },
+        "review": {
+          "papers": 81,
+          "citations": 560
+        },
+        "editorial": {
+          "papers": 67,
+          "citations": 50
+        },
+        "letter": {
+          "papers": 33,
+          "citations": 67
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 47,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2025-03",
+      "rolling_if": 3.311,
+      "rolling_if_no_reviews": 2.901,
+      "papers": 1126,
+      "research": 972,
+      "reviews": 154,
+      "citations": 3218,
+      "by_type": {
+        "research": {
+          "papers": 893,
+          "citations": 2545
+        },
+        "review": {
+          "papers": 90,
+          "citations": 567
+        },
+        "editorial": {
+          "papers": 68,
+          "citations": 46
+        },
+        "letter": {
+          "papers": 31,
+          "citations": 60
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 44,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2025-04",
+      "rolling_if": 3.056,
+      "rolling_if_no_reviews": 2.699,
+      "papers": 1144,
+      "research": 988,
+      "reviews": 156,
+      "citations": 3019,
+      "by_type": {
+        "research": {
+          "papers": 912,
+          "citations": 2399
+        },
+        "review": {
+          "papers": 96,
+          "citations": 530
+        },
+        "editorial": {
+          "papers": 75,
+          "citations": 48
+        },
+        "letter": {
+          "papers": 24,
+          "citations": 42
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 37,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2025-05",
+      "rolling_if": 2.723,
+      "rolling_if_no_reviews": 2.406,
+      "papers": 1217,
+      "research": 1062,
+      "reviews": 155,
+      "citations": 2892,
+      "by_type": {
+        "research": {
+          "papers": 978,
+          "citations": 2280
+        },
+        "review": {
+          "papers": 106,
+          "citations": 522
+        },
+        "editorial": {
+          "papers": 76,
+          "citations": 48
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 42
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 31,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2025-06",
+      "rolling_if": 6.325,
+      "rolling_if_no_reviews": 5.463,
+      "papers": 1222,
+      "research": 1069,
+      "reviews": 153,
+      "citations": 6761,
+      "by_type": {
+        "research": {
+          "papers": 984,
+          "citations": 5184
+        },
+        "review": {
+          "papers": 105,
+          "citations": 1399
+        },
+        "editorial": {
+          "papers": 76,
+          "citations": 98
+        },
+        "letter": {
+          "papers": 29,
+          "citations": 77
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 28,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2025-07",
+      "rolling_if": 6.085,
+      "rolling_if_no_reviews": 5.219,
+      "papers": 1215,
+      "research": 1062,
+      "reviews": 153,
+      "citations": 6462,
+      "by_type": {
+        "research": {
+          "papers": 982,
+          "citations": 4974
+        },
+        "review": {
+          "papers": 104,
+          "citations": 1325
+        },
+        "editorial": {
+          "papers": 75,
+          "citations": 86
+        },
+        "letter": {
+          "papers": 25,
+          "citations": 72
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 29,
+          "citations": 5
+        }
+      }
+    },
+    {
+      "month": "2025-08",
+      "rolling_if": 5.991,
+      "rolling_if_no_reviews": 5.138,
+      "papers": 1268,
+      "research": 1116,
+      "reviews": 152,
+      "citations": 6686,
+      "by_type": {
+        "research": {
+          "papers": 1033,
+          "citations": 5117
+        },
+        "review": {
+          "papers": 107,
+          "citations": 1389
+        },
+        "editorial": {
+          "papers": 79,
+          "citations": 103
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 73
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 23,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-09",
+      "rolling_if": 5.664,
+      "rolling_if_no_reviews": 4.878,
+      "papers": 1262,
+      "research": 1111,
+      "reviews": 151,
+      "citations": 6293,
+      "by_type": {
+        "research": {
+          "papers": 1027,
+          "citations": 4813
+        },
+        "review": {
+          "papers": 107,
+          "citations": 1321
+        },
+        "editorial": {
+          "papers": 80,
+          "citations": 102
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 54
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 22,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2025-10",
+      "rolling_if": 5.473,
+      "rolling_if_no_reviews": 4.742,
+      "papers": 1276,
+      "research": 1129,
+      "reviews": 147,
+      "citations": 6179,
+      "by_type": {
+        "research": {
+          "papers": 1044,
+          "citations": 4756
+        },
+        "review": {
+          "papers": 110,
+          "citations": 1268
+        },
+        "editorial": {
+          "papers": 75,
+          "citations": 98
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 54
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 21,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2025-11",
+      "rolling_if": 5.214,
+      "rolling_if_no_reviews": 4.607,
+      "papers": 1304,
+      "research": 1163,
+      "reviews": 141,
+      "citations": 6064,
+      "by_type": {
+        "research": {
+          "papers": 1080,
+          "citations": 4782
+        },
+        "review": {
+          "papers": 107,
+          "citations": 1134
+        },
+        "editorial": {
+          "papers": 73,
+          "citations": 92
+        },
+        "letter": {
+          "papers": 25,
+          "citations": 53
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 19,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2025-12",
+      "rolling_if": 5.011,
+      "rolling_if_no_reviews": 4.395,
+      "papers": 1288,
+      "research": 1150,
+      "reviews": 138,
+      "citations": 5763,
+      "by_type": {
+        "research": {
+          "papers": 1075,
+          "citations": 4570
+        },
+        "review": {
+          "papers": 99,
+          "citations": 1046
+        },
+        "editorial": {
+          "papers": 72,
+          "citations": 92
+        },
+        "letter": {
+          "papers": 25,
+          "citations": 53
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 17,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2026-01",
+      "rolling_if": 4.734,
+      "rolling_if_no_reviews": 4.205,
+      "papers": 1278,
+      "research": 1142,
+      "reviews": 136,
+      "citations": 5406,
+      "by_type": {
+        "research": {
+          "papers": 1068,
+          "citations": 4346
+        },
+        "review": {
+          "papers": 96,
+          "citations": 912
+        },
+        "editorial": {
+          "papers": 73,
+          "citations": 93
+        },
+        "letter": {
+          "papers": 25,
+          "citations": 53
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 16,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2026-02",
+      "rolling_if": 4.511,
+      "rolling_if_no_reviews": 3.988,
+      "papers": 1237,
+      "research": 1101,
+      "reviews": 136,
+      "citations": 4967,
+      "by_type": {
+        "research": {
+          "papers": 1032,
+          "citations": 3975
+        },
+        "review": {
+          "papers": 92,
+          "citations": 850
+        },
+        "editorial": {
+          "papers": 77,
+          "citations": 88
+        },
+        "letter": {
+          "papers": 22,
+          "citations": 52
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 14,
+          "citations": 2
+        }
+      }
+    }
+  ],
+  "timeseries_5yr": [
+    {
+      "month": "2022-01",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-02",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-03",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-04",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-05",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-06",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-07",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-08",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-09",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-10",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-11",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2022-12",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-01",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-02",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-03",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-04",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-05",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-06",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-07",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-08",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-09",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-10",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-11",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2023-12",
+      "rolling_if": 0.0,
+      "rolling_if_no_reviews": 0.0,
+      "papers": 0,
+      "research": 0,
+      "reviews": 0,
+      "citations": 0,
+      "by_type": {}
+    },
+    {
+      "month": "2024-01",
+      "rolling_if": 6.475,
+      "rolling_if_no_reviews": 6.311,
+      "papers": 65,
+      "research": 61,
+      "reviews": 4,
+      "citations": 395,
+      "by_type": {
+        "research": {
+          "papers": 57,
+          "citations": 326
+        },
+        "review": {
+          "papers": 5,
+          "citations": 68
+        },
+        "editorial": {
+          "papers": 3,
+          "citations": 1
+        },
+        "letter": {
+          "papers": 0,
+          "citations": 0
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 0,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2024-02",
+      "rolling_if": 6.04,
+      "rolling_if_no_reviews": 5.76,
+      "papers": 137,
+      "research": 125,
+      "reviews": 12,
+      "citations": 755,
+      "by_type": {
+        "research": {
+          "papers": 116,
+          "citations": 646
+        },
+        "review": {
+          "papers": 9,
+          "citations": 96
+        },
+        "editorial": {
+          "papers": 8,
+          "citations": 7
+        },
+        "letter": {
+          "papers": 3,
+          "citations": 6
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 1,
+          "citations": 0
+        }
+      }
+    },
+    {
+      "month": "2024-03",
+      "rolling_if": 5.32,
+      "rolling_if_no_reviews": 5.122,
+      "papers": 241,
+      "research": 222,
+      "reviews": 19,
+      "citations": 1181,
+      "by_type": {
+        "research": {
+          "papers": 206,
+          "citations": 1044
+        },
+        "review": {
+          "papers": 12,
+          "citations": 106
+        },
+        "editorial": {
+          "papers": 13,
+          "citations": 11
+        },
+        "letter": {
+          "papers": 8,
+          "citations": 19
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 2,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-04",
+      "rolling_if": 5.283,
+      "rolling_if_no_reviews": 4.833,
+      "papers": 354,
+      "research": 318,
+      "reviews": 36,
+      "citations": 1680,
+      "by_type": {
+        "research": {
+          "papers": 292,
+          "citations": 1387
+        },
+        "review": {
+          "papers": 23,
+          "citations": 243
+        },
+        "editorial": {
+          "papers": 21,
+          "citations": 19
+        },
+        "letter": {
+          "papers": 15,
+          "citations": 30
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 3,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-05",
+      "rolling_if": 5.236,
+      "rolling_if_no_reviews": 4.803,
+      "papers": 444,
+      "research": 390,
+      "reviews": 54,
+      "citations": 2042,
+      "by_type": {
+        "research": {
+          "papers": 357,
+          "citations": 1697
+        },
+        "review": {
+          "papers": 29,
+          "citations": 271
+        },
+        "editorial": {
+          "papers": 31,
+          "citations": 36
+        },
+        "letter": {
+          "papers": 18,
+          "citations": 37
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-06",
+      "rolling_if": 5.998,
+      "rolling_if_no_reviews": 5.493,
+      "papers": 543,
+      "research": 475,
+      "reviews": 68,
+      "citations": 2849,
+      "by_type": {
+        "research": {
+          "papers": 435,
+          "citations": 2371
+        },
+        "review": {
+          "papers": 38,
+          "citations": 388
+        },
+        "editorial": {
+          "papers": 41,
+          "citations": 49
+        },
+        "letter": {
+          "papers": 20,
+          "citations": 40
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-07",
+      "rolling_if": 5.827,
+      "rolling_if_no_reviews": 5.378,
+      "papers": 625,
+      "research": 550,
+      "reviews": 75,
+      "citations": 3205,
+      "by_type": {
+        "research": {
+          "papers": 500,
+          "citations": 2657
+        },
+        "review": {
+          "papers": 46,
+          "citations": 452
+        },
+        "editorial": {
+          "papers": 44,
+          "citations": 49
+        },
+        "letter": {
+          "papers": 26,
+          "citations": 46
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 9,
+          "citations": 1
+        }
+      }
+    },
+    {
+      "month": "2024-08",
+      "rolling_if": 5.777,
+      "rolling_if_no_reviews": 5.353,
+      "papers": 707,
+      "research": 620,
+      "reviews": 87,
+      "citations": 3582,
+      "by_type": {
+        "research": {
+          "papers": 567,
+          "citations": 2971
+        },
+        "review": {
+          "papers": 50,
+          "citations": 508
+        },
+        "editorial": {
+          "papers": 50,
+          "citations": 54
+        },
+        "letter": {
+          "papers": 27,
+          "citations": 47
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 13,
+          "citations": 2
+        }
+      }
+    },
+    {
+      "month": "2024-09",
+      "rolling_if": 5.802,
+      "rolling_if_no_reviews": 5.311,
+      "papers": 804,
+      "research": 701,
+      "reviews": 103,
+      "citations": 4067,
+      "by_type": {
+        "research": {
+          "papers": 643,
+          "citations": 3330
+        },
+        "review": {
+          "papers": 56,
+          "citations": 627
+        },
+        "editorial": {
+          "papers": 54,
+          "citations": 57
+        },
+        "letter": {
+          "papers": 32,
+          "citations": 50
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 19,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2024-10",
+      "rolling_if": 5.749,
+      "rolling_if_no_reviews": 5.199,
+      "papers": 893,
+      "research": 774,
+      "reviews": 119,
+      "citations": 4450,
+      "by_type": {
+        "research": {
+          "papers": 713,
+          "citations": 3620
+        },
+        "review": {
+          "papers": 61,
+          "citations": 693
+        },
+        "editorial": {
+          "papers": 61,
+          "citations": 73
+        },
+        "letter": {
+          "papers": 35,
+          "citations": 61
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 23,
+          "citations": 3
+        }
+      }
+    },
+    {
+      "month": "2024-11",
+      "rolling_if": 5.777,
+      "rolling_if_no_reviews": 5.202,
+      "papers": 953,
+      "research": 822,
+      "reviews": 131,
+      "citations": 4749,
+      "by_type": {
+        "research": {
+          "papers": 760,
+          "citations": 3870
+        },
+        "review": {
+          "papers": 63,
+          "citations": 723
+        },
+        "editorial": {
+          "papers": 68,
+          "citations": 89
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 63
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2024-12",
+      "rolling_if": 5.742,
+      "rolling_if_no_reviews": 5.146,
+      "papers": 1030,
+      "research": 884,
+      "reviews": 146,
+      "citations": 5076,
+      "by_type": {
+        "research": {
+          "papers": 820,
+          "citations": 4123
+        },
+        "review": {
+          "papers": 72,
+          "citations": 789
+        },
+        "editorial": {
+          "papers": 76,
+          "citations": 97
+        },
+        "letter": {
+          "papers": 36,
+          "citations": 63
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-01",
+      "rolling_if": 5.805,
+      "rolling_if_no_reviews": 5.201,
+      "papers": 1101,
+      "research": 946,
+      "reviews": 155,
+      "citations": 5492,
+      "by_type": {
+        "research": {
+          "papers": 877,
+          "citations": 4461
+        },
+        "review": {
+          "papers": 77,
+          "citations": 851
+        },
+        "editorial": {
+          "papers": 83,
+          "citations": 110
+        },
+        "letter": {
+          "papers": 38,
+          "citations": 66
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 26,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-02",
+      "rolling_if": 5.821,
+      "rolling_if_no_reviews": 5.238,
+      "papers": 1193,
+      "research": 1023,
+      "reviews": 170,
+      "citations": 5955,
+      "by_type": {
+        "research": {
+          "papers": 951,
+          "citations": 4870
+        },
+        "review": {
+          "papers": 81,
+          "citations": 888
+        },
+        "editorial": {
+          "papers": 91,
+          "citations": 114
+        },
+        "letter": {
+          "papers": 40,
+          "citations": 79
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 30,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-03",
+      "rolling_if": 5.806,
+      "rolling_if_no_reviews": 5.226,
+      "papers": 1283,
+      "research": 1094,
+      "reviews": 189,
+      "citations": 6352,
+      "by_type": {
+        "research": {
+          "papers": 1018,
+          "citations": 5214
+        },
+        "review": {
+          "papers": 87,
+          "citations": 923
+        },
+        "editorial": {
+          "papers": 97,
+          "citations": 125
+        },
+        "letter": {
+          "papers": 42,
+          "citations": 86
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 39,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-04",
+      "rolling_if": 5.744,
+      "rolling_if_no_reviews": 5.146,
+      "papers": 1365,
+      "research": 1162,
+      "reviews": 203,
+      "citations": 6674,
+      "by_type": {
+        "research": {
+          "papers": 1079,
+          "citations": 5459
+        },
+        "review": {
+          "papers": 90,
+          "citations": 978
+        },
+        "editorial": {
+          "papers": 98,
+          "citations": 129
+        },
+        "letter": {
+          "papers": 49,
+          "citations": 104
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 49,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-05",
+      "rolling_if": 5.677,
+      "rolling_if_no_reviews": 5.084,
+      "papers": 1434,
+      "research": 1220,
+      "reviews": 214,
+      "citations": 6926,
+      "by_type": {
+        "research": {
+          "papers": 1131,
+          "citations": 5671
+        },
+        "review": {
+          "papers": 93,
+          "citations": 1008
+        },
+        "editorial": {
+          "papers": 101,
+          "citations": 129
+        },
+        "letter": {
+          "papers": 54,
+          "citations": 114
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 55,
+          "citations": 4
+        }
+      }
+    },
+    {
+      "month": "2025-06",
+      "rolling_if": 6.918,
+      "rolling_if_no_reviews": 6.138,
+      "papers": 1519,
+      "research": 1294,
+      "reviews": 225,
+      "citations": 8952,
+      "by_type": {
+        "research": {
+          "papers": 1199,
+          "citations": 7246
+        },
+        "review": {
+          "papers": 100,
+          "citations": 1412
+        },
+        "editorial": {
+          "papers": 106,
+          "citations": 158
+        },
+        "letter": {
+          "papers": 56,
+          "citations": 126
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 58,
+          "citations": 10
+        }
+      }
+    },
+    {
+      "month": "2025-07",
+      "rolling_if": 6.92,
+      "rolling_if_no_reviews": 6.179,
+      "papers": 1613,
+      "research": 1383,
+      "reviews": 230,
+      "citations": 9571,
+      "by_type": {
+        "research": {
+          "papers": 1278,
+          "citations": 7747
+        },
+        "review": {
+          "papers": 105,
+          "citations": 1509
+        },
+        "editorial": {
+          "papers": 109,
+          "citations": 170
+        },
+        "letter": {
+          "papers": 62,
+          "citations": 135
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 59,
+          "citations": 10
+        }
+      }
+    },
+    {
+      "month": "2025-08",
+      "rolling_if": 6.875,
+      "rolling_if_no_reviews": 6.122,
+      "papers": 1690,
+      "research": 1446,
+      "reviews": 244,
+      "citations": 9941,
+      "by_type": {
+        "research": {
+          "papers": 1334,
+          "citations": 8035
+        },
+        "review": {
+          "papers": 110,
+          "citations": 1578
+        },
+        "editorial": {
+          "papers": 114,
+          "citations": 175
+        },
+        "letter": {
+          "papers": 67,
+          "citations": 142
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 65,
+          "citations": 11
+        }
+      }
+    },
+    {
+      "month": "2025-09",
+      "rolling_if": 6.981,
+      "rolling_if_no_reviews": 6.195,
+      "papers": 1789,
+      "research": 1527,
+      "reviews": 262,
+      "citations": 10660,
+      "by_type": {
+        "research": {
+          "papers": 1408,
+          "citations": 8597
+        },
+        "review": {
+          "papers": 118,
+          "citations": 1694
+        },
+        "editorial": {
+          "papers": 127,
+          "citations": 191
+        },
+        "letter": {
+          "papers": 69,
+          "citations": 166
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 67,
+          "citations": 12
+        }
+      }
+    },
+    {
+      "month": "2025-10",
+      "rolling_if": 7.012,
+      "rolling_if_no_reviews": 6.188,
+      "papers": 1873,
+      "research": 1596,
+      "reviews": 277,
+      "citations": 11191,
+      "by_type": {
+        "research": {
+          "papers": 1475,
+          "citations": 8997
+        },
+        "review": {
+          "papers": 123,
+          "citations": 1819
+        },
+        "editorial": {
+          "papers": 136,
+          "citations": 197
+        },
+        "letter": {
+          "papers": 69,
+          "citations": 166
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 70,
+          "citations": 12
+        }
+      }
+    },
+    {
+      "month": "2025-11",
+      "rolling_if": 6.993,
+      "rolling_if_no_reviews": 6.128,
+      "papers": 1968,
+      "research": 1678,
+      "reviews": 290,
+      "citations": 11734,
+      "by_type": {
+        "research": {
+          "papers": 1550,
+          "citations": 9361
+        },
+        "review": {
+          "papers": 135,
+          "citations": 1990
+        },
+        "editorial": {
+          "papers": 141,
+          "citations": 204
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 167
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 72,
+          "citations": 12
+        }
+      }
+    },
+    {
+      "month": "2025-12",
+      "rolling_if": 7.002,
+      "rolling_if_no_reviews": 6.17,
+      "papers": 2058,
+      "research": 1758,
+      "reviews": 300,
+      "citations": 12309,
+      "by_type": {
+        "research": {
+          "papers": 1620,
+          "citations": 9827
+        },
+        "review": {
+          "papers": 147,
+          "citations": 2096
+        },
+        "editorial": {
+          "papers": 147,
+          "citations": 206
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 167
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 74,
+          "citations": 13
+        }
+      }
+    },
+    {
+      "month": "2026-01",
+      "rolling_if": 6.954,
+      "rolling_if_no_reviews": 6.095,
+      "papers": 2164,
+      "research": 1851,
+      "reviews": 313,
+      "citations": 12871,
+      "by_type": {
+        "research": {
+          "papers": 1711,
+          "citations": 10225
+        },
+        "review": {
+          "papers": 154,
+          "citations": 2256
+        },
+        "editorial": {
+          "papers": 154,
+          "citations": 210
+        },
+        "letter": {
+          "papers": 70,
+          "citations": 167
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 75,
+          "citations": 13
+        }
+      }
+    },
+    {
+      "month": "2026-02",
+      "rolling_if": 6.848,
+      "rolling_if_no_reviews": 6.015,
+      "papers": 2293,
+      "research": 1969,
+      "reviews": 324,
+      "citations": 13483,
+      "by_type": {
+        "research": {
+          "papers": 1823,
+          "citations": 10745
+        },
+        "review": {
+          "papers": 162,
+          "citations": 2340
+        },
+        "editorial": {
+          "papers": 158,
+          "citations": 217
+        },
+        "letter": {
+          "papers": 73,
+          "citations": 168
+        },
+        "guideline": {
+          "papers": 0,
+          "citations": 0
+        },
+        "case_report": {
+          "papers": 0,
+          "citations": 0
+        },
+        "other": {
+          "papers": 77,
+          "citations": 13
+        }
+      }
     }
   ]
 }

@@ -3,6 +3,8 @@ IMPACT PubMed Fetcher
 Queries NCBI E-utilities to find papers by journal and fetch metadata.
 """
 
+import re
+import json
 import time
 import requests
 import xml.etree.ElementTree as ET
@@ -46,6 +48,15 @@ class PubMedFetcher:
             params["api_key"] = self.api_key
         return params
 
+    @staticmethod
+    def _safe_json(resp) -> Dict:
+        """Parse JSON, allowing stray control chars if needed (PubMed API quirk)."""
+        try:
+            return resp.json()
+        except Exception:
+            # strict=False allows control chars (\x00-\x1f) inside JSON strings
+            return json.loads(resp.text, strict=False)
+
     # ------------------------------------------------------------------ #
     #  ESearch — find PMIDs by journal
     # ------------------------------------------------------------------ #
@@ -54,44 +65,74 @@ class PubMedFetcher:
                        year_end: int) -> List[int]:
         """
         Search PubMed for all papers in a journal within a year range.
-        Returns list of PMIDs.
+        PubMed limits results to 9999 per query, so if the total exceeds that
+        we automatically split into per-year sub-queries.
+        Returns list of PMIDs (deduplicated).
+        """
+        pmids_set: set = set()
+        pmids_set.update(self._esearch_range(issn, year_start, year_end))
+        return list(pmids_set)
+
+    def _esearch_range(self, issn: str, year_start: int, year_end: int) -> List[int]:
+        """
+        Run ESearch for a year range. If the result exceeds 9999 records,
+        splits into individual years (and halves if a single year still exceeds limit).
         """
         query = f'{issn}[IS] AND {year_start}:{year_end}[PDAT]'
-        pmids = []
-        retstart = 0
-        retmax = 10000  # fetch in chunks
 
-        while True:
-            self.rate_limiter.wait()
-            params = {
+        # First: get just the count (retmax=0 is fast)
+        self.rate_limiter.wait()
+        resp = requests.get(
+            f"{PUBMED_BASE_URL}/esearch.fcgi",
+            params={
                 **self._base_params(),
                 "db": "pubmed",
                 "term": query,
-                "retmax": retmax,
-                "retstart": retstart,
-                "retmode": "json",
-            }
+                "retmax": 0,
+                "retmode": "xml",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        root = ET.fromstring(resp.content)
+        count_el = root.find("Count")
+        total_count = int(count_el.text) if count_el is not None else 0
 
-            resp = requests.get(
-                f"{PUBMED_BASE_URL}/esearch.fcgi", params=params, timeout=30
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        logger.info(
+            f"ESearch: {total_count} PMIDs for ISSN {issn} ({year_start}-{year_end})"
+        )
 
-            result = data.get("esearchresult", {})
-            id_list = result.get("idlist", [])
-            total_count = int(result.get("count", 0))
+        if total_count == 0:
+            return []
 
-            pmids.extend(int(pid) for pid in id_list)
-            logger.info(
-                f"ESearch: fetched {len(pmids)}/{total_count} PMIDs "
-                f"for ISSN {issn} ({year_start}-{year_end})"
-            )
+        # If too many for one query, split by year
+        if total_count > 9999 and year_start < year_end:
+            pmids: List[int] = []
+            for yr in range(year_start, year_end + 1):
+                pmids.extend(self._esearch_range(issn, yr, yr))
+            return pmids
 
-            retstart += retmax
-            if retstart >= total_count:
-                break
-
+        # Fetch all results (total_count <= 9999)
+        self.rate_limiter.wait()
+        resp = requests.get(
+            f"{PUBMED_BASE_URL}/esearch.fcgi",
+            params={
+                **self._base_params(),
+                "db": "pubmed",
+                "term": query,
+                "retmax": 9999,
+                "retstart": 0,
+                "retmode": "xml",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        root = ET.fromstring(resp.content)
+        pmids = [int(el.text) for el in root.findall(".//Id") if el.text]
+        logger.info(
+            f"ESearch: fetched {len(pmids)}/{total_count} PMIDs "
+            f"for ISSN {issn} ({year_start}-{year_end})"
+        )
         return pmids
 
     # ------------------------------------------------------------------ #
@@ -122,7 +163,7 @@ class PubMedFetcher:
                 f"{PUBMED_BASE_URL}/esummary.fcgi", params=params, timeout=60
             )
             resp.raise_for_status()
-            data = resp.json()
+            data = self._safe_json(resp)
 
             result = data.get("result", {})
 
@@ -231,6 +272,170 @@ class PubMedFetcher:
 
         date_iso = f"{year}-{month:02d}-{day:02d}"
         return year, month, date_iso
+
+    # ------------------------------------------------------------------ #
+    #  EFetch — author names and affiliations
+    # ------------------------------------------------------------------ #
+
+    def fetch_author_details(self, pmids: List[int],
+                             batch_size: int = 100) -> List[Dict]:
+        """
+        Fetch first and last author name + parsed affiliation for each PMID.
+        Uses PubMed EFetch XML.
+        Returns list of dicts ready for db.update_paper_authors_bulk().
+        """
+        results = []
+
+        for i in range(0, len(pmids), batch_size):
+            batch = pmids[i: i + batch_size]
+            batch_str = ",".join(str(p) for p in batch)
+
+            self.rate_limiter.wait()
+            resp = requests.get(
+                f"{PUBMED_BASE_URL}/efetch.fcgi",
+                params={
+                    **self._base_params(),
+                    "db": "pubmed",
+                    "id": batch_str,
+                    "retmode": "xml",
+                    "rettype": "abstract",
+                },
+                timeout=60,
+            )
+            resp.raise_for_status()
+
+            root = ET.fromstring(resp.content)
+            for article in root.findall(".//PubmedArticle"):
+                pmid_el = article.find(".//PMID")
+                if pmid_el is None:
+                    continue
+                pmid = int(pmid_el.text)
+
+                author_els = article.findall(".//AuthorList/Author")
+                if not author_els:
+                    results.append({
+                        "pmid": pmid,
+                        **{k: None for k in (
+                            "first_author_name", "first_author_institution",
+                            "first_author_city", "first_author_state",
+                            "first_author_country", "last_author_name",
+                            "last_author_institution", "last_author_city",
+                            "last_author_state", "last_author_country",
+                        )},
+                    })
+                    continue
+
+                def _extract(el):
+                    last = el.findtext("LastName") or ""
+                    initials = el.findtext("Initials") or ""
+                    name = f"{last} {initials}".strip() or None
+                    aff_raw = el.findtext(".//AffiliationInfo/Affiliation") or ""
+                    parsed = self._parse_affiliation(aff_raw)
+                    return name, parsed
+
+                first_name, first_aff = _extract(author_els[0])
+                last_name, last_aff = _extract(author_els[-1])
+
+                results.append({
+                    "pmid": pmid,
+                    "first_author_name":        first_name,
+                    "first_author_institution": first_aff.get("institution"),
+                    "first_author_city":        first_aff.get("city"),
+                    "first_author_state":       first_aff.get("state"),
+                    "first_author_country":     first_aff.get("country"),
+                    "last_author_name":         last_name,
+                    "last_author_institution":  last_aff.get("institution"),
+                    "last_author_city":         last_aff.get("city"),
+                    "last_author_state":        last_aff.get("state"),
+                    "last_author_country":      last_aff.get("country"),
+                })
+
+            logger.info(
+                f"EFetch authors: batch {i // batch_size + 1} "
+                f"({len(batch)} PMIDs, {len(results)} total)"
+            )
+
+        return results
+
+    @staticmethod
+    def _parse_affiliation(raw: str) -> Dict:
+        """
+        Parse a PubMed affiliation string into structured fields.
+        Returns dict: institution, city, state (US/Canada only), country.
+        All values may be None if not parseable.
+        """
+        if not raw:
+            return {"institution": None, "city": None,
+                    "state": None, "country": None}
+
+        DEPT_RE = re.compile(
+            r'^(dept\.?|department|division|div\.?|laboratory|lab\.?|'
+            r'center|centre|school|college|graduate|program|unit|section|'
+            r'group|institute of|institutes of)\b',
+            re.IGNORECASE,
+        )
+        US_NAMES  = {"USA", "United States", "US", "U.S.A.",
+                     "United States of America"}
+        CA_NAMES  = {"Canada"}
+
+        # Strip trailing email address
+        s = re.sub(r'\s*[\w.+-]+@[\w.-]+\.\w+\.?\s*$', '', raw)
+        s = s.strip().rstrip('.;').strip()
+
+        parts = [p.strip() for p in s.split(',') if p.strip()]
+
+        # Skip leading department / division tokens
+        start = 0
+        while start < len(parts) - 1 and DEPT_RE.match(parts[start]):
+            start += 1
+        parts = parts[start:]
+
+        out = {"institution": None, "city": None,
+               "state": None, "country": None}
+        if not parts:
+            return out
+
+        out["institution"] = parts[0]
+        if len(parts) == 1:
+            return out
+
+        # Country: last part, strip any trailing postal/zip tokens.
+        # Also handles "35205 USA" where zip precedes country name.
+        country_raw = re.sub(r'\s+\d[\d\s-]*$', '', parts[-1]).strip()
+        if re.match(r'^\d', country_raw):
+            # Starts with digit (e.g. "35205 USA") — extract trailing alpha word(s)
+            m_c = re.search(r'([A-Za-z].*)$', country_raw)
+            country_raw = m_c.group(1).strip() if m_c else ''
+        if country_raw and not re.match(r'^\d', country_raw):
+            out["country"] = country_raw
+
+        if len(parts) < 3:
+            return out
+
+        is_us = out["country"] in US_NAMES
+        is_ca = out["country"] in CA_NAMES
+
+        if is_us or is_ca:
+            # Penultimate part should be "ST" or "ST ZIPCODE" (including
+            # Canadian postal codes with spaces like "ON M5S 1A8")
+            state_part = parts[-2]
+            m = re.match(r'^([A-Z]{2})(?:\s+.*)?$', state_part)
+            if m:
+                out["state"] = m.group(1)
+                if len(parts) >= 4:
+                    out["city"] = parts[-3]
+            else:
+                # Doesn't look like a state — treat as city
+                out["city"] = re.sub(r'\s+\d{4,}$', '', state_part).strip() or None
+        else:
+            # International: penultimate part is city (strip postal codes)
+            city_raw = parts[-2]
+            c = re.sub(r'\s+\d[\d\s-]{3,}$', '', city_raw).strip()   # numeric postal
+            c = re.sub(r'\s+[A-Z]{1,2}\d[\w ]{2,}$', '', c).strip()  # UK/CA style
+            c = re.sub(r'\s+[A-Z0-9-]{4,}$', '', c).strip()           # generic
+            out["city"] = c if c and not re.match(r'^\d{4,}$', c) else None
+
+        return out
 
     def _classify_pub_type(self, pub_types: List[str]) -> str:
         """

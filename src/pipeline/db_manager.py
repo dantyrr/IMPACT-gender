@@ -313,6 +313,68 @@ class DatabaseManager:
         return [dict(r) for r in cursor.fetchall()]
 
     # ------------------------------------------------------------------ #
+    #  Author Data
+    # ------------------------------------------------------------------ #
+
+    def migrate_add_author_columns(self):
+        """Add first/last author columns to papers table (safe to call repeatedly)."""
+        new_columns = [
+            ("first_author_name",        "TEXT"),
+            ("first_author_institution", "TEXT"),
+            ("first_author_city",        "TEXT"),
+            ("first_author_state",       "TEXT"),
+            ("first_author_country",     "TEXT"),
+            ("last_author_name",         "TEXT"),
+            ("last_author_institution",  "TEXT"),
+            ("last_author_city",         "TEXT"),
+            ("last_author_state",        "TEXT"),
+            ("last_author_country",      "TEXT"),
+        ]
+        for col, col_type in new_columns:
+            try:
+                self.conn.execute(
+                    f"ALTER TABLE papers ADD COLUMN {col} {col_type}"
+                )
+            except Exception:
+                pass  # column already exists
+        self.conn.commit()
+
+    def get_pmids_missing_authors(self, journal_id: int = None) -> List[int]:
+        """Return PMIDs that have no author data yet."""
+        cursor = self.conn.cursor()
+        if journal_id is not None:
+            cursor.execute(
+                """SELECT pmid FROM papers
+                   WHERE first_author_name IS NULL AND journal_id = ?
+                   ORDER BY pmid""",
+                (journal_id,),
+            )
+        else:
+            cursor.execute(
+                "SELECT pmid FROM papers WHERE first_author_name IS NULL ORDER BY pmid"
+            )
+        return [row["pmid"] for row in cursor.fetchall()]
+
+    def update_paper_authors_bulk(self, author_rows: List[Dict]):
+        """Bulk-update author fields on the papers table."""
+        self.conn.executemany(
+            """UPDATE papers SET
+                 first_author_name        = :first_author_name,
+                 first_author_institution = :first_author_institution,
+                 first_author_city        = :first_author_city,
+                 first_author_state       = :first_author_state,
+                 first_author_country     = :first_author_country,
+                 last_author_name         = :last_author_name,
+                 last_author_institution  = :last_author_institution,
+                 last_author_city         = :last_author_city,
+                 last_author_state        = :last_author_state,
+                 last_author_country      = :last_author_country
+               WHERE pmid = :pmid""",
+            author_rows,
+        )
+        self.conn.commit()
+
+    # ------------------------------------------------------------------ #
     #  Housekeeping
     # ------------------------------------------------------------------ #
 

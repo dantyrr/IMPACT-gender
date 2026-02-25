@@ -93,13 +93,23 @@ def process_journal(issn: str, meta: dict, db: DatabaseManager,
         f"for {result['total_papers']} papers"
     )
 
+    # Step 6: Fetch author details for papers that don't have them yet
+    logger.info(f"Step 6: Fetching author details...")
+    pmids_needing_authors = db.get_pmids_missing_authors(journal_id)
+    if pmids_needing_authors:
+        author_rows = pubmed.fetch_author_details(pmids_needing_authors)
+        db.update_paper_authors_bulk(author_rows)
+        logger.info(f"  Stored author data for {len(author_rows)} papers")
+    else:
+        logger.info(f"  All papers already have author data")
+
     logger.info(f"Done with {name}!")
 
 
 def main():
     parser = argparse.ArgumentParser(description="IMPACT Data Pipeline")
-    parser.add_argument("--journal", type=str, default=None,
-                        help="Process single journal by slug (e.g., 'jci')")
+    parser.add_argument("--journal", type=str, default=None, nargs='+',
+                        help="Process one or more journals by slug (e.g., 'jci' or 'jci nejm')")
     parser.add_argument("--years", type=str, default=None,
                         help="Year range as START-END (e.g., '2022-2026')")
     args = parser.parse_args()
@@ -118,18 +128,20 @@ def main():
     # Initialize components
     db = DatabaseManager(DB_PATH)
     db.init_schema()
+    db.migrate_add_author_columns()
     pubmed = PubMedFetcher()
     icite = IciteFetcher()
     resolver = CitationResolver(db, icite)
 
     # Filter journals if --journal specified
     if args.journal:
+        slugs = set(args.journal)
         journals_to_process = {
             issn: meta for issn, meta in JOURNALS.items()
-            if meta.get("slug") == args.journal
+            if meta.get("slug") in slugs
         }
         if not journals_to_process:
-            logger.error(f"Unknown journal slug: {args.journal}")
+            logger.error(f"Unknown journal slug(s): {args.journal}")
             logger.info(f"Available: {[m['slug'] for m in JOURNALS.values()]}")
             sys.exit(1)
     else:

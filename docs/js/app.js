@@ -541,7 +541,18 @@ class IMPACTApp {
         // Step 1: fetch paper metadata from iCite
         const iciteMap = await this._fetchICite(pmids);
 
-        // Step 2: for each PMID, compute 24-month citations from publication date
+        // Collect all PMIDs that need PubMed date lookups (target papers + all their citing papers)
+        const allDatePmids = new Set(pmids.map(String));
+        for (const pmid of pmids) {
+            const p = iciteMap[String(pmid)];
+            if (p) for (const c of (p.cited_by || [])) allDatePmids.add(String(c));
+        }
+
+        // Step 2: fetch exact publication dates from PubMed ESummary
+        tableContainer.innerHTML = `<p class="loading-text">Fetching publication dates from PubMed (${allDatePmids.size} papers)…</p>`;
+        const pubmedDates = await this._fetchPubMedDates([...allDatePmids]);
+
+        // Step 3: for each PMID, compute exact 24-month citations
         const paperResults = [];
 
         for (const pmid of pmids) {
@@ -551,16 +562,34 @@ class IMPACTApp {
                 continue;
             }
 
-            const paperPubYear = paper.year;
+            const mainDate = pubmedDates[String(pmid)];
+            const mainPubYear = mainDate ? mainDate.year : paper.year;
+            const mainPubMonth = mainDate ? mainDate.month : null;
             let cit24mo = 0;
             const approx = false;
 
-            if (paperPubYear) {
-                // citedByPmidsByYear is [{pmid: year}, ...] — already has year per citation
-                const citedByPmidsByYear = paper.citedByPmidsByYear || [];
-                cit24mo = citedByPmidsByYear.filter(obj => {
+            if (mainPubYear && mainPubMonth) {
+                // Exact 24-month window: pub month through pub month + 23 months (inclusive)
+                const startTotMo = mainPubYear * 12 + (mainPubMonth - 1);
+                const endTotMo = startTotMo + 23;
+                for (const citPmid of (paper.cited_by || [])) {
+                    const d = pubmedDates[String(citPmid)];
+                    if (!d) continue;
+                    if (d.month !== null) {
+                        const citTotMo = d.year * 12 + (d.month - 1);
+                        if (citTotMo >= startTotMo && citTotMo <= endTotMo) cit24mo++;
+                    } else {
+                        // No month: include only if year is strictly interior to the window years
+                        const winStartYear = Math.floor(startTotMo / 12);
+                        const winEndYear = Math.floor(endTotMo / 12);
+                        if (d.year > winStartYear && d.year < winEndYear) cit24mo++;
+                    }
+                }
+            } else if (mainPubYear) {
+                // PubMed month unavailable — fall back to year-level approximation
+                cit24mo = (paper.citedByPmidsByYear || []).filter(obj => {
                     const yr = Object.values(obj)[0];
-                    return yr >= paperPubYear && yr <= paperPubYear + 2;
+                    return yr >= mainPubYear && yr <= mainPubYear + 2;
                 }).length;
             }
 
@@ -568,8 +597,8 @@ class IMPACTApp {
             const journalMatch = this._matchJournal(paper.journal);
             let journalRate = null;
             let journalRateMonth = null;
-            if (journalMatch && paperPubYear) {
-                const targetMonth = `${paperPubYear + 2}-01`;
+            if (journalMatch && mainPubYear) {
+                const targetMonth = `${mainPubYear + 2}-01`;
                 const rateInfo = await this._getJournalRateForPeriod(journalMatch.slug, targetMonth);
                 if (rateInfo) {
                     journalRate = rateInfo.rate;
@@ -584,7 +613,7 @@ class IMPACTApp {
                 found: true,
                 title: paper.title || '',
                 journal: paper.journal || '—',
-                year: paperPubYear || '—',
+                year: mainPubYear || '—',
                 total_citations: paper.citation_count || 0,
                 citations_24mo: cit24mo,
                 approx,
@@ -665,6 +694,54 @@ class IMPACTApp {
         return out;
     }
 
+    async _fetchPubMedDates(pmids) {
+        // Fetch exact publication dates from PubMed ESummary.
+        // Returns {pmid_str: {year, month}} where month is 1-12 or null.
+        const out = {};
+        if (!pmids || pmids.length === 0) return out;
+
+        const MONTH_MAP = { Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12 };
+        const parseDate = s => {
+            if (!s) return null;
+            const parts = s.trim().split(/\s+/);
+            const year = parseInt(parts[0]);
+            if (!year || year < 1900) return null;
+            let month = null;
+            if (parts.length >= 2) {
+                const mp = parts[1].split('-')[0];
+                month = MONTH_MAP[mp] ?? (parseInt(mp) || null);
+            }
+            return { year, month };
+        };
+        // Prefer pubdate (print); use epubdate only if pubdate lacks a month
+        const bestDate = (pd, epd) => {
+            if (pd && pd.month) return pd;
+            if (epd && epd.month) return epd;
+            return pd || epd;
+        };
+
+        const batchSize = 200;
+        for (let i = 0; i < pmids.length; i += batchSize) {
+            const batch = pmids.slice(i, i + batchSize);
+            try {
+                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${batch.join(',')}&retmode=json&tool=IMPACT&email=impact-tool@umich.edu`;
+                const resp = await fetch(url);
+                if (!resp.ok) continue;
+                const data = await resp.json();
+                const result = data.result || {};
+                for (const pid of (result.uids || [])) {
+                    const art = result[pid];
+                    if (!art || art.error) continue;
+                    const date = bestDate(parseDate(art.pubdate), parseDate(art.epubdate));
+                    if (date) out[String(pid)] = date;
+                }
+            } catch (e) {
+                console.error('PubMed ESummary fetch error:', e);
+            }
+        }
+        return out;
+    }
+
     _matchJournal(journalStr) {
         if (!journalStr) return null;
         const s = journalStr.toLowerCase().trim();
@@ -716,7 +793,7 @@ class IMPACTApp {
 
         const note = document.createElement('p');
         note.className = 'data-note';
-        note.textContent = '24-mo Citations: citations received in the publication year through 2 years later (year-level approximation; iCite does not provide citation month). Journal Rate (benchmark): the journal\'s rolling citation rate at approximately 24 months after the paper was published — the same period when most of the paper\'s 24-mo citations were accumulating.';
+        note.textContent = '24-mo Citations: citations received within exactly 24 months of publication, using PubMed publication dates for month-level precision. Journal Rate (benchmark): the journal\'s rolling citation rate at approximately 24 months after the paper was published — the same period when most of the paper\'s 24-mo citations were accumulating.';
         container.appendChild(note);
     }
 

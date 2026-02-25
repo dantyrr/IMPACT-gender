@@ -501,6 +501,15 @@ class IMPACTApp {
             'elife': 'elife',
             'j am heart assoc': 'jaha',
             'journal of the american heart association': 'jaha',
+            'autophagy': 'autophagy',
+            'redox biol': 'redox-biology',
+            'redox biology': 'redox-biology',
+            'sci immunol': 'science-immunology',
+            'science immunology': 'science-immunology',
+            'science': 'science',
+            'nature': 'nature',
+            'nat commun': 'nature-communications',
+            'nature communications': 'nature-communications',
         };
     }
 
@@ -554,7 +563,7 @@ class IMPACTApp {
                 const citedByMap = await this._fetchICite(fetchList);
                 // Count citations received in the 24 months after publication
                 const recentCount = Object.values(citedByMap).filter(
-                    p => p.year != null && p.year >= paperPubYear && p.year < paperPubYear + 2
+                    p => p.year != null && p.year >= paperPubYear && p.year <= paperPubYear + 2
                 ).length;
                 cit24mo = approx
                     ? Math.round(recentCount * citedBy.length / fetchList.length)

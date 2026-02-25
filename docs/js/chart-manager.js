@@ -395,8 +395,8 @@ class ChartManager {
         const labels = papers.map(p => `${p.pmid} (${p.year})`);
         const datasets = [
             {
-                label: '24-mo Citations (this paper)',
-                data: papers.map(p => p.citations_24mo),
+                label: 'Paper Cit/yr (2-yr window)',
+                data: papers.map(p => p.citations_24mo / 2),
                 backgroundColor: 'rgba(26, 82, 118, 0.7)',
                 borderColor: this.palette[0],
                 borderWidth: 1,
@@ -405,7 +405,7 @@ class ChartManager {
 
         if (papers.some(p => p.journal_rate != null)) {
             datasets.push({
-                label: 'Journal 24-mo Rate (benchmark)',
+                label: 'Journal Rate benchmark (cit/yr)',
                 data: papers.map(p => p.journal_rate),
                 backgroundColor: 'rgba(39, 174, 96, 0.5)',
                 borderColor: this.palette[1],
@@ -422,7 +422,7 @@ class ChartManager {
                 responsive: true,
                 indexAxis: horizontal ? 'y' : 'x',
                 plugins: {
-                    title: { display: true, text: '24-Month Citations: Paper vs Journal Benchmark', font: { size: 14 } },
+                    title: { display: true, text: 'Citations/yr (2-yr window): Paper vs Journal Benchmark', font: { size: 14 } },
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {

@@ -552,22 +552,16 @@ class IMPACTApp {
             }
 
             const paperPubYear = paper.year;
-            const citedBy = paper.cited_by || [];
             let cit24mo = 0;
-            let approx = false;
+            const approx = false;
 
-            if (citedBy.length > 0 && paperPubYear) {
-                tableContainer.innerHTML = `<p class="loading-text">Fetching citation dates for PMID ${pmid} (${citedBy.length} citations)…</p>`;
-                const fetchList = citedBy.length > 600 ? citedBy.slice(-600) : citedBy;
-                if (citedBy.length > 600) approx = true;
-                const citedByMap = await this._fetchICite(fetchList);
-                // Count citations received in the 24 months after publication
-                const recentCount = Object.values(citedByMap).filter(
-                    p => p.year != null && p.year >= paperPubYear && p.year <= paperPubYear + 2
-                ).length;
-                cit24mo = approx
-                    ? Math.round(recentCount * citedBy.length / fetchList.length)
-                    : recentCount;
+            if (paperPubYear) {
+                // citedByPmidsByYear is [{pmid: year}, ...] — already has year per citation
+                const citedByPmidsByYear = paper.citedByPmidsByYear || [];
+                cit24mo = citedByPmidsByYear.filter(obj => {
+                    const yr = Object.values(obj)[0];
+                    return yr >= paperPubYear && yr <= paperPubYear + 2;
+                }).length;
             }
 
             // Get time-matched journal benchmark (journal rate ~24 months after publication)
@@ -722,7 +716,7 @@ class IMPACTApp {
 
         const note = document.createElement('p');
         note.className = 'data-note';
-        note.textContent = '24-mo Citations: citations received in the 24 months after the paper\'s publication year (from iCite). ~ = estimate (>600 citations sampled). Journal Rate (benchmark): the journal\'s rolling citation rate at approximately 24 months after the paper was published — the same period when most of the paper\'s 24-mo citations were accumulating.';
+        note.textContent = '24-mo Citations: citations received in the publication year through 2 years later (year-level approximation; iCite does not provide citation month). Journal Rate (benchmark): the journal\'s rolling citation rate at approximately 24 months after the paper was published — the same period when most of the paper\'s 24-mo citations were accumulating.';
         container.appendChild(note);
     }
 

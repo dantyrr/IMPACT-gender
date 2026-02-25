@@ -16,6 +16,13 @@ except ImportError:
 PUBMED_API_KEY = os.getenv("PUBMED_API_KEY", "")
 PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "dantyrr@gmail.com")
 
+# --- Cloudflare R2 ---
+R2_ACCOUNT_ID      = os.getenv("R2_ACCOUNT_ID", "")
+R2_BUCKET_NAME     = os.getenv("R2_BUCKET_NAME", "impact-data")
+R2_ACCESS_KEY_ID   = os.getenv("R2_ACCESS_KEY_ID", "")
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
+R2_PUBLIC_URL      = os.getenv("R2_PUBLIC_URL", "")
+
 # --- Rate Limits (requests per second) ---
 PUBMED_RATE_LIMIT = 10 if PUBMED_API_KEY else 3
 ICITE_RATE_LIMIT = 5  # Conservative; no official limit documented

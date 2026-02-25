@@ -313,10 +313,13 @@ class PubMedFetcher:
 
                 author_els = article.findall(".//AuthorList/Author")
                 if not author_els:
+                    # Use "" as sentinel so get_pmids_missing_authors (IS NULL)
+                    # won't re-fetch this paper on future runs.
                     results.append({
                         "pmid": pmid,
+                        "first_author_name": "",
                         **{k: None for k in (
-                            "first_author_name", "first_author_institution",
+                            "first_author_institution",
                             "first_author_city", "first_author_state",
                             "first_author_country", "last_author_name",
                             "last_author_institution", "last_author_city",

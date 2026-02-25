@@ -355,6 +355,24 @@ class DatabaseManager:
             )
         return [row["pmid"] for row in cursor.fetchall()]
 
+    def get_paper_authors_for_journal(self, journal_id: int) -> List[Dict]:
+        """Return all papers with real author data for a journal (excludes sentinels)."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """SELECT pmid,
+                      first_author_name, first_author_institution,
+                      first_author_city, first_author_state, first_author_country,
+                      last_author_name, last_author_institution,
+                      last_author_city, last_author_state, last_author_country
+               FROM papers
+               WHERE journal_id = ?
+                 AND first_author_name IS NOT NULL
+                 AND first_author_name != ''
+               ORDER BY pmid""",
+            (journal_id,),
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
     def update_paper_authors_bulk(self, author_rows: List[Dict]):
         """Bulk-update author fields on the papers table."""
         self.conn.executemany(

@@ -103,6 +103,10 @@ def main():
             official_if=OFFICIAL_JIFS.get(issn),
         )
 
+        # Export per-journal author lookup JSON
+        author_rows = db.get_paper_authors_for_journal(jid)
+        exporter.export_journal_authors(slug, author_rows)
+
         # Add to index
         index_entries.append({
             "slug": slug,

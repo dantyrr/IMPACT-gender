@@ -113,6 +113,71 @@ class JSONExporter:
         logger.info(f"Exported index → {filepath} ({len(journals)} journals)")
         return filepath
 
+    @staticmethod
+    def _format_affiliation(row: Dict, prefix: str) -> str:
+        """Build a readable affiliation string from structured DB fields."""
+        parts = []
+        inst = row.get(f"{prefix}_institution")
+        if inst:
+            parts.append(inst)
+        city = row.get(f"{prefix}_city")
+        state = row.get(f"{prefix}_state")
+        city_state = ", ".join(filter(None, [city, state]))
+        if city_state:
+            parts.append(city_state)
+        country = row.get(f"{prefix}_country")
+        if country:
+            parts.append(country)
+        return ", ".join(parts) if parts else ""
+
+    def export_journal_authors(self, slug: str, rows: List[Dict]) -> str:
+        """
+        Export per-PMID author data for one journal.
+
+        Args:
+            slug: Journal slug (e.g., 'jci')
+            rows: Records from db.get_paper_authors_for_journal()
+
+        Returns:
+            Path to the exported file
+        """
+        authors_dir = os.path.join(self.data_dir, "authors")
+        os.makedirs(authors_dir, exist_ok=True)
+
+        entries = {}
+        for row in rows:
+            first_name = row.get("first_author_name") or ""
+            last_name = row.get("last_author_name") or ""
+            first_aff = self._format_affiliation(row, "first_author")
+            last_aff = self._format_affiliation(row, "last_author")
+
+            entry = {}
+            if first_name:
+                entry["f"] = first_name
+            if first_aff:
+                entry["fa"] = first_aff
+            if last_name:
+                entry["l"] = last_name
+            if last_aff:
+                entry["la"] = last_aff
+
+            if entry:
+                entries[str(row["pmid"])] = entry
+
+        data = {
+            "slug": slug,
+            "generated": datetime.now().strftime("%Y-%m-%d"),
+            "authors": entries,
+        }
+
+        filepath = os.path.join(authors_dir, f"{slug}.json")
+        with open(filepath, "w") as f:
+            json.dump(data, f, separators=(",", ":"))  # compact, no whitespace
+
+        size_kb = os.path.getsize(filepath) // 1024
+        logger.info(f"Exported author data → {filepath} ({len(entries)} entries, {size_kb} KB)")
+        return filepath
+
     def export_author_profile(self, author_name: str,
                                metrics: Dict) -> str:
         """Export author metrics as JSON."""

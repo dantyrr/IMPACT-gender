@@ -1,6 +1,6 @@
 {
-  "generated": "2026-02-24T16:56:21",
-  "journal_count": 18,
+  "generated": "2026-02-24T22:32:28",
+  "journal_count": 24,
   "journals": [
     {
       "slug": "aging-cell",
@@ -22,6 +22,17 @@
       "latest_if_no_reviews": 5.079,
       "official_jif": 39.2,
       "paper_count": 1158,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "autophagy",
+      "name": "Autophagy",
+      "issn": "1554-8627",
+      "abbreviation": "Autophagy",
+      "latest_if": 12.722,
+      "latest_if_no_reviews": 9.878,
+      "official_jif": 14.9,
+      "paper_count": 543,
       "latest_month": "2026-02"
     },
     {
@@ -124,6 +135,17 @@
       "latest_month": "2026-02"
     },
     {
+      "slug": "nature",
+      "name": "Nature",
+      "issn": "0028-0836",
+      "abbreviation": "Nature",
+      "latest_if": 32.203,
+      "latest_if_no_reviews": 29.159,
+      "official_jif": 50.5,
+      "paper_count": 8132,
+      "latest_month": "2026-02"
+    },
+    {
       "slug": "nature-aging",
       "name": "Nature Aging",
       "issn": "2662-8465",
@@ -132,6 +154,17 @@
       "latest_if_no_reviews": 12.451,
       "official_jif": 17.0,
       "paper_count": 419,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nature-communications",
+      "name": "Nature Communications",
+      "issn": "2041-1723",
+      "abbreviation": "Nat Commun",
+      "latest_if": 0.199,
+      "latest_if_no_reviews": 0.189,
+      "official_jif": 14.7,
+      "paper_count": 17394,
       "latest_month": "2026-02"
     },
     {
@@ -165,6 +198,39 @@
       "latest_if_no_reviews": 29.713,
       "official_jif": 96.2,
       "paper_count": 2731,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "redox-biology",
+      "name": "Redox Biology",
+      "issn": "2213-2317",
+      "abbreviation": "Redox Biol",
+      "latest_if": 16.772,
+      "latest_if_no_reviews": 13.687,
+      "official_jif": 11.4,
+      "paper_count": 865,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "science",
+      "name": "Science",
+      "issn": "0036-8075",
+      "abbreviation": "Science",
+      "latest_if": 1.617,
+      "latest_if_no_reviews": 1.501,
+      "official_jif": 44.7,
+      "paper_count": 3672,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "science-immunology",
+      "name": "Science Immunology",
+      "issn": "2470-9468",
+      "abbreviation": "Sci Immunol",
+      "latest_if": 14.157,
+      "latest_if_no_reviews": 13.056,
+      "official_jif": 17.6,
+      "paper_count": 323,
       "latest_month": "2026-02"
     },
     {

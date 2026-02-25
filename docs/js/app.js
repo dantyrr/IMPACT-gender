@@ -6,6 +6,7 @@ class IMPACTApp {
     constructor() {
         this.journals = [];
         this.journalDataCache = {};
+        this.authorDataCache = {};  // slug → {pmid: {f,fa,l,la}} or null if not available
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -552,9 +553,9 @@ class IMPACTApp {
         tableContainer.innerHTML = `<p class="loading-text">Fetching publication dates from PubMed (${allDatePmids.size} papers)…</p>`;
         const pubmedDates = await this._fetchPubMedDates([...allDatePmids]);
 
-        // Step 3: fetch author details (name + affiliation) for target papers only
-        tableContainer.innerHTML = `<p class="loading-text">Fetching author details from PubMed…</p>`;
-        const authorDetails = await this._fetchPubMedAuthors(pmids);
+        // Step 3: resolve author details — DB-cached first, live EFetch fallback
+        tableContainer.innerHTML = `<p class="loading-text">Fetching author details…</p>`;
+        const authorDetails = await this._resolveAuthors(pmids, iciteMap);
 
         // Step 4: for each PMID, compute exact 24-month citations
         const paperResults = [];
@@ -746,6 +747,59 @@ class IMPACTApp {
                 console.error('PubMed ESummary fetch error:', e);
             }
         }
+        return out;
+    }
+
+    async _loadAuthorData(slug) {
+        // Returns {pmid_str: {f,fa,l,la}} or null if not available.
+        // Results are cached so each journal file is fetched at most once.
+        if (Object.prototype.hasOwnProperty.call(this.authorDataCache, slug)) {
+            return this.authorDataCache[slug];
+        }
+        try {
+            const resp = await fetch(`data/authors/${slug}.json`);
+            if (!resp.ok) { this.authorDataCache[slug] = null; return null; }
+            const d = await resp.json();
+            this.authorDataCache[slug] = d.authors || null;
+            return this.authorDataCache[slug];
+        } catch (e) {
+            this.authorDataCache[slug] = null;
+            return null;
+        }
+    }
+
+    async _resolveAuthors(pmids, iciteMap) {
+        // Returns {pmid_str: {first: {name, affiliation}, last: {name, affiliation}}}.
+        // Checks pre-fetched per-journal author JSON first; falls back to live EFetch
+        // for PMIDs from untracked journals or those not found in the JSON.
+        const out = {};
+        const needLive = [];
+
+        for (const pmid of pmids) {
+            const paper = iciteMap[String(pmid)];
+            const slug = paper ? this._matchJournal(paper.journal)?.slug : null;
+            let found = false;
+
+            if (slug) {
+                const authorData = await this._loadAuthorData(slug);
+                if (authorData && authorData[String(pmid)]) {
+                    const d = authorData[String(pmid)];
+                    out[String(pmid)] = {
+                        first: { name: d.f || '', affiliation: d.fa || '' },
+                        last:  { name: d.l || '', affiliation: d.la || '' },
+                    };
+                    found = true;
+                }
+            }
+
+            if (!found) needLive.push(pmid);
+        }
+
+        if (needLive.length > 0) {
+            const live = await this._fetchPubMedAuthors(needLive);
+            Object.assign(out, live);
+        }
+
         return out;
     }
 

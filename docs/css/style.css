@@ -449,6 +449,95 @@ canvas {
     margin: 1.5rem 0;
 }
 
+/* ---- Journal Picker ---- */
+
+.journal-picker {
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+
+.picker-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+
+.picker-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.4rem 0.3rem 0.65rem;
+    background: #eaf2f8;
+    border: 1px solid var(--primary-light);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+}
+
+.picker-chip-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--text-light);
+    padding: 0 0.15rem;
+    margin-left: 0.1rem;
+    transition: color 0.15s;
+}
+
+.picker-chip-remove:hover {
+    color: var(--danger);
+}
+
+.picker-input-wrap {
+    position: relative;
+}
+
+.picker-input {
+    width: 100%;
+    padding: 0.55rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.picker-input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+}
+
+.picker-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-hover);
+    z-index: 200;
+    display: none;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.picker-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.1s;
+}
+
+.picker-option:hover {
+    background: #f0f6fc;
+}
+
 /* ---- About ---- */
 
 .about-content {

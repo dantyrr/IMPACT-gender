@@ -86,22 +86,10 @@ class IMPACTApp {
     // ---- Journal Trends Comparison ----
 
     setupJournalTrendsPanel() {
-        const container = document.getElementById('jc-journal-checkboxes');
-        this.journals.forEach((journal, idx) => {
-            const color = chartManager.palette[idx % chartManager.palette.length];
-            const label = document.createElement('label');
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.value = journal.slug;
-            cb.addEventListener('change', () => this.updateJournalsTrendsChart());
-            const dot = document.createElement('span');
-            dot.className = 'color-dot';
-            dot.style.background = color;
-            label.appendChild(cb);
-            label.appendChild(dot);
-            label.appendChild(document.createTextNode(journal.name));
-            container.appendChild(label);
-        });
+        this.jcPicker = new JournalPicker(
+            'jc-picker', this.journals, chartManager.palette,
+            () => this.updateJournalsTrendsChart()
+        );
 
         document.querySelectorAll('#jc-type-checkboxes input').forEach(cb => {
             cb.addEventListener('change', () => this.updateJournalsTrendsChart());
@@ -114,9 +102,7 @@ class IMPACTApp {
     }
 
     async updateJournalsTrendsChart() {
-        const checkedJournals = Array.from(
-            document.querySelectorAll('#jc-journal-checkboxes input:checked')
-        ).map(cb => cb.value);
+        const checkedJournals = this.jcPicker.getSelected();
 
         const checkedTypes = Array.from(
             document.querySelectorAll('#jc-type-checkboxes input:checked')
@@ -377,27 +363,16 @@ class IMPACTApp {
     // ---- Compare ----
 
     setupCompare() {
-        const container = document.getElementById('compare-checkboxes');
-        container.innerHTML = '';
+        this.comparePicker = new JournalPicker(
+            'compare-picker', this.journals, chartManager.palette,
+            () => this.updateComparison()
+        );
 
-        this.journals.forEach(journal => {
-            const label = document.createElement('label');
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.value = journal.slug;
-            cb.addEventListener('change', () => this.updateComparison());
-            label.appendChild(cb);
-            label.appendChild(document.createTextNode(journal.name));
-            container.appendChild(label);
-        });
-
-        // Window toggle
         this._setupToggleGroup('compare-window-toggle', (windowKey) => {
             this.compareWindow = windowKey;
             this.updateComparison();
         }, 'data-window');
 
-        // Metric toggle
         this._setupToggleGroup('compare-metric-toggle', (mode) => {
             this.compareMetric = mode;
             this.updateComparison();
@@ -405,9 +380,7 @@ class IMPACTApp {
     }
 
     async updateComparison() {
-        const checked = Array.from(
-            document.querySelectorAll('#compare-checkboxes input:checked')
-        ).map(cb => cb.value);
+        const checked = this.comparePicker.getSelected();
 
         const tableContainer = document.getElementById('compare-table-container');
 

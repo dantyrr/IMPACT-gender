@@ -552,7 +552,11 @@ class IMPACTApp {
         tableContainer.innerHTML = `<p class="loading-text">Fetching publication dates from PubMed (${allDatePmids.size} papers)…</p>`;
         const pubmedDates = await this._fetchPubMedDates([...allDatePmids]);
 
-        // Step 3: for each PMID, compute exact 24-month citations
+        // Step 3: fetch author details (name + affiliation) for target papers only
+        tableContainer.innerHTML = `<p class="loading-text">Fetching author details from PubMed…</p>`;
+        const authorDetails = await this._fetchPubMedAuthors(pmids);
+
+        // Step 4: for each PMID, compute exact 24-month citations
         const paperResults = [];
 
         for (const pmid of pmids) {
@@ -608,6 +612,7 @@ class IMPACTApp {
                 }
             }
 
+            const authors = authorDetails[String(pmid)] || {};
             paperResults.push({
                 pmid,
                 found: true,
@@ -620,6 +625,8 @@ class IMPACTApp {
                 journal_name: journalMatch ? journalMatch.name : null,
                 journal_rate: journalRate,
                 journal_rate_month: journalRateMonth,
+                first_author: authors.first || null,
+                last_author: authors.last || null,
             });
         }
 
@@ -742,6 +749,59 @@ class IMPACTApp {
         return out;
     }
 
+    async _fetchPubMedAuthors(pmids) {
+        // Fetch first/last author name + affiliation via EFetch XML.
+        // Returns {pmid_str: {first: {name, affiliation}, last: {name, affiliation}}}.
+        const out = {};
+        if (!pmids || pmids.length === 0) return out;
+
+        const batchSize = 50; // XML responses are larger; use smaller batches
+        for (let i = 0; i < pmids.length; i += batchSize) {
+            const batch = pmids.slice(i, i + batchSize);
+            try {
+                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${batch.join(',')}&retmode=xml&rettype=abstract&tool=IMPACT&email=impact-tool@umich.edu`;
+                const resp = await fetch(url);
+                if (!resp.ok) continue;
+                const text = await resp.text();
+                const xml = new DOMParser().parseFromString(text, 'application/xml');
+                for (const article of xml.querySelectorAll('PubmedArticle')) {
+                    const pmid = article.querySelector('PMID')?.textContent?.trim();
+                    if (!pmid) continue;
+                    const authorEls = [...article.querySelectorAll('AuthorList > Author')];
+                    if (!authorEls.length) continue;
+                    const parseAuthor = el => {
+                        const last = el.querySelector('LastName')?.textContent || '';
+                        const initials = el.querySelector('Initials')?.textContent || '';
+                        const aff = el.querySelector('AffiliationInfo > Affiliation')?.textContent || '';
+                        return {
+                            name: [last, initials].filter(Boolean).join(' '),
+                            affiliation: this._cleanAffiliation(aff),
+                        };
+                    };
+                    out[pmid] = {
+                        first: parseAuthor(authorEls[0]),
+                        last: parseAuthor(authorEls[authorEls.length - 1]),
+                    };
+                }
+            } catch (e) {
+                console.error('PubMed EFetch error:', e);
+            }
+        }
+        return out;
+    }
+
+    _cleanAffiliation(aff) {
+        if (!aff) return '';
+        // Remove trailing email address
+        let s = aff.replace(/\s*[\w.+-]+@[\w.-]+\.\w+\.?\s*$/, '').trim().replace(/[.;]+$/, '').trim();
+        // Skip leading department/division/lab components so we get institution + location
+        const deptPattern = /^(dept\.?|department|division|div\.?|laboratory|lab\.?|center|centre|school|college|graduate|program|unit|section|group|institute)\b/i;
+        const parts = s.split(',').map(p => p.trim()).filter(Boolean);
+        let start = 0;
+        while (start < parts.length - 1 && deptPattern.test(parts[start])) start++;
+        return parts.slice(start).join(', ');
+    }
+
     _matchJournal(journalStr) {
         if (!journalStr) return null;
         const s = journalStr.toLowerCase().trim();
@@ -779,6 +839,8 @@ class IMPACTApp {
             total: p.found ? p.total_citations : null,
             journal_rate: p.found ? p.journal_rate : null,
             benchmark_month: p.found ? (p.journal_rate_month || (p.journal_rate != null ? 'latest' : '—')) : '—',
+            first_author: p.found && p.first_author ? `${p.first_author.name}${p.first_author.affiliation ? ' — ' + p.first_author.affiliation : ''}` : '—',
+            last_author: p.found && p.last_author ? `${p.last_author.name}${p.last_author.affiliation ? ' — ' + p.last_author.affiliation : ''}` : '—',
         }));
 
         container.appendChild(UIHelpers.createTable(rows, [
@@ -791,6 +853,8 @@ class IMPACTApp {
             { key: 'total', label: 'Total Citations', format: UIHelpers.formatInt },
             { key: 'journal_rate', label: 'Journal Rate (benchmark)', format: UIHelpers.formatIF },
             { key: 'benchmark_month', label: 'Benchmark month' },
+            { key: 'first_author', label: 'First Author' },
+            { key: 'last_author', label: 'Last Author' },
         ]));
 
         const note = document.createElement('p');

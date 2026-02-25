@@ -626,14 +626,14 @@ class IMPACTApp {
         // Summary metrics
         const found = paperResults.filter(p => p.found);
         const totalCites = found.reduce((s, p) => s + p.total_citations, 0);
-        const avg24mo = found.length > 0
-            ? found.reduce((s, p) => s + p.citations_24mo, 0) / found.length
+        const avgCitPerYr = found.length > 0
+            ? found.reduce((s, p) => s + p.citations_24mo, 0) / found.length / 2
             : 0;
 
         document.getElementById('author-papers').textContent = `${found.length} / ${pmids.length}`;
         document.getElementById('author-cites').textContent = UIHelpers.formatInt(totalCites);
         document.getElementById('author-avg').textContent = found.length > 0 ? UIHelpers.formatIF(totalCites / found.length) : '—';
-        document.getElementById('author-weighted-if').textContent = found.length > 0 ? UIHelpers.formatIF(avg24mo) : '—';
+        document.getElementById('author-weighted-if').textContent = found.length > 0 ? UIHelpers.formatIF(avgCitPerYr) : '—';
 
         this._renderAuthorTable(tableContainer, paperResults);
 
@@ -775,6 +775,7 @@ class IMPACTApp {
             journal: p.found ? p.journal : '—',
             year: p.found ? String(p.year) : '—',
             cit24mo: p.found ? `${p.approx ? '~' : ''}${p.citations_24mo}` : '—',
+            cit_per_yr: p.found ? p.citations_24mo / 2 : null,
             total: p.found ? p.total_citations : null,
             journal_rate: p.found ? p.journal_rate : null,
             benchmark_month: p.found ? (p.journal_rate_month || (p.journal_rate != null ? 'latest' : '—')) : '—',
@@ -786,6 +787,7 @@ class IMPACTApp {
             { key: 'journal', label: 'Journal' },
             { key: 'year', label: 'Published' },
             { key: 'cit24mo', label: '24-mo Citations' },
+            { key: 'cit_per_yr', label: 'Cit/yr (2-yr)', format: UIHelpers.formatIF },
             { key: 'total', label: 'Total Citations', format: UIHelpers.formatInt },
             { key: 'journal_rate', label: 'Journal Rate (benchmark)', format: UIHelpers.formatIF },
             { key: 'benchmark_month', label: 'Benchmark month' },
@@ -793,7 +795,7 @@ class IMPACTApp {
 
         const note = document.createElement('p');
         note.className = 'data-note';
-        note.textContent = '24-mo Citations: citations received within exactly 24 months of publication, using PubMed publication dates for month-level precision. Journal Rate (benchmark): the journal\'s rolling citation rate at approximately 24 months after the paper was published — the same period when most of the paper\'s 24-mo citations were accumulating.';
+        note.textContent = '24-mo Citations: total citations received within exactly 24 months of publication (PubMed dates). Cit/yr (2-yr): 24-mo citations ÷ 2 — the paper\'s annualized citation rate, directly comparable to the Journal Rate benchmark. Journal Rate (benchmark): the journal\'s rolling citation rate (citations per paper per year) at ~24 months after publication — computed the same way as a traditional 2-yr JIF.';
         container.appendChild(note);
     }
 

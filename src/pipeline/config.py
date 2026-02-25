@@ -153,12 +153,88 @@ JOURNALS = {
         "abbreviation": "Nat Commun",
         "slug": "nature-communications",
     },
+    # Nature specialty journals
+    "1061-4036": {
+        "name": "Nature Genetics",
+        "abbreviation": "Nat Genet",
+        "slug": "nature-genetics",
+    },
+    "1548-7091": {
+        "name": "Nature Methods",
+        "abbreviation": "Nat Methods",
+        "slug": "nature-methods",
+    },
+    "1087-0156": {
+        "name": "Nature Biotechnology",
+        "abbreviation": "Nat Biotechnol",
+        "slug": "nature-biotechnology",
+    },
+    "1465-7392": {
+        "name": "Nature Cell Biology",
+        "abbreviation": "Nat Cell Biol",
+        "slug": "nature-cell-biology",
+    },
+    "1545-9993": {
+        "name": "Nature Structural and Molecular Biology",
+        "abbreviation": "Nat Struct Mol Biol",
+        "slug": "nature-structural-molecular-biology",
+    },
+    # Clinical
+    "0959-8138": {
+        "name": "The BMJ",
+        "abbreviation": "BMJ",
+        "slug": "bmj",
+    },
+    "0923-7534": {
+        "name": "Annals of Oncology",
+        "abbreviation": "Ann Oncol",
+        "slug": "annals-of-oncology",
+    },
+    "2374-2437": {
+        "name": "JAMA Oncology",
+        "abbreviation": "JAMA Oncol",
+        "slug": "jama-oncology",
+    },
+    "2168-6106": {
+        "name": "JAMA Internal Medicine",
+        "abbreviation": "JAMA Intern Med",
+        "slug": "jama-internal-medicine",
+    },
+    # Cell biology / molecular
+    "1097-2765": {
+        "name": "Molecular Cell",
+        "abbreviation": "Mol Cell",
+        "slug": "molecular-cell",
+    },
+    "1534-5807": {
+        "name": "Developmental Cell",
+        "abbreviation": "Dev Cell",
+        "slug": "developmental-cell",
+    },
+    "0261-4189": {
+        "name": "EMBO Journal",
+        "abbreviation": "EMBO J",
+        "slug": "embo-journal",
+    },
+    # Experimental medicine / open access
+    "0022-1007": {
+        "name": "Journal of Experimental Medicine",
+        "abbreviation": "J Exp Med",
+        "slug": "journal-of-experimental-medicine",
+    },
+    "1544-9173": {
+        "name": "PLOS Biology",
+        "abbreviation": "PLoS Biol",
+        "slug": "plos-biology",
+    },
 }
 
 # --- Paths ---
 # Resolve relative to repo root
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB_PATH = os.path.join(_REPO_ROOT, "data", "impact.db")
+PMID_DATE_CACHE_PATH = os.path.join(_REPO_ROOT, "data", "pmid_dates.db")
+PUBMED_BULK_DB_PATH  = os.path.join(_REPO_ROOT, "data", "pubmed_bulk.db")
 WEBSITE_DATA_DIR = os.path.join(_REPO_ROOT, "docs", "data")
 SNAPSHOTS_DIR = os.path.join(WEBSITE_DATA_DIR, "journals")
 

@@ -51,6 +51,24 @@ OFFICIAL_JIFS = {
     "0036-8075": 44.7,   # Science
     "0028-0836": 50.5,   # Nature
     "2041-1723": 14.7,   # Nature Communications
+    # Nature specialty journals
+    "1061-4036": 41.1,   # Nature Genetics
+    "1548-7091": 48.0,   # Nature Methods
+    "1087-0156": 33.1,   # Nature Biotechnology
+    "1465-7392": 21.3,   # Nature Cell Biology
+    "1545-9993": 12.5,   # Nature Structural and Molecular Biology
+    # Clinical
+    "0959-8138": 105.7,  # The BMJ
+    "0923-7534": 51.8,   # Annals of Oncology
+    "2374-2437": 33.0,   # JAMA Oncology
+    "2168-6106": 22.5,   # JAMA Internal Medicine
+    # Cell biology / molecular
+    "1097-2765": 14.9,   # Molecular Cell
+    "1534-5807": 11.1,   # Developmental Cell
+    "0261-4189": 9.4,    # EMBO Journal
+    # Experimental medicine / open access
+    "0022-1007": 14.6,   # Journal of Experimental Medicine
+    "1544-9173": 9.8,    # PLOS Biology
 }
 
 

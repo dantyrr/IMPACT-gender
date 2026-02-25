@@ -2,6 +2,9 @@
 data/impact.db
 data/impact.db-wal
 data/impact.db-shm
+data/pubmed_bulk.db
+data/pmid_dates.db
+data/impact_month_fix_checkpoint.json
 
 # Python
 __pycache__/

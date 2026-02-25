@@ -32,7 +32,8 @@ from typing import Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.pipeline.config import DB_PATH, PUBMED_API_KEY, PUBMED_EMAIL
+from src.pipeline.config import (DB_PATH, PUBMED_API_KEY, PUBMED_EMAIL,
+                                 PMID_DATE_CACHE_PATH, PUBMED_BULK_DB_PATH)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,6 +88,40 @@ def save_checkpoint(date_map: Dict[int, Tuple[int, int]], next_start: int):
             f,
         )
     os.replace(tmp, CHECKPOINT_PATH)
+
+
+# ---- Persistent PMID date cache ----
+
+def open_cache() -> sqlite3.Connection:
+    """Open (and create if needed) the persistent PMID date cache."""
+    cache = sqlite3.connect(PMID_DATE_CACHE_PATH)
+    cache.execute("PRAGMA journal_mode=WAL")
+    cache.execute("""
+        CREATE TABLE IF NOT EXISTS pmid_dates (
+            pmid      INTEGER PRIMARY KEY,
+            pub_year  INTEGER NOT NULL,
+            pub_month INTEGER NOT NULL
+        )
+    """)
+    cache.commit()
+    return cache
+
+
+def load_cache(cache_conn: sqlite3.Connection) -> Dict[int, Tuple[int, int]]:
+    """Load all cached PMID dates into memory."""
+    cur = cache_conn.cursor()
+    cur.execute("SELECT pmid, pub_year, pub_month FROM pmid_dates")
+    return {row[0]: (row[1], row[2]) for row in cur.fetchall()}
+
+
+def save_to_cache(cache_conn: sqlite3.Connection,
+                  batch: Dict[int, Tuple[int, int]]) -> None:
+    """Persist a batch of newly fetched dates to the cache."""
+    cache_conn.executemany(
+        "INSERT OR REPLACE INTO pmid_dates (pmid, pub_year, pub_month) VALUES (?,?,?)",
+        [(pmid, year, month) for pmid, (year, month) in batch.items()],
+    )
+    cache_conn.commit()
 
 
 # ---- PubMed helpers ----
@@ -206,6 +241,20 @@ def main():
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA journal_mode=WAL")
 
+    # Load persistent date cache (avoids re-fetching already-known PMIDs)
+    cache_conn = open_cache()
+    date_map = load_cache(cache_conn)
+    logger.info(f"Loaded {len(date_map):,} entries from PMID date cache")
+
+    # Migrate old JSON checkpoint into cache if present (one-time transition)
+    if os.path.exists(CHECKPOINT_PATH):
+        old_map, _ = load_checkpoint()
+        new_entries = {p: v for p, v in old_map.items() if p not in date_map}
+        if new_entries:
+            save_to_cache(cache_conn, new_entries)
+            date_map.update(new_entries)
+            logger.info(f"Migrated {len(new_entries):,} entries from old checkpoint to cache")
+
     cur = conn.cursor()
     if args.fill_missing:
         logger.info("--fill-missing: fetching only PMIDs currently at month=6...")
@@ -217,61 +266,88 @@ def main():
         logger.info("Fetching distinct citing PMIDs from database...")
         cur.execute("SELECT DISTINCT citing_pmid FROM citations ORDER BY citing_pmid")
     all_pmids = [row[0] for row in cur.fetchall()]
-    total = len(all_pmids)
+
+    # Only fetch PMIDs not already in the cache
+    uncached_pmids = [p for p in all_pmids if p not in date_map]
+
+    # Check pubmed_bulk.db for a fast local lookup before hitting the API
+    if uncached_pmids and os.path.exists(PUBMED_BULK_DB_PATH):
+        logger.info(
+            f"Looking up {len(uncached_pmids):,} PMIDs in pubmed_bulk.db..."
+        )
+        bulk_conn = sqlite3.connect(f"file:{PUBMED_BULK_DB_PATH}?mode=ro", uri=True)
+        # Use a temp table to avoid very long IN clauses
+        bulk_conn.execute("CREATE TEMP TABLE _lkp (pmid INTEGER PRIMARY KEY)")
+        bulk_conn.executemany(
+            "INSERT OR IGNORE INTO _lkp VALUES (?)", [(p,) for p in uncached_pmids]
+        )
+        bulk_rows = bulk_conn.execute(
+            "SELECT p.pmid, p.pub_year, p.pub_month FROM pubmed p "
+            "JOIN _lkp l ON p.pmid = l.pmid"
+        ).fetchall()
+        bulk_conn.close()
+
+        bulk_dates = {r[0]: (r[1], r[2]) for r in bulk_rows}
+        if bulk_dates:
+            logger.info(f"  Found {len(bulk_dates):,} in bulk DB — saving to cache")
+            date_map.update(bulk_dates)
+            save_to_cache(cache_conn, bulk_dates)
+        uncached_pmids = [p for p in uncached_pmids if p not in date_map]
+        logger.info(f"  {len(uncached_pmids):,} still need PubMed API")
+
+    total = len(uncached_pmids)
     total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
+    eta_sec = total_batches / RATE_LIMIT
 
-    # Load checkpoint if present
-    date_map, start_idx = load_checkpoint()
-
-    remaining = total - start_idx
-    remaining_batches = (remaining + BATCH_SIZE - 1) // BATCH_SIZE
-    eta_sec = remaining_batches / RATE_LIMIT
-
-    logger.info(f"Found {total:,} unique citing PMIDs total")
+    logger.info(f"Found {len(all_pmids):,} unique citing PMIDs total")
     logger.info(
-        f"Using {'API key (10 req/sec)' if PUBMED_API_KEY else 'no API key (3 req/sec)'}, "
-        f"batch size {BATCH_SIZE}"
+        f"  {len(all_pmids) - total:,} already resolved, "
+        f"{total:,} to fetch from PubMed API"
     )
-    logger.info(
-        f"Remaining: {remaining:,} PMIDs ({remaining_batches} batches, "
-        f"~{eta_sec/60:.1f} min)"
-    )
+    if total > 0:
+        logger.info(
+            f"Using {'API key (10 req/sec)' if PUBMED_API_KEY else 'no API key (3 req/sec)'}, "
+            f"batch size {BATCH_SIZE}, ~{eta_sec/60:.1f} min estimated"
+        )
 
-    # Fetch dates from PubMed, resuming from checkpoint
-    for i in range(start_idx, total, BATCH_SIZE):
-        batch = all_pmids[i: i + BATCH_SIZE]
+    # Fetch remaining PMIDs from PubMed API
+    for i in range(0, total, BATCH_SIZE):
+        batch = uncached_pmids[i: i + BATCH_SIZE]
         batch_result = fetch_dates_batch(batch)
         date_map.update(batch_result)
+        save_to_cache(cache_conn, batch_result)
 
         batch_num = i // BATCH_SIZE + 1
         is_last = (i + BATCH_SIZE) >= total
 
-        # Save checkpoint periodically
-        if batch_num % SAVE_EVERY == 0 or is_last:
-            save_checkpoint(date_map, i + BATCH_SIZE)
-
         if batch_num % 100 == 0 or is_last:
-            pct = min(100, (i + BATCH_SIZE) / total * 100)
+            pct = min(100, (i + BATCH_SIZE) / total * 100) if total > 0 else 100
             logger.info(
                 f"Batch {batch_num}/{total_batches} — "
-                f"{len(date_map):,} dates fetched ({pct:.0f}%)"
+                f"{len(batch_result):,} new dates fetched ({pct:.0f}%)"
             )
 
-    with_real_month = sum(1 for _, m in date_map.values() if m != 6)
+    cache_conn.close()
+
+    # Build update list from all relevant PMIDs (cached + newly fetched)
+    all_pmids_set = set(all_pmids)
+    relevant_dates = {p: v for p, v in date_map.items() if p in all_pmids_set}
+
+    with_real_month = sum(1 for _, m in relevant_dates.values() if m != 6)
     logger.info(
-        f"\nPubMed coverage: {len(date_map):,}/{total:,} PMIDs resolved "
-        f"({len(date_map)/total*100:.1f}%)"
+        f"\nPubMed coverage: {len(relevant_dates):,}/{len(all_pmids):,} PMIDs resolved "
+        f"({len(relevant_dates)/len(all_pmids)*100:.1f}%)"
     )
     logger.info(
-        f"Month precision: {with_real_month:,} ({with_real_month/len(date_map)*100:.1f}%) "
-        f"have a real month — {len(date_map)-with_real_month:,} defaulted to June (no PubMed month)"
+        f"Month precision: {with_real_month:,} ({with_real_month/max(len(relevant_dates),1)*100:.1f}%) "
+        f"have a real month — {len(relevant_dates)-with_real_month:,} defaulted to June (no PubMed month)"
     )
 
     # Update citations table
     logger.info("\nUpdating citations table...")
     updates = [
         (year, month, f"{year}-{month:02d}-01", pmid)
-        for pmid, (year, month) in date_map.items()
+        for pmid, (year, month) in relevant_dates.items()
     ]
 
     chunk_size = 5000

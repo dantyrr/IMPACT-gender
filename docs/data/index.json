@@ -1,6 +1,6 @@
 {
-  "generated": "2026-02-25T10:15:14",
-  "journal_count": 24,
+  "generated": "2026-02-25T14:17:53",
+  "journal_count": 38,
   "journals": [
     {
       "slug": "aging-cell",
@@ -22,6 +22,17 @@
       "latest_if_no_reviews": 5.079,
       "official_jif": 39.2,
       "paper_count": 1158,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "annals-of-oncology",
+      "name": "Annals of Oncology",
+      "issn": "0923-7534",
+      "abbreviation": "Ann Oncol",
+      "latest_if": 35.203,
+      "latest_if_no_reviews": 22.029,
+      "official_jif": 51.8,
+      "paper_count": 328,
       "latest_month": "2026-02"
     },
     {
@@ -69,6 +80,28 @@
       "latest_month": "2026-02"
     },
     {
+      "slug": "developmental-cell",
+      "name": "Developmental Cell",
+      "issn": "1534-5807",
+      "abbreviation": "Dev Cell",
+      "latest_if": 0.0,
+      "latest_if_no_reviews": 0.0,
+      "official_jif": 11.1,
+      "paper_count": 546,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "embo-journal",
+      "name": "EMBO Journal",
+      "issn": "0261-4189",
+      "abbreviation": "EMBO J",
+      "latest_if": 8.865,
+      "latest_if_no_reviews": 8.059,
+      "official_jif": 9.4,
+      "paper_count": 632,
+      "latest_month": "2026-02"
+    },
+    {
       "slug": "gastroenterology",
       "name": "Gastroenterology",
       "issn": "0016-5085",
@@ -113,6 +146,28 @@
       "latest_month": "2026-02"
     },
     {
+      "slug": "jama-internal-medicine",
+      "name": "JAMA Internal Medicine",
+      "issn": "2168-6106",
+      "abbreviation": "JAMA Intern Med",
+      "latest_if": 0.0,
+      "latest_if_no_reviews": 0.0,
+      "official_jif": 22.5,
+      "paper_count": 885,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "jama-oncology",
+      "name": "JAMA Oncology",
+      "issn": "2374-2437",
+      "abbreviation": "JAMA Oncol",
+      "latest_if": 14.306,
+      "latest_if_no_reviews": 11.616,
+      "official_jif": 33.0,
+      "paper_count": 713,
+      "latest_month": "2026-02"
+    },
+    {
       "slug": "jci",
       "name": "Journal of Clinical Investigation",
       "issn": "0021-9738",
@@ -124,6 +179,17 @@
       "latest_month": "2026-02"
     },
     {
+      "slug": "journal-of-experimental-medicine",
+      "name": "Journal of Experimental Medicine",
+      "issn": "0022-1007",
+      "abbreviation": "J Exp Med",
+      "latest_if": 11.099,
+      "latest_if_no_reviews": 9.512,
+      "official_jif": 14.6,
+      "paper_count": 415,
+      "latest_month": "2026-02"
+    },
+    {
       "slug": "jaha",
       "name": "Journal of the American Heart Association",
       "issn": "2047-9980",
@@ -132,6 +198,17 @@
       "latest_if_no_reviews": 4.445,
       "official_jif": 5.0,
       "paper_count": 2337,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "molecular-cell",
+      "name": "Molecular Cell",
+      "issn": "1097-2765",
+      "abbreviation": "Mol Cell",
+      "latest_if": 14.75,
+      "latest_if_no_reviews": 12.128,
+      "official_jif": 14.9,
+      "paper_count": 797,
       "latest_month": "2026-02"
     },
     {
@@ -157,6 +234,28 @@
       "latest_month": "2026-02"
     },
     {
+      "slug": "nature-biotechnology",
+      "name": "Nature Biotechnology",
+      "issn": "1087-0156",
+      "abbreviation": "Nat Biotechnol",
+      "latest_if": 21.442,
+      "latest_if_no_reviews": 19.669,
+      "official_jif": 33.1,
+      "paper_count": 799,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nature-cell-biology",
+      "name": "Nature Cell Biology",
+      "issn": "1465-7392",
+      "abbreviation": "Nat Cell Biol",
+      "latest_if": 13.207,
+      "latest_if_no_reviews": 10.723,
+      "official_jif": 21.3,
+      "paper_count": 522,
+      "latest_month": "2026-02"
+    },
+    {
       "slug": "nature-communications",
       "name": "Nature Communications",
       "issn": "2041-1723",
@@ -165,6 +264,17 @@
       "latest_if_no_reviews": 10.7,
       "official_jif": 14.7,
       "paper_count": 17394,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nature-genetics",
+      "name": "Nature Genetics",
+      "issn": "1061-4036",
+      "abbreviation": "Nat Genet",
+      "latest_if": 17.259,
+      "latest_if_no_reviews": 16.589,
+      "official_jif": 41.1,
+      "paper_count": 754,
       "latest_month": "2026-02"
     },
     {
@@ -190,6 +300,28 @@
       "latest_month": "2026-02"
     },
     {
+      "slug": "nature-methods",
+      "name": "Nature Methods",
+      "issn": "1548-7091",
+      "abbreviation": "Nat Methods",
+      "latest_if": 17.168,
+      "latest_if_no_reviews": 15.452,
+      "official_jif": 48.0,
+      "paper_count": 807,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "nature-structural-molecular-biology",
+      "name": "Nature Structural and Molecular Biology",
+      "issn": "1545-9993",
+      "abbreviation": "Nat Struct Mol Biol",
+      "latest_if": 7.304,
+      "latest_if_no_reviews": 6.928,
+      "official_jif": 12.5,
+      "paper_count": 562,
+      "latest_month": "2026-02"
+    },
+    {
       "slug": "nejm",
       "name": "New England Journal of Medicine",
       "issn": "0028-4793",
@@ -198,6 +330,17 @@
       "latest_if_no_reviews": 29.713,
       "official_jif": 96.2,
       "paper_count": 2731,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "plos-biology",
+      "name": "PLOS Biology",
+      "issn": "1544-9173",
+      "abbreviation": "PLoS Biol",
+      "latest_if": 5.683,
+      "latest_if_no_reviews": 5.532,
+      "official_jif": 9.8,
+      "paper_count": 973,
       "latest_month": "2026-02"
     },
     {
@@ -242,6 +385,17 @@
       "latest_if_no_reviews": 13.328,
       "official_jif": 17.1,
       "paper_count": 602,
+      "latest_month": "2026-02"
+    },
+    {
+      "slug": "bmj",
+      "name": "The BMJ",
+      "issn": "0959-8138",
+      "abbreviation": "BMJ",
+      "latest_if": 4.549,
+      "latest_if_no_reviews": 3.315,
+      "official_jif": 105.7,
+      "paper_count": 5508,
       "latest_month": "2026-02"
     },
     {

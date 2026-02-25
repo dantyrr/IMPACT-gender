@@ -13,15 +13,21 @@ This script:
   3. Updates citing_year, citing_month, and citing_date in the citations table
   4. Reports coverage statistics
 
+Checkpoint support: progress is saved to a .json file every 50 batches so the
+script can resume after an interruption (e.g. lost internet) without re-fetching
+already-retrieved dates.
+
 After this completes, re-run:  python scripts/compute_snapshots.py
 """
 
 import sys
 import os
+import json
 import sqlite3
 import logging
 import time
 import requests
+import argparse
 from typing import Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,8 +48,48 @@ MONTH_MAP = {
 
 BATCH_SIZE = 500  # Use POST to avoid URL length limits
 RATE_LIMIT = 10.0 if PUBMED_API_KEY else 3.0
+SAVE_EVERY = 50   # Save checkpoint every N batches (~25K PMIDs)
 _last_request = 0.0
 
+CHECKPOINT_PATH = str(DB_PATH).replace(".db", "_month_fix_checkpoint.json")
+
+
+# ---- Checkpoint helpers ----
+
+def load_checkpoint() -> Tuple[Dict[int, Tuple[int, int]], int]:
+    """Load saved progress. Returns (date_map, next_start_idx)."""
+    if not os.path.exists(CHECKPOINT_PATH):
+        return {}, 0
+    try:
+        with open(CHECKPOINT_PATH) as f:
+            cp = json.load(f)
+        date_map = {int(k): tuple(v) for k, v in cp["date_map"].items()}
+        next_start = cp.get("next_start", 0)
+        logger.info(
+            f"Checkpoint loaded: resuming from PMID index {next_start:,} "
+            f"({len(date_map):,} dates already fetched)"
+        )
+        return date_map, next_start
+    except Exception as e:
+        logger.warning(f"Could not load checkpoint ({e}), starting fresh")
+        return {}, 0
+
+
+def save_checkpoint(date_map: Dict[int, Tuple[int, int]], next_start: int):
+    """Atomically save progress to disk."""
+    tmp = CHECKPOINT_PATH + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(
+            {
+                "next_start": next_start,
+                "date_map": {str(k): list(v) for k, v in date_map.items()},
+            },
+            f,
+        )
+    os.replace(tmp, CHECKPOINT_PATH)
+
+
+# ---- PubMed helpers ----
 
 def _wait():
     global _last_request
@@ -95,6 +141,7 @@ def fetch_dates_batch(pmids: List[int]) -> Dict[int, Tuple[int, int]]:
     Fetch pub dates from PubMed ESummary for one batch of PMIDs.
     Returns {pmid: (year, month)} — month defaults to 6 only when
     neither epubdate nor pubdate contain a month.
+    Returns {} on network error (will be retried on next run via checkpoint).
     """
     _wait()
     params = {
@@ -103,7 +150,6 @@ def fetch_dates_batch(pmids: List[int]) -> Dict[int, Tuple[int, int]]:
         "id": ",".join(str(p) for p in pmids),
     }
     try:
-        # Use POST to avoid HTTP 414 (URL too long) with large batches
         resp = requests.post(
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
             data=params,
@@ -147,33 +193,64 @@ def fetch_dates_batch(pmids: List[int]) -> Dict[int, Tuple[int, int]]:
     return results
 
 
+# ---- Main ----
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--fill-missing", action="store_true",
+        help="Only re-fetch PMIDs currently assigned month=6 (faster gap-fill)"
+    )
+    args = parser.parse_args()
+
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA journal_mode=WAL")
 
-    logger.info("Fetching distinct citing PMIDs from database...")
     cur = conn.cursor()
-    cur.execute("SELECT DISTINCT citing_pmid FROM citations ORDER BY citing_pmid")
+    if args.fill_missing:
+        logger.info("--fill-missing: fetching only PMIDs currently at month=6...")
+        cur.execute(
+            "SELECT DISTINCT citing_pmid FROM citations "
+            "WHERE citing_month = 6 ORDER BY citing_pmid"
+        )
+    else:
+        logger.info("Fetching distinct citing PMIDs from database...")
+        cur.execute("SELECT DISTINCT citing_pmid FROM citations ORDER BY citing_pmid")
     all_pmids = [row[0] for row in cur.fetchall()]
     total = len(all_pmids)
-    logger.info(f"Found {total:,} unique citing PMIDs to update")
+    total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
+
+    # Load checkpoint if present
+    date_map, start_idx = load_checkpoint()
+
+    remaining = total - start_idx
+    remaining_batches = (remaining + BATCH_SIZE - 1) // BATCH_SIZE
+    eta_sec = remaining_batches / RATE_LIMIT
+
+    logger.info(f"Found {total:,} unique citing PMIDs total")
     logger.info(
         f"Using {'API key (10 req/sec)' if PUBMED_API_KEY else 'no API key (3 req/sec)'}, "
         f"batch size {BATCH_SIZE}"
     )
-    total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
-    eta_sec = total_batches / RATE_LIMIT
-    logger.info(f"Estimated time: {eta_sec/60:.1f} min ({total_batches} batches)")
+    logger.info(
+        f"Remaining: {remaining:,} PMIDs ({remaining_batches} batches, "
+        f"~{eta_sec/60:.1f} min)"
+    )
 
-    # Fetch all dates from PubMed
-    date_map: Dict[int, Tuple[int, int]] = {}
-    for i in range(0, total, BATCH_SIZE):
+    # Fetch dates from PubMed, resuming from checkpoint
+    for i in range(start_idx, total, BATCH_SIZE):
         batch = all_pmids[i: i + BATCH_SIZE]
         batch_result = fetch_dates_batch(batch)
         date_map.update(batch_result)
 
         batch_num = i // BATCH_SIZE + 1
-        if batch_num % 100 == 0 or batch_num == total_batches:
+        is_last = (i + BATCH_SIZE) >= total
+
+        # Save checkpoint periodically
+        if batch_num % SAVE_EVERY == 0 or is_last:
+            save_checkpoint(date_map, i + BATCH_SIZE)
+
+        if batch_num % 100 == 0 or is_last:
             pct = min(100, (i + BATCH_SIZE) / total * 100)
             logger.info(
                 f"Batch {batch_num}/{total_batches} — "
@@ -225,6 +302,12 @@ def main():
         logger.info(f"  Month {month:2d}: {cnt:7,}  {bar}")
 
     conn.close()
+
+    # Clean up checkpoint — we're done
+    if os.path.exists(CHECKPOINT_PATH):
+        os.remove(CHECKPOINT_PATH)
+        logger.info("Checkpoint file removed.")
+
     logger.info(
         "\nDone! Run the following to regenerate JSON files:\n"
         "  python scripts/compute_snapshots.py"

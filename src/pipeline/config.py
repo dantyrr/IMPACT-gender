@@ -120,6 +120,39 @@ JOURNALS = {
         "abbreviation": "Gut",
         "slug": "gut",
     },
+    # Autophagy / Redox
+    "1554-8627": {
+        "name": "Autophagy",
+        "abbreviation": "Autophagy",
+        "slug": "autophagy",
+    },
+    "2213-2317": {
+        "name": "Redox Biology",
+        "abbreviation": "Redox Biol",
+        "slug": "redox-biology",
+    },
+    # Immunology
+    "2470-9468": {
+        "name": "Science Immunology",
+        "abbreviation": "Sci Immunol",
+        "slug": "science-immunology",
+    },
+    # Broad-scope / multidisciplinary
+    "0036-8075": {
+        "name": "Science",
+        "abbreviation": "Science",
+        "slug": "science",
+    },
+    "0028-0836": {
+        "name": "Nature",
+        "abbreviation": "Nature",
+        "slug": "nature",
+    },
+    "2041-1723": {
+        "name": "Nature Communications",
+        "abbreviation": "Nat Commun",
+        "slug": "nature-communications",
+    },
 }
 
 # --- Paths ---

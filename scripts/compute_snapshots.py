@@ -45,6 +45,12 @@ OFFICIAL_JIFS = {
     "1529-2908": 27.7,   # Nature Immunology
     "0016-5085": 29.4,   # Gastroenterology
     "0017-5749": 24.5,   # Gut
+    "1554-8627": 14.9,   # Autophagy
+    "2213-2317": 11.4,   # Redox Biology
+    "2470-9468": 17.6,   # Science Immunology
+    "0036-8075": 44.7,   # Science
+    "0028-0836": 50.5,   # Nature
+    "2041-1723": 14.7,   # Nature Communications
 }
 
 
@@ -64,11 +70,11 @@ def main():
 
         logger.info(f"Computing timeseries for {name}...")
 
-        # Compute all three window variants from Jan 2022 to current month
+        # Compute all three window variants from Jan 2012 to current month
         now = datetime.now()
         window_data = calc.compute_all_window_timeseries(
             journal_id=jid,
-            start_year=2022, start_month=1,
+            start_year=2012, start_month=1,
             end_year=now.year, end_month=now.month,
         )
 

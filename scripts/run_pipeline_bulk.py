@@ -270,6 +270,14 @@ def process_journal(issn: str, meta: dict, db: DatabaseManager,
     logger.info(f"Done with {name}!")
 
 
+def load_registry(path: str) -> dict:
+    """Load journal_registry.json → {issn: meta} dict."""
+    import json
+    with open(path) as f:
+        entries = json.load(f)
+    return {e["issn"]: e for e in entries}
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description=__doc__,
@@ -278,6 +286,8 @@ def main():
                         help="One or more journal slugs (e.g. bmj nature-cell-biology)")
     parser.add_argument("--years", type=str, default=None,
                         help="Year range START-END (e.g. 2010-2026)")
+    parser.add_argument("--registry", type=str, default=None,
+                        help="Path to journal_registry.json (overrides config.JOURNALS)")
     args = parser.parse_args()
 
     now = datetime.now()
@@ -287,19 +297,22 @@ def main():
     else:
         year_start, year_end = now.year - 4, now.year
 
+    # Build journal source: registry file or hardcoded config
+    all_journals = load_registry(args.registry) if args.registry else JOURNALS
+
     # Select journals
     if args.journal:
         slugs = set(args.journal)
         journals_to_process = {
-            issn: meta for issn, meta in JOURNALS.items()
+            issn: meta for issn, meta in all_journals.items()
             if meta.get("slug") in slugs
         }
         if not journals_to_process:
             logger.error(f"Unknown slug(s): {args.journal}")
-            logger.info(f"Available: {sorted(m['slug'] for m in JOURNALS.values())}")
+            logger.info(f"Available (first 20): {sorted(m['slug'] for m in all_journals.values())[:20]}")
             sys.exit(1)
     else:
-        journals_to_process = JOURNALS
+        journals_to_process = all_journals
 
     db = DatabaseManager(DB_PATH)
     db.init_schema()

@@ -512,11 +512,14 @@ class ChartManager {
      * Create a horizontal bar chart (for country/institution/author breakdowns).
      * labels: string[]  values: number[]
      */
-    createBarChart(canvasId, labels, values, valueLabel = 'Papers') {
+    createBarChart(canvasId, labels, values, valueLabel = 'Papers', opts = {}) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
         this._destroy(canvasId);
+
+        const horizontal = opts.horizontal !== false;  // default: horizontal
+        const parsedKey = horizontal ? 'x' : 'y';
 
         this.charts[canvasId] = new Chart(ctx, {
             type: 'bar',
@@ -524,26 +527,34 @@ class ChartManager {
                 labels,
                 datasets: [{
                     data: values,
-                    backgroundColor: labels.map((_, i) => this.palette[i % this.palette.length] + 'cc'),
-                    borderColor: labels.map((_, i) => this.palette[i % this.palette.length]),
+                    backgroundColor: horizontal
+                        ? labels.map((_, i) => this.palette[i % this.palette.length] + 'cc')
+                        : this.palette[0] + 'cc',
+                    borderColor: horizontal
+                        ? labels.map((_, i) => this.palette[i % this.palette.length])
+                        : this.palette[0],
                     borderWidth: 1,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y',
+                indexAxis: horizontal ? 'y' : 'x',
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => ` ${ctx.parsed.x.toLocaleString()} ${valueLabel}`
+                            label: (ctx) => ` ${ctx.parsed[parsedKey].toLocaleString()} ${valueLabel}`
                         }
                     }
                 },
                 scales: {
-                    x: { beginAtZero: true, title: { display: true, text: valueLabel } },
-                    y: { ticks: { font: { size: 11 }, maxTicksLimit: 20 } }
+                    x: { beginAtZero: true, title: { display: !horizontal, text: horizontal ? undefined : valueLabel } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { font: { size: 11 }, maxTicksLimit: 20 },
+                        title: { display: horizontal, text: horizontal ? valueLabel : undefined },
+                    }
                 }
             }
         });

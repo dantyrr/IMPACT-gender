@@ -7,9 +7,7 @@ class IMPACTApp {
         this.journals = [];
         this.journalDataCache = {};
         this.authorDataCache = {};  // slug → {pmid: {f,fa,l,la}} or null if not available
-        this.papersDataCache = {};  // slug → papers array
-        this.papersCurrentData = null;
-        this.papersSort = { col: 'c', dir: 'desc' };
+        this._visNetwork = null;
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -28,10 +26,9 @@ class IMPACTApp {
             this.setupSearch();
             this.setupJournalTrendsPanel();
             this.setupCompare();
-            this.setupPapers();
-            this.setupAuthorsSection();
+            this.setupCitationNetwork();
+            this.setupAuthorSearch();
             this.setupGeography();
-            this.setupAuthor();
             this.setupAboutJournalList();
             this.updateTimestamp(index.generated);
         } catch (error) {
@@ -449,249 +446,285 @@ class IMPACTApp {
         container.appendChild(UIHelpers.createTable(rows, columns));
     }
 
-    // ---- Papers Browser ----
+    // ---- Citation Network ----
 
-    setupPapers() {
-        this.papersPicker = new SingleJournalPicker(
-            'papers-journal-picker', this.journals,
-            (slug) => {
-                if (slug) {
-                    this.loadPapersForJournal(slug);
-                } else {
-                    document.getElementById('papers-content').style.display = 'none';
-                    document.getElementById('papers-hint').textContent = 'Select a journal above to browse its papers.';
-                    document.getElementById('papers-hint').style.display = '';
-                    this.papersCurrentData = null;
-                }
-            }
-        );
-
-        document.getElementById('papers-search').addEventListener('input', () => this._renderPapersTable());
-        document.getElementById('papers-type-filter').addEventListener('change', () => this._renderPapersTable());
-        document.getElementById('papers-year-filter').addEventListener('change', () => this._renderPapersTable());
-
-        document.querySelectorAll('#papers-table th.sortable').forEach(th => {
-            th.addEventListener('click', () => {
-                const col = th.dataset.col;
-                if (this.papersSort.col === col) {
-                    this.papersSort.dir = this.papersSort.dir === 'asc' ? 'desc' : 'asc';
-                } else {
-                    this.papersSort = { col, dir: col === 'c' || col === 'y' ? 'desc' : 'asc' };
-                }
-                document.querySelectorAll('#papers-table th.sortable').forEach(h =>
-                    h.classList.remove('sort-active', 'sort-asc', 'sort-desc')
-                );
-                th.classList.add('sort-active', this.papersSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
-                this._renderPapersTable();
-            });
+    setupCitationNetwork() {
+        document.getElementById('network-search-btn').addEventListener('click', () => this.loadCitationNetwork());
+        document.getElementById('network-pmid-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.loadCitationNetwork();
         });
     }
 
-    async loadPapersForJournal(slug) {
-        const hint = document.getElementById('papers-hint');
-        const content = document.getElementById('papers-content');
-        hint.textContent = 'Loading…';
+    async loadCitationNetwork() {
+        const pmid = document.getElementById('network-pmid-input').value.trim().replace(/\D/g, '');
+        if (!pmid) return;
+
+        const hint = document.getElementById('network-hint');
+        const results = document.getElementById('network-results');
+        hint.textContent = 'Fetching paper data…';
         hint.style.display = '';
-        content.style.display = 'none';
+        results.style.display = 'none';
+        document.getElementById('network-selected-panel').style.display = 'none';
 
         try {
-            if (!this.papersDataCache[slug]) {
-                const resp = await fetch(`data/papers/${slug}.json`);
-                if (!resp.ok) throw new Error('Not found');
-                const d = await resp.json();
-                this.papersDataCache[slug] = d.papers || [];
-                this.papersDataCache[`${slug}__geo`] = d.geo || null;
-            }
-            this.papersCurrentData = this.papersDataCache[slug];
+            const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`);
+            if (!resp.ok) throw new Error('iCite API error');
+            const json = await resp.json();
+            const items = Array.isArray(json) ? json : (json.data || []);
+            if (!items.length) { hint.textContent = 'Paper not found in iCite. Check the PMID.'; return; }
 
-            // Populate year filter
-            const years = [...new Set(this.papersCurrentData.map(p => p.y).filter(Boolean))].sort((a, b) => b - a);
-            const yearSel = document.getElementById('papers-year-filter');
-            yearSel.innerHTML = '<option value="">All years</option>';
-            years.forEach(y => {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.textContent = y;
-                yearSel.appendChild(opt);
-            });
-
-            // Reset filters and sort
-            document.getElementById('papers-search').value = '';
-            document.getElementById('papers-type-filter').value = '';
-            this.papersSort = { col: 'c', dir: 'desc' };
-            document.querySelectorAll('#papers-table th.sortable').forEach(h =>
-                h.classList.remove('sort-active', 'sort-asc', 'sort-desc')
-            );
-            const citCol = document.querySelector('#papers-table th[data-col="c"]');
-            if (citCol) citCol.classList.add('sort-active', 'sort-desc');
-
-            hint.style.display = 'none';
-            content.style.display = '';
-            this._renderPapersTable();
-        } catch (e) {
-            hint.textContent = 'Paper data not yet available for this journal.';
-            hint.style.display = '';
-        }
-    }
-
-    _renderPapersTable() {
-        if (!this.papersCurrentData) return;
-
-        const search = document.getElementById('papers-search').value.toLowerCase().trim();
-        const typeFilter = document.getElementById('papers-type-filter').value.toLowerCase();
-        const yearFilter = document.getElementById('papers-year-filter').value;
-
-        let filtered = this.papersCurrentData.filter(p => {
-            if (typeFilter && (p.pt || '').toLowerCase() !== typeFilter) return false;
-            if (yearFilter && String(p.y) !== yearFilter) return false;
-            if (search) {
-                const inTitle = (p.t || '').toLowerCase().includes(search);
-                const inAuthor = (p.fa || '').toLowerCase().includes(search) || (p.la || '').toLowerCase().includes(search);
-                const inCountry = (p.fc || '').toLowerCase().includes(search) || (p.lc || '').toLowerCase().includes(search);
-                if (!inTitle && !inAuthor && !inCountry) return false;
-            }
-            return true;
-        });
-
-        const { col, dir } = this.papersSort;
-        filtered.sort((a, b) => {
-            let av = a[col] ?? (col === 'c' || col === 'y' ? -1 : '');
-            let bv = b[col] ?? (col === 'c' || col === 'y' ? -1 : '');
-            if (typeof av === 'string') av = av.toLowerCase();
-            if (typeof bv === 'string') bv = bv.toLowerCase();
-            if (av < bv) return dir === 'asc' ? -1 : 1;
-            if (av > bv) return dir === 'asc' ? 1 : -1;
-            return 0;
-        });
-
-        document.getElementById('papers-count').textContent = `${filtered.length.toLocaleString()} papers`;
-
-        const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        const tbody = document.getElementById('papers-tbody');
-        tbody.innerHTML = filtered.map(p => {
-            const title = p.t ? (p.t.length > 90 ? p.t.slice(0, 90) + '…' : p.t) : '—';
-            return `<tr class="papers-row-link" data-pmid="${p.pmid}" title="Open in PubMed">` +
-                `<td>${esc(title)}</td>` +
-                `<td>${p.y || '—'}</td>` +
-                `<td>${esc(p.pt || '—')}</td>` +
-                `<td>${esc(p.fa || '—')}</td>` +
-                `<td>${esc(p.fc || '—')}</td>` +
-                `<td>${p.c != null ? p.c.toLocaleString() : '—'}</td></tr>`;
-        }).join('');
-
-        // Event delegation — single listener handles all row clicks
-        if (!tbody._papersClickBound) {
-            tbody._papersClickBound = true;
-            tbody.addEventListener('click', (e) => {
-                const tr = e.target.closest('tr[data-pmid]');
-                if (tr) window.open(`https://pubmed.ncbi.nlm.nih.gov/${tr.dataset.pmid}/`, '_blank');
-            });
-        }
-
-        const total = this.papersCurrentData.length;
-        const noteEl = document.getElementById('papers-note');
-        noteEl.textContent = total >= 2000
-            ? `Showing top 2,000 most-cited papers. Click any row to open in PubMed.`
-            : `Showing all ${total.toLocaleString()} papers. Click any row to open in PubMed.`;
-    }
-
-    // ---- Authors Journal Breakdown ----
-
-    setupAuthorsSection() {
-        // Tab switching
-        document.querySelectorAll('.authors-tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.authors-tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const tabId = btn.dataset.tab;
-                document.querySelectorAll('.authors-tab-panel').forEach(panel => {
-                    panel.style.display = panel.id === tabId ? '' : 'none';
-                });
-            });
-        });
-
-        // Journal select for breakdown tab
-        this.authorsPicker = new SingleJournalPicker(
-            'authors-journal-picker', this.journals,
-            (slug) => { if (slug) this.loadAuthorsBreakdown(slug); }
-        );
-    }
-
-    async loadAuthorsBreakdown(slug) {
-        const hint = document.getElementById('authors-hint');
-        const content = document.getElementById('authors-content');
-        hint.textContent = 'Loading…';
-        hint.style.display = '';
-        content.style.display = 'none';
-
-        try {
-            // Load papers data (country + author name)
-            if (!this.papersDataCache[slug]) {
-                const resp = await fetch(`data/papers/${slug}.json`);
-                if (!resp.ok) throw new Error('No papers data');
-                const d = await resp.json();
-                this.papersDataCache[slug] = d.papers || [];
-                this.papersDataCache[`${slug}__geo`] = d.geo || null;
-            }
-            const papers = this.papersDataCache[slug];
-
-            // Load author data (institution via affiliation)
-            const authorData = await this._loadAuthorData(slug);
-
-            // Aggregate country counts (first author), normalizing variants
-            const countryCounts = {};
-            papers.forEach(p => {
-                const c = this._normalizeCountry(p.fc);
-                if (c) countryCounts[c] = (countryCounts[c] || 0) + 1;
-            });
-
-            // Aggregate institution counts (first author, from full affiliation string)
-            const instCounts = {};
-            if (authorData) {
-                Object.values(authorData).forEach(d => {
-                    if (d.fa) {
-                        const inst = d.fa.split(',')[0].trim();
-                        if (inst && inst.length > 2) instCounts[inst] = (instCounts[inst] || 0) + 1;
-                    }
-                });
+            const center = items[0];
+            const citedBy = center.cited_by || [];
+            if (!citedBy.length) {
+                hint.textContent = 'No citing papers found for this PMID yet.';
+                return;
             }
 
-            // Aggregate top first authors by paper count
-            const authorCounts = {};
-            papers.forEach(p => {
-                if (p.fa) authorCounts[p.fa] = (authorCounts[p.fa] || 0) + 1;
-            });
+            hint.textContent = `Found ${center.citation_count.toLocaleString()} citations. Loading citing papers…`;
 
-            const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
-            const topInst = Object.entries(instCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
-            const topAuthors = Object.entries(authorCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
+            // Fetch up to 300, then keep top 200 by citation count
+            const citing = await this._fetchICiteBatch(citedBy.slice(0, 300));
+            citing.sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0));
+            const displayed = citing.slice(0, 200);
 
-            // Update metrics row
-            const metricsRow = document.getElementById('authors-metrics-row');
-            const metrics = [
-                [papers.length.toLocaleString(), 'Papers (top 2k)'],
-                [Object.keys(countryCounts).length, 'Countries'],
-            ];
-            if (authorData) metrics.push([Object.keys(instCounts).length, 'Institutions']);
-            metricsRow.innerHTML = metrics.map(([val, label]) =>
-                `<div class="metric-card"><span class="metric-value">${val}</span><span class="metric-label">${label}</span></div>`
+            document.getElementById('network-metrics').innerHTML = [
+                [center.citation_count.toLocaleString(), 'Total Citations'],
+                [citedBy.length.toLocaleString(), 'Citing Papers'],
+                [displayed.length, 'Shown in Network'],
+                [center.year || '—', 'Year Published'],
+            ].map(([v, l]) =>
+                `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
             ).join('');
 
-            hint.style.display = 'none';
-            content.style.display = '';
+            document.getElementById('network-note').textContent = citedBy.length > displayed.length
+                ? `Showing ${displayed.length} highest-cited papers of ${citedBy.length} total citers. Click any node for details.`
+                : `Showing all ${displayed.length} citing papers. Click any node for details.`;
 
-            chartManager.createBarChart('authors-country-chart',
-                topCountries.map(x => x[0]), topCountries.map(x => x[1]), 'Papers');
-            chartManager.createBarChart('authors-institution-chart',
-                topInst.map(x => x[0]), topInst.map(x => x[1]), 'Papers');
-            chartManager.createBarChart('authors-top-chart',
-                topAuthors.map(x => x[0]), topAuthors.map(x => x[1]), 'Papers');
+            hint.style.display = 'none';
+            results.style.display = '';
+            this._renderCitationNetwork(center, displayed);
 
         } catch (e) {
-            hint.textContent = 'Data not yet available for this journal.';
-            hint.style.display = '';
-            console.error('Error loading author breakdown:', e);
+            hint.textContent = `Error: ${e.message}`;
+            console.error('Citation network error:', e);
         }
+    }
+
+    _renderCitationNetwork(center, citingPapers) {
+        const container = document.getElementById('citation-network');
+
+        const yearColor = (yr) => {
+            if (!yr) return '#90CAF9';
+            if (yr >= 2022) return '#1565C0';
+            if (yr >= 2018) return '#1976D2';
+            if (yr >= 2014) return '#42A5F5';
+            if (yr >= 2010) return '#64B5F6';
+            return '#90CAF9';
+        };
+        const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '—');
+        const tooltip = (p) =>
+            `<b>${trunc(p.title, 120)}</b><br>${trunc(p.authors, 60)}<br>` +
+            `${p.journal || ''}, ${p.year || ''} · ${(p.citation_count || 0).toLocaleString()} citations`;
+        const lastName = (authors) => (authors || '').split(',')[0].trim().split(' ').pop() || '';
+
+        const nodesData = [{
+            id: center.pmid,
+            label: `${lastName(center.authors)}\n${center.year || ''}`,
+            title: tooltip(center),
+            size: 30,
+            color: { background: '#e74c3c', border: '#c0392b',
+                     highlight: { background: '#e74c3c', border: '#922b21' } },
+            font: { size: 13, color: '#fff', bold: true },
+            shape: 'dot',
+            fixed: { x: true, y: true },
+            x: 0, y: 0,
+        }];
+
+        citingPapers.forEach(p => {
+            const cits = p.citation_count || 0;
+            nodesData.push({
+                id: p.pmid,
+                label: `${lastName(p.authors)}\n${p.year || ''}`,
+                title: tooltip(p),
+                size: Math.max(5, Math.min(22, 5 + Math.sqrt(cits) * 1.4)),
+                color: { background: yearColor(p.year), border: '#1a5276',
+                         highlight: { background: '#f39c12', border: '#d68910' } },
+                font: { size: 10 },
+                shape: 'dot',
+            });
+        });
+
+        const nodes = new vis.DataSet(nodesData);
+        const edges = new vis.DataSet(citingPapers.map(p => ({
+            from: p.pmid, to: center.pmid,
+            arrows: { to: { enabled: true, scaleFactor: 0.35 } },
+            color: { color: '#ccc', opacity: 0.5 },
+            width: 0.5,
+        })));
+
+        if (this._visNetwork) { this._visNetwork.destroy(); this._visNetwork = null; }
+        this._visNetwork = new vis.Network(container, { nodes, edges }, {
+            physics: {
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: {
+                    gravitationalConstant: -80,
+                    centralGravity: 0.02,
+                    springLength: 130,
+                    springConstant: 0.04,
+                    avoidOverlap: 0.4,
+                },
+                stabilization: { iterations: 150, updateInterval: 30 },
+                maxVelocity: 60,
+            },
+            edges: { smooth: { type: 'continuous' } },
+            interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true },
+        });
+
+        const allPapers = [center, ...citingPapers];
+        this._visNetwork.on('click', (params) => {
+            if (params.nodes.length > 0) {
+                const paper = allPapers.find(p => p.pmid === params.nodes[0]);
+                if (paper) this._showNetworkSelected(paper);
+            }
+        });
+    }
+
+    _showNetworkSelected(paper) {
+        document.getElementById('network-sel-title').textContent = paper.title || 'Unknown title';
+        document.getElementById('network-sel-meta').textContent =
+            `${paper.authors || ''} · ${paper.journal || ''} · ${paper.year || ''} · ${(paper.citation_count || 0).toLocaleString()} citations`;
+        document.getElementById('network-sel-link').href = `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}/`;
+        document.getElementById('network-selected-panel').style.display = '';
+    }
+
+    async _fetchICiteBatch(pmids, batchSize = 100) {
+        const results = [];
+        for (let i = 0; i < pmids.length; i += batchSize) {
+            const batch = pmids.slice(i, i + batchSize);
+            try {
+                const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${batch.join(',')}`);
+                if (!resp.ok) continue;
+                const json = await resp.json();
+                results.push(...(Array.isArray(json) ? json : (json.data || [])));
+            } catch (e) { console.error('iCite batch error:', e); }
+        }
+        return results;
+    }
+
+    _computeHIndex(citations) {
+        const sorted = [...citations].sort((a, b) => b - a);
+        let h = 0;
+        for (let i = 0; i < sorted.length; i++) {
+            if (sorted[i] >= i + 1) h = i + 1; else break;
+        }
+        return h;
+    }
+
+    // ---- Author Name Search ----
+
+    setupAuthorSearch() {
+        document.getElementById('author-name-search-btn').addEventListener('click', () => this.searchAuthorByName());
+        document.getElementById('author-name-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.searchAuthorByName();
+        });
+    }
+
+    async searchAuthorByName() {
+        const name = document.getElementById('author-name-input').value.trim();
+        if (!name) return;
+
+        const hint = document.getElementById('author-search-hint');
+        const results = document.getElementById('author-search-results');
+        hint.textContent = 'Searching PubMed…';
+        hint.style.display = '';
+        results.style.display = 'none';
+
+        try {
+            const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(name)}[Author]&retmax=500&retmode=json&tool=IMPACT&email=impact-tool@umich.edu`;
+            const resp = await fetch(searchUrl);
+            if (!resp.ok) throw new Error('PubMed search failed');
+            const data = await resp.json();
+            const pmids = data.esearchresult?.idlist || [];
+            const totalFound = parseInt(data.esearchresult?.count || 0);
+
+            if (!pmids.length) {
+                hint.textContent = 'No papers found. Try "Lastname AB" format (e.g. "Smith J").';
+                return;
+            }
+
+            hint.textContent = `Found ${totalFound.toLocaleString()} papers. Fetching citation data…`;
+            const papers = await this._fetchICiteBatch(pmids);
+
+            if (!papers.length) {
+                hint.textContent = 'Papers found on PubMed but no citation data available yet.';
+                return;
+            }
+
+            hint.style.display = 'none';
+            results.style.display = '';
+            this._renderAuthorSearchResults(papers, totalFound);
+
+        } catch (e) {
+            hint.textContent = `Error: ${e.message}`;
+            console.error('Author search error:', e);
+        }
+    }
+
+    _renderAuthorSearchResults(papers, totalFound) {
+        const totalCitations = papers.reduce((s, p) => s + (p.citation_count || 0), 0);
+        const hIndex = this._computeHIndex(papers.map(p => p.citation_count || 0));
+
+        document.getElementById('author-search-metrics').innerHTML = [
+            [papers.length.toLocaleString(), 'Papers Loaded'],
+            [totalFound > papers.length ? `${totalFound.toLocaleString()} total` : totalFound.toLocaleString(), 'Papers on PubMed'],
+            [totalCitations.toLocaleString(), 'Total Citations'],
+            [hIndex, 'h-index (est.)'],
+        ].map(([v, l]) =>
+            `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+        ).join('');
+
+        // Publications per year
+        const pubsByYear = {};
+        papers.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
+        const sortedYears = Object.keys(pubsByYear).sort();
+        chartManager.createBarChart('author-pubs-chart', sortedYears,
+            sortedYears.map(y => pubsByYear[y]), 'Papers', { horizontal: false });
+
+        // Citations by publication year
+        const citsByYear = {};
+        papers.forEach(p => { if (p.year) citsByYear[p.year] = (citsByYear[p.year] || 0) + (p.citation_count || 0); });
+        chartManager.createBarChart('author-cits-chart', sortedYears,
+            sortedYears.map(y => citsByYear[y] || 0), 'Citations', { horizontal: false });
+
+        // Top journals
+        const jCounts = {};
+        papers.forEach(p => { if (p.journal) jCounts[p.journal] = (jCounts[p.journal] || 0) + 1; });
+        const topJ = Object.entries(jCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+        chartManager.createBarChart('author-journals-chart',
+            topJ.map(x => x[0]), topJ.map(x => x[1]), 'Papers');
+
+        // Most-cited papers table
+        const sorted = [...papers].sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0)).slice(0, 50);
+        const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const tbody = sorted.map(p => {
+            const title = p.title ? (p.title.length > 90 ? p.title.slice(0, 90) + '…' : p.title) : '—';
+            return `<tr class="papers-row-link" data-pmid="${p.pmid}" title="Open in PubMed">` +
+                `<td>${esc(title)}</td><td>${esc(p.journal || '—')}</td>` +
+                `<td>${p.year || '—'}</td><td>${(p.citation_count || 0).toLocaleString()}</td></tr>`;
+        }).join('');
+
+        const container = document.getElementById('author-papers-list');
+        container.innerHTML =
+            `<h4 style="margin-bottom:.5rem">Most-Cited Papers (top ${sorted.length} of ${papers.length})</h4>` +
+            `<div class="table-scroll"><table class="data-table"><thead><tr>` +
+            `<th>Title</th><th>Journal</th><th>Year</th><th>Citations</th>` +
+            `</tr></thead><tbody>${tbody}</tbody></table></div>` +
+            `<p class="data-note">Click any row to open in PubMed. Name search may return papers from multiple authors with similar names — verify by institution or co-authors.</p>`;
+
+        container.querySelector('tbody').addEventListener('click', (e) => {
+            const tr = e.target.closest('tr[data-pmid]');
+            if (tr) window.open(`https://pubmed.ncbi.nlm.nih.gov/${tr.dataset.pmid}/`, '_blank');
+        });
     }
 
     // ---- Geography ----

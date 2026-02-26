@@ -6,6 +6,7 @@
     <title>IMPACT — Independent Metrics for Publication Analysis and Citation Tracking</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
 
@@ -188,138 +189,67 @@
 
     <!-- ============ PAPERS ============ -->
     <section id="papers" class="section">
-        <h2>Paper Browser</h2>
-        <p class="section-desc">Browse individual papers for any journal — sortable by citations, year, or author. Click a paper to view on PubMed.</p>
+        <h2>Citation Network</h2>
+        <p class="section-desc">Enter a PubMed ID to visualize all papers that cite it as an interactive network. Node size reflects a paper's own citation count.</p>
 
-        <div id="papers-picker-wrap">
-            <div class="section-label">Select a journal</div>
-            <div id="papers-journal-picker"></div>
+        <div class="search-bar">
+            <input type="text" id="network-pmid-input" placeholder="Enter PMID (e.g. 35537787)" autocomplete="off">
+            <button id="network-search-btn">Search</button>
         </div>
 
-        <div id="papers-content" style="display:none;">
-            <div class="papers-toolbar">
-                <input type="text" id="papers-search" class="papers-search-input" placeholder="Filter by title, author, or country…" autocomplete="off">
-                <div class="papers-filter-group">
-                    <label class="papers-filter-label">Type:</label>
-                    <select id="papers-type-filter" class="papers-select">
-                        <option value="">All types</option>
-                        <option value="journal article">Research</option>
-                        <option value="review">Review</option>
-                        <option value="editorial">Editorial</option>
-                        <option value="letter">Letter</option>
-                    </select>
-                </div>
-                <div class="papers-filter-group">
-                    <label class="papers-filter-label">Year:</label>
-                    <select id="papers-year-filter" class="papers-select">
-                        <option value="">All years</option>
-                    </select>
-                </div>
-                <span id="papers-count" class="papers-count-label"></span>
+        <div id="network-results" style="display:none">
+            <div class="metrics-row" id="network-metrics"></div>
+            <div id="citation-network"></div>
+            <p class="data-note" id="network-note"></p>
+            <div id="network-selected-panel" class="network-selected-panel" style="display:none">
+                <h4 id="network-sel-title"></h4>
+                <p id="network-sel-meta"></p>
+                <a id="network-sel-link" class="pubmed-link" target="_blank" rel="noopener">Open in PubMed →</a>
             </div>
-
-            <div class="table-scroll">
-                <table class="data-table sortable-table" id="papers-table">
-                    <thead>
-                        <tr>
-                            <th class="sortable" data-col="t">Title</th>
-                            <th class="sortable" data-col="y">Year</th>
-                            <th class="sortable" data-col="pt">Type</th>
-                            <th class="sortable" data-col="fa">First Author</th>
-                            <th class="sortable" data-col="fc">Country</th>
-                            <th class="sortable sort-active sort-desc" data-col="c">Citations</th>
-                        </tr>
-                    </thead>
-                    <tbody id="papers-tbody"></tbody>
-                </table>
-            </div>
-            <p class="data-note" id="papers-note"></p>
         </div>
 
-        <p id="papers-hint" class="data-note" style="margin-top:1rem;">Select a journal above to browse its papers.</p>
+        <p id="network-hint" class="data-note" style="margin-top:1rem;">Enter a PMID above to visualize its citation network.</p>
     </section>
 
     <!-- ============ AUTHORS ============ -->
     <section id="authors" class="section">
-        <h2>Author &amp; Institution Explorer</h2>
-        <p class="section-desc">Browse top authors, institutions, and countries for any journal — or look up your own papers by PMID.</p>
+        <h2>Author Search</h2>
+        <p class="section-desc">Search for an author by name to explore their publications, citation trends, and most-cited papers. Use "Lastname AB" format (e.g. "Horvath S") for best results.</p>
 
-        <div class="authors-tabs">
-            <button class="authors-tab-btn active" data-tab="journal-authors">Journal Breakdown</button>
-            <button class="authors-tab-btn" data-tab="pmid-lookup">My Papers (PMID Lookup)</button>
+        <div class="search-bar">
+            <input type="text" id="author-name-input" placeholder='e.g. "Horvath S" or "Steve Horvath"' autocomplete="off">
+            <button id="author-name-search-btn">Search</button>
         </div>
 
-        <!-- Journal Authors panel -->
-        <div id="journal-authors" class="authors-tab-panel active">
-            <div id="authors-picker-wrap">
-                <div class="section-label">Select a journal</div>
-                <div id="authors-journal-picker"></div>
-            </div>
+        <div id="author-search-results" style="display:none">
+            <div class="metrics-row" id="author-search-metrics"></div>
 
-            <div id="authors-content" style="display:none;">
-                <div class="metrics-row" id="authors-metrics-row"></div>
-
-                <div class="authors-charts-grid">
-                    <div class="authors-chart-card">
-                        <h4>Top Countries (First Author)</h4>
-                        <div class="chart-container" style="margin-bottom:0;">
-                            <canvas id="authors-country-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="authors-chart-card">
-                        <h4>Top Institutions (First Author)</h4>
-                        <div class="chart-container" style="margin-bottom:0;">
-                            <canvas id="authors-institution-chart"></canvas>
-                        </div>
+            <div class="authors-charts-grid">
+                <div class="authors-chart-card">
+                    <h4>Publications per Year</h4>
+                    <div class="chart-container" style="height:240px; margin-bottom:0">
+                        <canvas id="author-pubs-chart"></canvas>
                     </div>
                 </div>
-
-                <div class="authors-chart-card" style="margin-top:1rem;">
-                    <h4>Top Authors by Paper Count</h4>
-                    <div class="chart-container" style="margin-bottom:0;">
-                        <canvas id="authors-top-chart"></canvas>
+                <div class="authors-chart-card">
+                    <h4>Citations by Publication Year</h4>
+                    <div class="chart-container" style="height:240px; margin-bottom:0">
+                        <canvas id="author-cits-chart"></canvas>
                     </div>
                 </div>
             </div>
-            <p id="authors-hint" class="data-note" style="margin-top:1rem;">Select a journal above to see author breakdowns.</p>
+
+            <div class="authors-chart-card" style="margin-top:1rem">
+                <h4>Top Journals</h4>
+                <div class="chart-container" style="height:280px; margin-bottom:0">
+                    <canvas id="author-journals-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="author-papers-list" style="margin-top:1.5rem"></div>
         </div>
 
-        <!-- PMID Lookup panel (existing Author Metrics) -->
-        <div id="pmid-lookup" class="authors-tab-panel" style="display:none;">
-            <p class="section-desc" style="margin-top:1rem;">
-                Enter one or more PubMed IDs (PMIDs) to see each paper's rolling 24-month citation count
-                and compare it to the journal's citation rate.
-            </p>
-            <div class="search-bar">
-                <input type="text" id="pmid-input" placeholder="Enter PMIDs separated by commas (e.g., 38009535, 38031718)">
-                <button id="author-analyze-btn">Analyze</button>
-            </div>
-
-            <div id="author-results" style="display:none;">
-                <div class="metrics-row">
-                    <div class="metric-card">
-                        <span class="metric-value" id="author-papers">—</span>
-                        <span class="metric-label">Papers Found</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-value" id="author-cites">—</span>
-                        <span class="metric-label">Total Citations (all time)</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-value" id="author-avg">—</span>
-                        <span class="metric-label">Avg Total Citations / Paper</span>
-                    </div>
-                    <div class="metric-card">
-                        <span class="metric-value" id="author-weighted-if">—</span>
-                        <span class="metric-label">Avg Cit/yr (2-yr window)</span>
-                    </div>
-                </div>
-                <div class="chart-container" id="author-chart-container" style="display:none;">
-                    <canvas id="author-chart"></canvas>
-                </div>
-                <div id="author-table-container"></div>
-            </div>
-        </div>
+        <p id="author-search-hint" class="data-note" style="margin-top:1rem;">Search an author name above to explore their publication history.</p>
     </section>
 
     <!-- ============ GEOGRAPHY ============ -->
@@ -423,10 +353,10 @@
 </footer>
 
 <script src="js/data-loader.js?v=3"></script>
-<script src="js/chart-manager.js?v=2"></script>
+<script src="js/chart-manager.js?v=3"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=2"></script>
-<script src="js/app.js?v=2"></script>
+<script src="js/app.js?v=3"></script>
 
 </body>
 </html>

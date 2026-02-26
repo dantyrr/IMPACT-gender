@@ -168,8 +168,7 @@ class IMPACTApp {
         const multiType = checkedTypes.length > 1;
         const series = [];
 
-        journalsData.forEach(jData => {
-            const jIdx = this.journals.findIndex(j => j.slug === jData.slug);
+        journalsData.forEach((jData, jIdx) => {
             const color = chartManager.palette[jIdx % chartManager.palette.length];
             const raw = jData[this.jcWindow] || jData.timeseries;
             const startIdx = raw.findIndex(d => d.papers > 0);
@@ -195,7 +194,8 @@ class IMPACTApp {
                 series.push({
                     label,
                     color,
-                    dash: typeDashes[typeKey] || [],
+                    // Only use dashes to distinguish types when multiple types are selected
+                    dash: multiType ? (typeDashes[typeKey] || []) : [],
                     months: ts.map(d => d.month),
                     values,
                 });

@@ -6,18 +6,19 @@
 class ChartManager {
     constructor() {
         this.charts = {};
-        // Colorblind-friendly palette (Okabe-Ito inspired, reordered green→blue→red first)
+        // Okabe-Ito colorblind-safe palette (Nature Methods recommended)
+        // Yellow (#F0E442) and black replaced with purple and gray for web legibility
         this.palette = [
-            '#2ca02c', // 1 green
-            '#1f77b4', // 2 blue
-            '#d62728', // 3 red
-            '#ff7f0e', // 4 orange
-            '#9467bd', // 5 purple
-            '#17becf', // 6 cyan
-            '#8c564b', // 7 brown
-            '#e377c2', // 8 pink
-            '#bcbd22', // 9 olive
-            '#7f7f7f', // 10 gray
+            '#0072B2', // 1 blue
+            '#D55E00', // 2 vermilion
+            '#009E73', // 3 bluish green
+            '#56B4E9', // 4 sky blue
+            '#E69F00', // 5 orange/amber
+            '#CC79A7', // 6 reddish purple
+            '#7B2D8B', // 7 purple (replaces yellow)
+            '#7f7f7f', // 8 gray (replaces black)
+            '#44AA99', // 9 teal
+            '#AA4499', // 10 mauve
         ];
     }
 

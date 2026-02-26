@@ -569,7 +569,8 @@ class IMPACTApp {
 
             hint.style.display = 'none';
             results.style.display = '';
-            this._renderCitationNetwork(center, displayed);
+            // rAF ensures the browser has laid out the container before vis.js reads its size
+            requestAnimationFrame(() => this._renderCitationNetwork(center, displayed));
 
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
@@ -653,6 +654,11 @@ class IMPACTApp {
                 const paper = allPapers.find(p => p.pmid === params.nodes[0]);
                 if (paper) this._showNetworkSelected(paper);
             }
+        });
+
+        // Fit all nodes into view once the physics stabilizes
+        this._visNetwork.once('stabilized', () => {
+            this._visNetwork.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
         });
     }
 

@@ -37,7 +37,7 @@ class IMPACTApp {
         } catch (error) {
             console.error('Failed to initialize IMPACT:', error);
             document.getElementById('journal-cards').innerHTML =
-                '<p style="color:#e74c3c;">Failed to load data. Make sure data/index.json exists.</p>';
+                `<p style="color:#e74c3c;">Failed to initialize: ${error.message}</p>`;
         }
     }
 

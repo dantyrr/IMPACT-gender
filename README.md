@@ -10,42 +10,74 @@ An open-source alternative to Clarivate's Journal Impact Factor, computed from f
 
 ## Why IMPACT?
 
-The official Journal Impact Factor (JIF) is computed by Clarivate using proprietary Web of Science citation data, behind a paywall, with limited transparency. IMPACT provides:
+The official Journal Impact Factor (JIF) is computed by Clarivate using proprietary Web of Science citation data, behind a paywall, with limited methodological transparency. IMPACT provides:
 
-- **Rolling 24-month IF** updated monthly, not just annually
-- **Review-excluded IF** to detect inflation from highly-cited review articles
-- **Open data** — all code and computed metrics are public on GitHub
-- **Author-level metrics** — rolling average citations per paper
-- **Paper-level trends** — month-by-month citation trajectories
+- **Rolling 24-month citation rate** updated continuously, not just annually
+- **Three window variants** — 12-month, 24-month (standard), and 5-year (years 2–6)
+- **Review-excluded rate** to detect inflation from highly-cited review articles
+- **Full article-type breakdown** — research, reviews, editorials, letters, other
+- **8,000+ journals** — all PubMed-indexed journals processed from the bulk data
+- **Open data** — all code, metrics, and methodology are public on GitHub
+
+---
+
+## Live Site Features
+
+### Journals
+Compare citation rate trends across any combination of journals. Select one or more journals from the searchable picker to overlay their trends on a single chart. Use the window toggle to switch between 12-month, 24-month, and 5-year rates. Filter by article type (all, research, reviews, etc.). Journal info cards below the chart update to show only the selected journals.
+
+**Download the chart** as PNG, JPG, or PDF, or export the underlying data as a CSV file — directly from the browser.
+
+### Authors
+Search any author by name (e.g. `Horvath S`) to pull their publications from PubMed and citation data from iCite. Displays:
+- Estimated h-index, total citations, papers loaded
+- Publications per year and citations by publication year (bar charts)
+- Top journals (horizontal bar chart)
+- Most-cited papers table with PubMed links
+
+### Papers
+Enter any PubMed ID to visualize all papers that cite it as an interactive force-directed network. Node size reflects each citing paper's own citation count; color reflects publication decade. Click any node to see title, authors, journal, and a direct PubMed link.
+
+### Geography *(beta)*
+Select a journal to see first-author country breakdowns over time — stacked bar chart by year, top countries overall, and recent-years comparison.
+
+### Compare
+Overlay multiple journals on a single chart with a choice of metric (citation rate, raw citations, or paper count) and time window.
 
 ---
 
 ## How It Works
 
 ```
-PubMed E-utilities ──► Paper discovery (by ISSN)
-                         ↓
-NIH iCite API ──────► Citation data (cited_by lists)
-                         ↓
-                    SQLite database
-                         ↓
-                    Rolling IF calculator
-                         ↓
-                    JSON exports
-                         ↓
-                    GitHub Pages website
+PubMed Baseline Bulk Files (~40M records)
+        ↓
+  pubmed_bulk.db  ←─── download_pubmed_bulk.py
+        ↓
+  run_pipeline_bulk.py  (per journal: papers + authors)
+        ↓
+  iCite Bulk DB  ←────── download_icite_bulk.py
+        ↓
+  Citation data joined locally (no API calls)
+        ↓
+  SQLite database  (data/impact.db)
+        ↓
+  compute_snapshots.py  (rolling IF calculator)
+        ↓
+  JSON exports  →  docs/data/
+        ↓
+  GitHub Pages website
 ```
 
-The rolling IF is recomputed monthly via GitHub Actions and the pre-computed JSON is served directly from this repo.
+The key innovation over the original pipeline is using the **PubMed annual baseline** and **iCite Open Citation Collection** bulk downloads rather than hitting APIs for every paper — reducing processing time from weeks to hours for all 8,000+ PubMed-indexed journals.
 
 ---
 
-## Quick Start (Running Locally)
+## Quick Start
 
 ### Requirements
 
 - Python 3.9+
-- Optional: [NCBI API key](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/) (increases rate limit from 3 → 10 req/sec)
+- ~50 GB free disk space for bulk databases
 
 ### Setup
 
@@ -55,62 +87,40 @@ cd IMPACT
 pip install -r requirements.txt
 ```
 
-### Configure (optional)
-
-Create a `.env` file for your NCBI API key:
-
-```
-PUBMED_API_KEY=your_key_here
-PUBMED_EMAIL=your@email.com
-```
-
-### Initialize the database
+### 1. Download bulk data
 
 ```bash
-python scripts/init_db.py
+# PubMed baseline (~25 GB compressed, builds pubmed_bulk.db ~40M records, ~1 hr)
+python scripts/download_pubmed_bulk.py
+
+# iCite Open Citation Collection (~10 GB, builds icite_bulk.db)
+python scripts/download_icite_bulk.py
 ```
 
-### Fetch data and compute metrics
+### 2. Run the pipeline
 
 ```bash
-# All journals (can take 30-60 min due to API rate limits)
-python scripts/run_pipeline.py
+# Process all ~8,490 PubMed-indexed journals in parallel (4 workers)
+python scripts/run_all_journals.py --workers 4
 
-# Single journal only
-python scripts/run_pipeline.py --journal aging-cell
+# Or process a single journal
+python scripts/run_pipeline_bulk.py --journal aging-cell --years 2010-2026
 
-# Specific year range
-python scripts/run_pipeline.py --journal aging-cell --years 2022-2026
+# Resume an interrupted run
+python scripts/run_all_journals.py --resume --workers 4
 ```
 
-### Compute rolling IF snapshots and export JSON
+### 3. Compute snapshots and export JSON
 
 ```bash
 python scripts/compute_snapshots.py
 ```
 
-### View the website locally
+This writes one JSON file per journal to `docs/data/journals/`, `docs/data/authors/`, and `docs/data/papers/`, plus `docs/data/index.json`.
 
-Open `website/index.html` in your browser. No server needed — just open the file directly.
+### 4. View locally
 
----
-
-## Adding Journals
-
-Edit `src/pipeline/config.py` and add entries to the `JOURNALS` dictionary:
-
-```python
-JOURNALS = {
-    "1234-5678": {
-        "name": "Journal of Example Research",
-        "abbreviation": "J Example Res",
-        "slug": "j-example-res",
-    },
-    # ... existing journals
-}
-```
-
-Then re-run the pipeline and `compute_snapshots.py`.
+Open `docs/index.html` in your browser (served via `file://` — no server needed).
 
 ---
 
@@ -118,46 +128,99 @@ Then re-run the pipeline and `compute_snapshots.py`.
 
 ```
 IMPACT/
-├── .github/workflows/       # GitHub Actions (monthly update + Pages deploy)
-├── src/pipeline/            # Python data pipeline
-│   ├── config.py            # Journals, API keys, paths
-│   ├── db_manager.py        # SQLite CRUD
-│   ├── pubmed_fetcher.py    # PubMed E-utilities
-│   ├── icite_fetcher.py     # NIH iCite API
-│   ├── citation_resolver.py # Reconstruct historical citations
-│   ├── impact_calculator.py # Rolling IF computation
-│   └── json_exporter.py     # Export JSON for website
+├── src/pipeline/
+│   ├── db_manager.py        # SQLite CRUD (papers, citations, snapshots)
+│   ├── pubmed_fetcher.py    # PubMed E-utilities (legacy / small-scale)
+│   ├── icite_fetcher.py     # iCite API (legacy / small-scale)
+│   ├── impact_calculator.py # Rolling IF computation (all three window variants)
+│   └── json_exporter.py     # JSON export for website (journal, authors, papers, geo)
 ├── scripts/
-│   ├── init_db.py           # Initialize database
-│   ├── run_pipeline.py      # Main pipeline orchestrator
-│   ├── compute_snapshots.py # Compute & export rolling IFs
-│   ├── validate_exports.py  # Validate JSON outputs
-│   └── generate_sample_data.py  # Sample data for testing
-├── website/                 # GitHub Pages site
+│   ├── download_pubmed_bulk.py   # Download PubMed baseline → pubmed_bulk.db
+│   ├── download_icite_bulk.py    # Download iCite bulk → icite_bulk.db
+│   ├── run_pipeline_bulk.py      # Per-journal pipeline using bulk DBs
+│   ├── run_all_journals.py       # Parallel orchestrator for all journals
+│   ├── compute_snapshots.py      # Compute rolling IFs and export all JSONs
+│   ├── fix_citation_months.py    # Backfill exact citation months (June→real month)
+│   └── build_date_cache.py       # Seed pmid_dates.db cache from DB
+├── docs/                    # GitHub Pages site
 │   ├── index.html
 │   ├── css/style.css
-│   ├── js/                  # App logic, Chart.js wrapper, data loader
+│   ├── js/
+│   │   ├── app.js           # Main app logic
+│   │   ├── chart-manager.js # Chart.js wrapper (Okabe-Ito palette)
+│   │   ├── data-loader.js   # Fetch routing (local vs CDN)
+│   │   ├── journal-picker.js # Searchable multi- and single-select pickers
+│   │   └── ui-helpers.js    # Shared UI utilities
 │   └── data/                # Pre-computed JSON (committed to repo)
-│       ├── index.json
-│       └── journals/        # One JSON file per journal
-├── data/impact.db           # SQLite (local only, gitignored)
-└── docs/METHODOLOGY.md      # Detailed methodology
+│       ├── index.json        # Journal index (name, ISSN, latest IF, ...)
+│       ├── journals/         # One JSON per journal (full timeseries)
+│       ├── authors/          # One JSON per journal (author lookup table)
+│       └── papers/           # One JSON per journal (top papers + geo data)
+└── data/                    # Local only (gitignored)
+    ├── impact.db             # Main SQLite database
+    ├── pubmed_bulk.db        # PubMed baseline (~40M records)
+    ├── icite_bulk.db         # iCite Open Citation Collection
+    └── pmid_dates.db         # PMID → pub date cache
 ```
+
+---
+
+## Adding a Journal
+
+All PubMed-indexed journals are already in `data/journal_registry.json` (auto-populated from the bulk download). To process a specific journal:
+
+```bash
+python scripts/run_pipeline_bulk.py --journal <slug> --years 2010-2026
+python scripts/compute_snapshots.py
+```
+
+The slug is the journal's name lowercased with spaces replaced by hyphens (e.g. `nature-medicine`). If a journal returns 0 papers, check its ISSNLinking in `pubmed_bulk.db` — sometimes the print ISSN differs from the e-ISSN in the config.
 
 ---
 
 ## Methodology
 
-See [docs/METHODOLOGY.md](docs/METHODOLOGY.md) for a detailed explanation of how the rolling IF is calculated and how it compares to the official JIF.
+### Rolling Citation Rate
+
+For each target month *M*, IMPACT counts:
+
+- **Papers window**: articles published in the 24 months ending 12 months before *M* (i.e. 13–36 months prior)
+- **Citation window**: citations those papers received in the 12 months ending at *M*
+
+```
+Rolling IF(M) = Citations(M-12 → M) / Papers(M-36 → M-13)
+```
+
+This matches the structure of the traditional 2-year JIF while being computed monthly instead of annually. Three variants are available:
+
+| Variant | Paper window | Skip |
+|---------|-------------|------|
+| 24-month (default) | 24 months | 0 months |
+| 12-month | 12 months | 0 months |
+| 5-year (yr 2–6) | 60 months | 12 months |
+
+### Citation Month Resolution
+
+iCite provides only year-level citation data. IMPACT backfills exact months by querying PubMed ESummary, resolving the common "June artifact" (the default month iCite assigns when no month is known). A local SQLite cache (`pmid_dates.db`) means subsequent runs only fetch newly-seen PMIDs.
 
 ---
 
 ## Data Sources
 
 | Source | What We Use |
-|--------|------------|
-| [PubMed E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25499/) | Paper discovery, titles, pub dates, publication types |
-| [NIH iCite API](https://icite.od.nih.gov/api) | `cited_by` lists for historical citation reconstruction |
+|--------|-------------|
+| [PubMed Baseline](https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/) | All ~40M PubMed records: titles, ISSNs, pub dates, pub types, author affiliations |
+| [iCite Open Citation Collection](https://icite.od.nih.gov/stats) | `cited_by` lists for all papers — no API calls needed for bulk processing |
+| [PubMed E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25499/) | Live author search (Authors tab) and exact pub dates for new citations |
+| [NIH iCite API](https://icite.od.nih.gov/api) | Live citation data for Papers and Authors tabs |
+
+---
+
+## Accessibility
+
+Charts use the **[Okabe-Ito colorblind-safe palette](https://www.nature.com/articles/nmeth.1618)**, recommended by *Nature Methods* for scientific visualization. All eight core colors remain distinguishable under deuteranopia, protanopia, and tritanopia (the most common forms of color vision deficiency, affecting ~8% of males). Yellow and black are substituted with purple and gray for better legibility on white backgrounds.
+
+Have a suggestion for improving accessibility or the color scheme? [Open an issue on GitHub](https://github.com/dantyrr/IMPACT/issues/new).
 
 ---
 
@@ -169,4 +232,4 @@ MIT — see [LICENSE](LICENSE)
 
 ## Contributing
 
-Pull requests welcome! If you'd like to add a journal, fix a bug, or improve the methodology, please open an issue first.
+Pull requests are welcome. If you'd like to add a feature, fix a bug, or improve the methodology, please [open an issue](https://github.com/dantyrr/IMPACT/issues) first to discuss.

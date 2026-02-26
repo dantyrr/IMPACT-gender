@@ -178,6 +178,69 @@ class JSONExporter:
         logger.info(f"Exported author data → {filepath} ({len(entries)} entries, {size_kb} KB)")
         return filepath
 
+    def export_journal_papers(self, slug: str, rows: list,
+                              geo_rows: list = None) -> str:
+        """
+        Export per-paper data for the papers browser tab, plus country-by-year geo data.
+        Saves to docs/data/papers/{slug}.json
+        """
+        papers_dir = os.path.join(self.data_dir, "papers")
+        os.makedirs(papers_dir, exist_ok=True)
+
+        entries = []
+        for row in rows:
+            entry = {
+                "pmid": row["pmid"],
+                "y": row.get("pub_year"),
+                "m": row.get("pub_month"),
+                "c": row.get("citation_count", 0),
+            }
+            title = row.get("title") or ""
+            if title:
+                entry["t"] = title[:120]
+            fa = row.get("first_author_name") or ""
+            if fa:
+                entry["fa"] = fa
+            fc = row.get("first_author_country") or ""
+            if fc:
+                entry["fc"] = fc
+            la = row.get("last_author_name") or ""
+            if la:
+                entry["la"] = la
+            lc = row.get("last_author_country") or ""
+            if lc:
+                entry["lc"] = lc
+            pt = row.get("pub_type") or ""
+            if pt:
+                entry["pt"] = pt
+            entries.append(entry)
+
+        # Build compact geo summary: {year: {country: count}}
+        geo = {}
+        for row in (geo_rows or []):
+            yr = str(row["pub_year"])
+            country = row["first_author_country"]
+            n = row["n"]
+            if yr not in geo:
+                geo[yr] = {}
+            geo[yr][country] = n
+
+        data = {
+            "slug": slug,
+            "generated": datetime.now().strftime("%Y-%m-%d"),
+            "papers": entries,
+        }
+        if geo:
+            data["geo"] = geo
+
+        path = os.path.join(papers_dir, f"{slug}.json")
+        with open(path, "w") as f:
+            json.dump(data, f, separators=(",", ":"))
+
+        size_kb = os.path.getsize(path) // 1024
+        logger.info(f"Exported papers data → {path} ({len(entries)} entries, {size_kb} KB)")
+        return path
+
     def export_author_profile(self, author_name: str,
                                metrics: Dict) -> str:
         """Export author metrics as JSON."""

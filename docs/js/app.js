@@ -7,6 +7,9 @@ class IMPACTApp {
         this.journals = [];
         this.journalDataCache = {};
         this.authorDataCache = {};  // slug → {pmid: {f,fa,l,la}} or null if not available
+        this.papersDataCache = {};  // slug → papers array
+        this.papersCurrentData = null;
+        this.papersSort = { col: 'c', dir: 'desc' };
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -25,6 +28,9 @@ class IMPACTApp {
             this.setupSearch();
             this.setupJournalTrendsPanel();
             this.setupCompare();
+            this.setupPapers();
+            this.setupAuthorsSection();
+            this.setupGeography();
             this.setupAuthor();
             this.setupAboutJournalList();
             this.updateTimestamp(index.generated);
@@ -441,6 +447,393 @@ class IMPACTApp {
 
         container.innerHTML = '';
         container.appendChild(UIHelpers.createTable(rows, columns));
+    }
+
+    // ---- Papers Browser ----
+
+    setupPapers() {
+        this.papersPicker = new SingleJournalPicker(
+            'papers-journal-picker', this.journals,
+            (slug) => {
+                if (slug) {
+                    this.loadPapersForJournal(slug);
+                } else {
+                    document.getElementById('papers-content').style.display = 'none';
+                    document.getElementById('papers-hint').textContent = 'Select a journal above to browse its papers.';
+                    document.getElementById('papers-hint').style.display = '';
+                    this.papersCurrentData = null;
+                }
+            }
+        );
+
+        document.getElementById('papers-search').addEventListener('input', () => this._renderPapersTable());
+        document.getElementById('papers-type-filter').addEventListener('change', () => this._renderPapersTable());
+        document.getElementById('papers-year-filter').addEventListener('change', () => this._renderPapersTable());
+
+        document.querySelectorAll('#papers-table th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (this.papersSort.col === col) {
+                    this.papersSort.dir = this.papersSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.papersSort = { col, dir: col === 'c' || col === 'y' ? 'desc' : 'asc' };
+                }
+                document.querySelectorAll('#papers-table th.sortable').forEach(h =>
+                    h.classList.remove('sort-active', 'sort-asc', 'sort-desc')
+                );
+                th.classList.add('sort-active', this.papersSort.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+                this._renderPapersTable();
+            });
+        });
+    }
+
+    async loadPapersForJournal(slug) {
+        const hint = document.getElementById('papers-hint');
+        const content = document.getElementById('papers-content');
+        hint.textContent = 'Loading…';
+        hint.style.display = '';
+        content.style.display = 'none';
+
+        try {
+            if (!this.papersDataCache[slug]) {
+                const resp = await fetch(`data/papers/${slug}.json`);
+                if (!resp.ok) throw new Error('Not found');
+                const d = await resp.json();
+                this.papersDataCache[slug] = d.papers || [];
+                this.papersDataCache[`${slug}__geo`] = d.geo || null;
+            }
+            this.papersCurrentData = this.papersDataCache[slug];
+
+            // Populate year filter
+            const years = [...new Set(this.papersCurrentData.map(p => p.y).filter(Boolean))].sort((a, b) => b - a);
+            const yearSel = document.getElementById('papers-year-filter');
+            yearSel.innerHTML = '<option value="">All years</option>';
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                yearSel.appendChild(opt);
+            });
+
+            // Reset filters and sort
+            document.getElementById('papers-search').value = '';
+            document.getElementById('papers-type-filter').value = '';
+            this.papersSort = { col: 'c', dir: 'desc' };
+            document.querySelectorAll('#papers-table th.sortable').forEach(h =>
+                h.classList.remove('sort-active', 'sort-asc', 'sort-desc')
+            );
+            const citCol = document.querySelector('#papers-table th[data-col="c"]');
+            if (citCol) citCol.classList.add('sort-active', 'sort-desc');
+
+            hint.style.display = 'none';
+            content.style.display = '';
+            this._renderPapersTable();
+        } catch (e) {
+            hint.textContent = 'Paper data not yet available for this journal.';
+            hint.style.display = '';
+        }
+    }
+
+    _renderPapersTable() {
+        if (!this.papersCurrentData) return;
+
+        const search = document.getElementById('papers-search').value.toLowerCase().trim();
+        const typeFilter = document.getElementById('papers-type-filter').value.toLowerCase();
+        const yearFilter = document.getElementById('papers-year-filter').value;
+
+        let filtered = this.papersCurrentData.filter(p => {
+            if (typeFilter && (p.pt || '').toLowerCase() !== typeFilter) return false;
+            if (yearFilter && String(p.y) !== yearFilter) return false;
+            if (search) {
+                const inTitle = (p.t || '').toLowerCase().includes(search);
+                const inAuthor = (p.fa || '').toLowerCase().includes(search) || (p.la || '').toLowerCase().includes(search);
+                const inCountry = (p.fc || '').toLowerCase().includes(search) || (p.lc || '').toLowerCase().includes(search);
+                if (!inTitle && !inAuthor && !inCountry) return false;
+            }
+            return true;
+        });
+
+        const { col, dir } = this.papersSort;
+        filtered.sort((a, b) => {
+            let av = a[col] ?? (col === 'c' || col === 'y' ? -1 : '');
+            let bv = b[col] ?? (col === 'c' || col === 'y' ? -1 : '');
+            if (typeof av === 'string') av = av.toLowerCase();
+            if (typeof bv === 'string') bv = bv.toLowerCase();
+            if (av < bv) return dir === 'asc' ? -1 : 1;
+            if (av > bv) return dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        document.getElementById('papers-count').textContent = `${filtered.length.toLocaleString()} papers`;
+
+        const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        const tbody = document.getElementById('papers-tbody');
+        tbody.innerHTML = filtered.map(p => {
+            const title = p.t ? (p.t.length > 90 ? p.t.slice(0, 90) + '…' : p.t) : '—';
+            return `<tr class="papers-row-link" data-pmid="${p.pmid}" title="Open in PubMed">` +
+                `<td>${esc(title)}</td>` +
+                `<td>${p.y || '—'}</td>` +
+                `<td>${esc(p.pt || '—')}</td>` +
+                `<td>${esc(p.fa || '—')}</td>` +
+                `<td>${esc(p.fc || '—')}</td>` +
+                `<td>${p.c != null ? p.c.toLocaleString() : '—'}</td></tr>`;
+        }).join('');
+
+        // Event delegation — single listener handles all row clicks
+        if (!tbody._papersClickBound) {
+            tbody._papersClickBound = true;
+            tbody.addEventListener('click', (e) => {
+                const tr = e.target.closest('tr[data-pmid]');
+                if (tr) window.open(`https://pubmed.ncbi.nlm.nih.gov/${tr.dataset.pmid}/`, '_blank');
+            });
+        }
+
+        const total = this.papersCurrentData.length;
+        const noteEl = document.getElementById('papers-note');
+        noteEl.textContent = total >= 2000
+            ? `Showing top 2,000 most-cited papers. Click any row to open in PubMed.`
+            : `Showing all ${total.toLocaleString()} papers. Click any row to open in PubMed.`;
+    }
+
+    // ---- Authors Journal Breakdown ----
+
+    setupAuthorsSection() {
+        // Tab switching
+        document.querySelectorAll('.authors-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.authors-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tabId = btn.dataset.tab;
+                document.querySelectorAll('.authors-tab-panel').forEach(panel => {
+                    panel.style.display = panel.id === tabId ? '' : 'none';
+                });
+            });
+        });
+
+        // Journal select for breakdown tab
+        this.authorsPicker = new SingleJournalPicker(
+            'authors-journal-picker', this.journals,
+            (slug) => { if (slug) this.loadAuthorsBreakdown(slug); }
+        );
+    }
+
+    async loadAuthorsBreakdown(slug) {
+        const hint = document.getElementById('authors-hint');
+        const content = document.getElementById('authors-content');
+        hint.textContent = 'Loading…';
+        hint.style.display = '';
+        content.style.display = 'none';
+
+        try {
+            // Load papers data (country + author name)
+            if (!this.papersDataCache[slug]) {
+                const resp = await fetch(`data/papers/${slug}.json`);
+                if (!resp.ok) throw new Error('No papers data');
+                const d = await resp.json();
+                this.papersDataCache[slug] = d.papers || [];
+                this.papersDataCache[`${slug}__geo`] = d.geo || null;
+            }
+            const papers = this.papersDataCache[slug];
+
+            // Load author data (institution via affiliation)
+            const authorData = await this._loadAuthorData(slug);
+
+            // Aggregate country counts (first author), normalizing variants
+            const countryCounts = {};
+            papers.forEach(p => {
+                const c = this._normalizeCountry(p.fc);
+                if (c) countryCounts[c] = (countryCounts[c] || 0) + 1;
+            });
+
+            // Aggregate institution counts (first author, from full affiliation string)
+            const instCounts = {};
+            if (authorData) {
+                Object.values(authorData).forEach(d => {
+                    if (d.fa) {
+                        const inst = d.fa.split(',')[0].trim();
+                        if (inst && inst.length > 2) instCounts[inst] = (instCounts[inst] || 0) + 1;
+                    }
+                });
+            }
+
+            // Aggregate top first authors by paper count
+            const authorCounts = {};
+            papers.forEach(p => {
+                if (p.fa) authorCounts[p.fa] = (authorCounts[p.fa] || 0) + 1;
+            });
+
+            const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            const topInst = Object.entries(instCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            const topAuthors = Object.entries(authorCounts).sort((a, b) => b[1] - a[1]).slice(0, 20);
+
+            // Update metrics row
+            const metricsRow = document.getElementById('authors-metrics-row');
+            const metrics = [
+                [papers.length.toLocaleString(), 'Papers (top 2k)'],
+                [Object.keys(countryCounts).length, 'Countries'],
+            ];
+            if (authorData) metrics.push([Object.keys(instCounts).length, 'Institutions']);
+            metricsRow.innerHTML = metrics.map(([val, label]) =>
+                `<div class="metric-card"><span class="metric-value">${val}</span><span class="metric-label">${label}</span></div>`
+            ).join('');
+
+            hint.style.display = 'none';
+            content.style.display = '';
+
+            chartManager.createBarChart('authors-country-chart',
+                topCountries.map(x => x[0]), topCountries.map(x => x[1]), 'Papers');
+            chartManager.createBarChart('authors-institution-chart',
+                topInst.map(x => x[0]), topInst.map(x => x[1]), 'Papers');
+            chartManager.createBarChart('authors-top-chart',
+                topAuthors.map(x => x[0]), topAuthors.map(x => x[1]), 'Papers');
+
+        } catch (e) {
+            hint.textContent = 'Data not yet available for this journal.';
+            hint.style.display = '';
+            console.error('Error loading author breakdown:', e);
+        }
+    }
+
+    // ---- Geography ----
+
+    // US state abbreviations to normalize to "USA"
+    static get US_STATES() {
+        return new Set([
+            'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN',
+            'IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV',
+            'NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN',
+            'TX','UT','VT','VA','WA','WV','WI','WY','DC',
+        ]);
+    }
+
+    _normalizeCountry(c) {
+        if (!c) return null;
+        const t = c.trim();
+        if (IMPACTApp.US_STATES.has(t.toUpperCase())) return 'USA';
+        // Strip trailing email artifacts
+        const clean = t.replace(/\.\s*(electronic address|email):?.*/i, '').trim();
+        const lo = clean.toLowerCase();
+        if (lo === 'usa' || lo === 'us' || lo === 'united states' || lo === 'united states of america') return 'USA';
+        if (lo === 'uk' || lo === 'england' || lo === 'scotland' || lo === 'wales' || lo === 'great britain') return 'United Kingdom';
+        if (/^(people.?s republic of china|pr china|p\.?\s*r\.?\s*china)$/i.test(clean)) return 'China';
+        if (lo === 'republic of korea' || lo === 'south korea') return 'South Korea';
+        if (lo === 'democratic people\'s republic of korea' || lo === 'north korea') return 'North Korea';
+        if (lo === 'islamic republic of iran' || lo === 'iran, islamic republic') return 'Iran';
+        if (lo === 'russian federation' || lo === 'russia') return 'Russia';
+        if (lo === 'czech republic' || lo === 'czechia') return 'Czech Republic';
+        if (lo === 'the netherlands' || lo === 'netherlands') return 'Netherlands';
+        if (lo === 'taiwan' || lo === 'republic of china') return 'Taiwan';
+        return clean || null;
+    }
+
+    setupGeography() {
+        this.geoPicker = new SingleJournalPicker(
+            'geo-journal-picker', this.journals,
+            (slug) => {
+                if (slug) {
+                    this.loadGeographyData(slug);
+                } else {
+                    document.getElementById('geo-content').style.display = 'none';
+                    document.getElementById('geo-hint').textContent = 'Select a journal above to see its geographic breakdown.';
+                    document.getElementById('geo-hint').style.display = '';
+                }
+            }
+        );
+    }
+
+    async loadGeographyData(slug) {
+        const hint = document.getElementById('geo-hint');
+        const content = document.getElementById('geo-content');
+        hint.textContent = 'Loading…';
+        hint.style.display = '';
+        content.style.display = 'none';
+
+        try {
+            if (!this.papersDataCache[slug]) {
+                const resp = await fetch(`data/papers/${slug}.json`);
+                if (!resp.ok) throw new Error('No data');
+                const d = await resp.json();
+                this.papersDataCache[slug] = d.papers || [];
+                this.papersDataCache[`${slug}__geo`] = d.geo || null;
+            }
+
+            const geo = this.papersDataCache[`${slug}__geo`];
+            if (!geo || Object.keys(geo).length === 0) {
+                hint.textContent = 'Geographic data not yet available for this journal.';
+                hint.style.display = '';
+                return;
+            }
+
+            // Normalize countries (state abbrevs → USA)
+            const normalizedGeo = {};
+            Object.entries(geo).forEach(([yr, countries]) => {
+                normalizedGeo[yr] = {};
+                Object.entries(countries).forEach(([c, n]) => {
+                    const norm = this._normalizeCountry(c);
+                    if (norm) normalizedGeo[yr][norm] = (normalizedGeo[yr][norm] || 0) + n;
+                });
+            });
+
+            const years = Object.keys(normalizedGeo).sort();
+
+            // Overall totals per country
+            const totals = {};
+            Object.values(normalizedGeo).forEach(byCountry => {
+                Object.entries(byCountry).forEach(([c, n]) => {
+                    totals[c] = (totals[c] || 0) + n;
+                });
+            });
+
+            const top10 = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 10).map(x => x[0]);
+
+            // Metrics
+            const totalPapers = Object.values(totals).reduce((a, b) => a + b, 0);
+            const nCountries = Object.keys(totals).length;
+            const recentYears = years.slice(-3);
+            const recentTotals = {};
+            recentYears.forEach(yr => {
+                Object.entries(normalizedGeo[yr] || {}).forEach(([c, n]) => {
+                    recentTotals[c] = (recentTotals[c] || 0) + n;
+                });
+            });
+            const topRecent = Object.entries(recentTotals).sort((a, b) => b[1] - a[1]).slice(0, 12);
+
+            document.getElementById('geo-metrics-row').innerHTML = [
+                [totalPapers.toLocaleString(), 'Papers with Location Data'],
+                [nCountries, 'Countries'],
+                [top10[0] || '—', 'Top Country Overall'],
+                [topRecent[0] ? topRecent[0][0] : '—', `Top Country (${recentYears[0]}–${recentYears[recentYears.length-1]})`],
+            ].map(([val, label]) =>
+                `<div class="metric-card"><span class="metric-value">${val}</span><span class="metric-label">${label}</span></div>`
+            ).join('');
+
+            hint.style.display = 'none';
+            content.style.display = '';
+
+            // Trend chart: stacked bars by year, top 10 countries
+            const trendDatasets = top10.map((country, i) => ({
+                label: country,
+                data: years.map(yr => normalizedGeo[yr][country] || 0),
+                backgroundColor: chartManager.palette[i % chartManager.palette.length] + 'cc',
+                borderColor: chartManager.palette[i % chartManager.palette.length],
+                borderWidth: 1,
+            }));
+            chartManager.createStackedBarChart('geo-trend-chart', years, trendDatasets, 'Papers');
+
+            // Top countries overall (horizontal bar)
+            const topOverall = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            chartManager.createBarChart('geo-top-chart',
+                topOverall.map(x => x[0]), topOverall.map(x => x[1]), 'Papers');
+
+            // Recent years (horizontal bar)
+            chartManager.createBarChart('geo-recent-chart',
+                topRecent.map(x => x[0]), topRecent.map(x => x[1]), 'Papers');
+
+        } catch (e) {
+            hint.textContent = 'Geographic data not yet available for this journal.';
+            hint.style.display = '';
+            console.error('Geo error:', e);
+        }
     }
 
     // ---- Author Metrics ----

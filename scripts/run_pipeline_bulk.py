@@ -26,8 +26,11 @@ import os
 import sqlite3
 import logging
 from datetime import datetime
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = Path(__file__).parent.parent
+
+sys.path.insert(0, str(REPO_ROOT))
 
 from src.pipeline.config import JOURNALS, DB_PATH, PUBMED_BULK_DB_PATH
 from src.pipeline.db_manager import DatabaseManager
@@ -97,9 +100,53 @@ def get_citing_dates(bulk: sqlite3.Connection,
     return {r[0]: (r[1], r[2]) for r in rows}
 
 
+def open_icite_bulk_db(path: str) -> sqlite3.Connection:
+    """Open a pre-built icite_bulk.db (from download_icite_bulk.py)."""
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    conn.execute("PRAGMA cache_size=-131072")
+    return conn
+
+
+def get_icite_local(icite_bulk: sqlite3.Connection, pmids: list) -> dict:
+    """
+    Look up citation data from local icite_bulk.db.
+    Returns {pmid: {"cited_by": [list], "is_research_article": bool}}.
+
+    Uses a temp table + PK join on the 40M-row metadata table (fast),
+    avoiding the old 893M-row citations table.
+    """
+    if not pmids:
+        return {}
+
+    icite_bulk.execute(
+        "CREATE TEMP TABLE IF NOT EXISTS _q (pmid INTEGER PRIMARY KEY)"
+    )
+    icite_bulk.execute("DELETE FROM _q")
+    icite_bulk.executemany("INSERT OR IGNORE INTO _q VALUES (?)",
+                           [(p,) for p in pmids])
+
+    rows = icite_bulk.execute(
+        "SELECT m.pmid, m.is_research_article, m.cited_by "
+        "FROM metadata m JOIN _q q ON m.pmid = q.pmid"
+    ).fetchall()
+
+    result = {}
+    for pmid, is_res, cited_by_str in rows:
+        cited_by = [int(x) for x in cited_by_str.split() if x] if cited_by_str else []
+        result[pmid] = {"cited_by": cited_by, "is_research_article": bool(is_res)}
+
+    # Placeholder for very new papers not yet in snapshot
+    for pmid in pmids:
+        if pmid not in result:
+            result[pmid] = {"cited_by": [], "is_research_article": True}
+
+    return result
+
+
 def process_journal(issn: str, meta: dict, db: DatabaseManager,
                     icite: IciteFetcher, bulk: sqlite3.Connection,
-                    year_start: int, year_end: int):
+                    year_start: int, year_end: int,
+                    icite_bulk: sqlite3.Connection = None):
     name = meta["name"]
     logger.info("=" * 60)
     logger.info(f"Processing: {name} (ISSN: {issn})")
@@ -151,12 +198,17 @@ def process_journal(issn: str, meta: dict, db: DatabaseManager,
     logger.info(f"  {stored:,} papers in DB")
 
     # ------------------------------------------------------------------ #
-    # Step 3: iCite — citation links (still requires API)
+    # Step 3: iCite — citation links (local DB preferred, API fallback)
     # ------------------------------------------------------------------ #
-    logger.info("Step 3: Fetching iCite citation data...")
     pmids = [p["pmid"] for p in paper_dicts]
-    icite_data = icite.fetch_batch(pmids)
-    logger.info(f"  iCite returned data for {len(icite_data):,} papers")
+    if icite_bulk is not None:
+        logger.info("Step 3: Loading iCite data from local bulk DB...")
+        icite_data = get_icite_local(icite_bulk, pmids)
+        logger.info(f"  Local DB: {len(icite_data):,} papers")
+    else:
+        logger.info("Step 3: Fetching iCite citation data from API...")
+        icite_data = icite.fetch_batch(pmids)
+        logger.info(f"  API returned data for {len(icite_data):,} papers")
 
     # Update is_research from iCite (more reliable than PubMed pub type)
     for pmid, record in icite_data.items():
@@ -288,6 +340,8 @@ def main():
                         help="Year range START-END (e.g. 2010-2026)")
     parser.add_argument("--registry", type=str, default=None,
                         help="Path to journal_registry.json (overrides config.JOURNALS)")
+    parser.add_argument("--icite-db", type=str, default=None,
+                        help="Path to icite_bulk.db (skips iCite API entirely)")
     args = parser.parse_args()
 
     now = datetime.now()
@@ -324,15 +378,25 @@ def main():
     bulk_count = bulk.execute("SELECT COUNT(*) FROM pubmed").fetchone()[0]
     logger.info(f"  {bulk_count:,} records in bulk DB")
 
+    icite_bulk = None
+    icite_db_path = args.icite_db or str(REPO_ROOT / "data" / "icite_bulk.db")
+    if os.path.exists(icite_db_path):
+        logger.info(f"Opening local iCite bulk DB: {icite_db_path}")
+        icite_bulk = open_icite_bulk_db(icite_db_path)
+    else:
+        logger.info("No local iCite bulk DB found — using API (run download_icite_bulk.py to speed this up)")
+
     for issn, meta in journals_to_process.items():
         try:
             process_journal(issn, meta, db, icite, bulk,
-                            year_start, year_end)
+                            year_start, year_end, icite_bulk=icite_bulk)
         except Exception as e:
             logger.error(f"Error processing {meta['name']}: {e}", exc_info=True)
             continue
 
     bulk.close()
+    if icite_bulk:
+        icite_bulk.close()
     db.close()
     logger.info("Pipeline complete!")
 

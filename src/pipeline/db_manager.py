@@ -374,6 +374,41 @@ class DatabaseManager:
         )
         return [dict(r) for r in cursor.fetchall()]
 
+
+    def get_papers_for_export(self, journal_id: int, limit: int = 2000) -> list:
+        """Return papers for the papers browser export, sorted by citation count desc."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """SELECT p.pmid, p.title, p.pub_year, p.pub_month, p.pub_type,
+                      p.first_author_name, p.first_author_country,
+                      p.last_author_name, p.last_author_country,
+                      COUNT(c.id) as citation_count
+               FROM papers p
+               LEFT JOIN citations c ON c.cited_pmid = p.pmid
+               WHERE p.journal_id = ?
+               GROUP BY p.pmid
+               ORDER BY citation_count DESC
+               LIMIT ?""",
+            (journal_id, limit),
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
+    def get_country_by_year(self, journal_id: int) -> list:
+        """Return first-author country counts per year for geographic breakdown."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """SELECT pub_year, first_author_country, COUNT(*) as n
+               FROM papers
+               WHERE journal_id = ?
+                 AND pub_year BETWEEN 2010 AND 2026
+                 AND first_author_country IS NOT NULL
+                 AND first_author_country != ''
+               GROUP BY pub_year, first_author_country
+               ORDER BY pub_year, n DESC""",
+            (journal_id,),
+        )
+        return [dict(r) for r in cursor.fetchall()]
+
     def update_paper_authors_bulk(self, author_rows: List[Dict]):
         """Bulk-update author fields on the papers table."""
         self.conn.executemany(

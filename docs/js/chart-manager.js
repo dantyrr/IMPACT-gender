@@ -508,6 +508,84 @@ class ChartManager {
         });
     }
 
+    /**
+     * Create a horizontal bar chart (for country/institution/author breakdowns).
+     * labels: string[]  values: number[]
+     */
+    createBarChart(canvasId, labels, values, valueLabel = 'Papers') {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        this._destroy(canvasId);
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: labels.map((_, i) => this.palette[i % this.palette.length] + 'cc'),
+                    borderColor: labels.map((_, i) => this.palette[i % this.palette.length]),
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.parsed.x.toLocaleString()} ${valueLabel}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, title: { display: true, text: valueLabel } },
+                    y: { ticks: { font: { size: 11 }, maxTicksLimit: 20 } }
+                }
+            }
+        });
+    }
+
+    /**
+     * Create a stacked bar chart (for country/geo trend visualization).
+     * labels: string[] (x-axis — years)
+     * datasets: [{label, data, backgroundColor, borderColor, borderWidth}]
+     * valueLabel: string for y-axis
+     */
+    createStackedBarChart(canvasId, labels, datasets, valueLabel = 'Papers') {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        this._destroy(canvasId);
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 11 }, boxWidth: 12, padding: 8 }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Year' } },
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: valueLabel } }
+                }
+            }
+        });
+    }
+
     _destroy(canvasId) {
         if (this.charts[canvasId]) {
             this.charts[canvasId].destroy();

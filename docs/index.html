@@ -16,16 +16,18 @@
         <p class="tagline">Open-source rolling 24-month journal citation rates computed from PubMed &amp; iCite data</p>
     </div>
     <nav>
-        <a href="#journals" class="nav-link active" data-section="journals">Journal Metrics</a>
+        <a href="#journals" class="nav-link active" data-section="journals">Journals</a>
         <a href="#compare" class="nav-link" data-section="compare">Compare</a>
-        <a href="#author" class="nav-link" data-section="author">Author Metrics</a>
+        <a href="#papers" class="nav-link" data-section="papers">Papers</a>
+        <a href="#authors" class="nav-link" data-section="authors">Authors</a>
+        <a href="#geography" class="nav-link" data-section="geography">Geography</a>
         <a href="#about" class="nav-link" data-section="about">About</a>
     </nav>
 </header>
 
 <main>
 
-    <!-- ============ JOURNAL METRICS ============ -->
+    <!-- ============ JOURNALS ============ -->
     <section id="journals" class="section active">
         <h2>Journal Citation Rate Trends</h2>
         <p class="section-desc">Compare citation rate trends across journals and article types, or browse individual journals below.</p>
@@ -104,7 +106,6 @@
                 </div>
             </div>
 
-            <!-- Chart controls: window -->
             <div class="chart-controls">
                 <span class="chart-controls-label">Window:</span>
                 <div class="toggle-group" id="window-toggle">
@@ -114,7 +115,6 @@
                 </div>
             </div>
 
-            <!-- Chart controls: article type -->
             <div class="chart-controls">
                 <span class="chart-controls-label">Article type:</span>
                 <div class="toggle-group" id="type-toggle">
@@ -131,7 +131,6 @@
                 <canvas id="journal-chart"></canvas>
             </div>
 
-            <!-- Citation Trends -->
             <div class="chart-controls">
                 <span class="chart-controls-label">Citation Trends:</span>
                 <div class="toggle-group" id="citation-chart-toggle">
@@ -144,17 +143,15 @@
                 <canvas id="citation-chart"></canvas>
             </div>
 
-            <!-- Paper Composition -->
             <div class="chart-container">
                 <canvas id="composition-chart"></canvas>
             </div>
 
-            <!-- Papers & Citations bar chart -->
             <div class="chart-container">
                 <canvas id="papers-chart"></canvas>
             </div>
         </div>
-    </section><!-- /#journals -->
+    </section>
 
     <!-- ============ COMPARE ============ -->
     <section id="compare" class="section">
@@ -186,47 +183,182 @@
             <canvas id="compare-chart"></canvas>
         </div>
 
-        <!-- Comparison data table -->
         <div id="compare-table-container"></div>
     </section>
 
-    <!-- ============ AUTHOR METRICS ============ -->
-    <section id="author" class="section">
-        <h2>Author Metrics</h2>
-        <p class="section-desc">
-            Enter one or more PubMed IDs (PMIDs) to see each paper's rolling 24-month citation count
-            and compare it to the journal's 24-month citation rate. Citation data is fetched live from NIH iCite.
-        </p>
+    <!-- ============ PAPERS ============ -->
+    <section id="papers" class="section">
+        <h2>Paper Browser</h2>
+        <p class="section-desc">Browse individual papers for any journal — sortable by citations, year, or author. Click a paper to view on PubMed.</p>
 
-        <div class="search-bar">
-            <input type="text" id="pmid-input" placeholder="Enter PMIDs separated by commas (e.g., 38009535, 38031718)">
-            <button id="author-analyze-btn">Analyze</button>
+        <div id="papers-picker-wrap">
+            <div class="section-label">Select a journal</div>
+            <div id="papers-journal-picker"></div>
         </div>
 
-        <div id="author-results" style="display:none;">
-            <div class="metrics-row">
-                <div class="metric-card">
-                    <span class="metric-value" id="author-papers">—</span>
-                    <span class="metric-label">Papers Found</span>
+        <div id="papers-content" style="display:none;">
+            <div class="papers-toolbar">
+                <input type="text" id="papers-search" class="papers-search-input" placeholder="Filter by title, author, or country…" autocomplete="off">
+                <div class="papers-filter-group">
+                    <label class="papers-filter-label">Type:</label>
+                    <select id="papers-type-filter" class="papers-select">
+                        <option value="">All types</option>
+                        <option value="journal article">Research</option>
+                        <option value="review">Review</option>
+                        <option value="editorial">Editorial</option>
+                        <option value="letter">Letter</option>
+                    </select>
                 </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="author-cites">—</span>
-                    <span class="metric-label">Total Citations (all time)</span>
+                <div class="papers-filter-group">
+                    <label class="papers-filter-label">Year:</label>
+                    <select id="papers-year-filter" class="papers-select">
+                        <option value="">All years</option>
+                    </select>
                 </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="author-avg">—</span>
-                    <span class="metric-label">Avg Total Citations / Paper</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="author-weighted-if">—</span>
-                    <span class="metric-label">Avg Cit/yr (2-yr window)</span>
-                </div>
+                <span id="papers-count" class="papers-count-label"></span>
             </div>
-            <div class="chart-container" id="author-chart-container" style="display:none;">
-                <canvas id="author-chart"></canvas>
+
+            <div class="table-scroll">
+                <table class="data-table sortable-table" id="papers-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-col="t">Title</th>
+                            <th class="sortable" data-col="y">Year</th>
+                            <th class="sortable" data-col="pt">Type</th>
+                            <th class="sortable" data-col="fa">First Author</th>
+                            <th class="sortable" data-col="fc">Country</th>
+                            <th class="sortable sort-active sort-desc" data-col="c">Citations</th>
+                        </tr>
+                    </thead>
+                    <tbody id="papers-tbody"></tbody>
+                </table>
             </div>
-            <div id="author-table-container"></div>
+            <p class="data-note" id="papers-note"></p>
         </div>
+
+        <p id="papers-hint" class="data-note" style="margin-top:1rem;">Select a journal above to browse its papers.</p>
+    </section>
+
+    <!-- ============ AUTHORS ============ -->
+    <section id="authors" class="section">
+        <h2>Author &amp; Institution Explorer</h2>
+        <p class="section-desc">Browse top authors, institutions, and countries for any journal — or look up your own papers by PMID.</p>
+
+        <div class="authors-tabs">
+            <button class="authors-tab-btn active" data-tab="journal-authors">Journal Breakdown</button>
+            <button class="authors-tab-btn" data-tab="pmid-lookup">My Papers (PMID Lookup)</button>
+        </div>
+
+        <!-- Journal Authors panel -->
+        <div id="journal-authors" class="authors-tab-panel active">
+            <div id="authors-picker-wrap">
+                <div class="section-label">Select a journal</div>
+                <div id="authors-journal-picker"></div>
+            </div>
+
+            <div id="authors-content" style="display:none;">
+                <div class="metrics-row" id="authors-metrics-row"></div>
+
+                <div class="authors-charts-grid">
+                    <div class="authors-chart-card">
+                        <h4>Top Countries (First Author)</h4>
+                        <div class="chart-container" style="margin-bottom:0;">
+                            <canvas id="authors-country-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="authors-chart-card">
+                        <h4>Top Institutions (First Author)</h4>
+                        <div class="chart-container" style="margin-bottom:0;">
+                            <canvas id="authors-institution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="authors-chart-card" style="margin-top:1rem;">
+                    <h4>Top Authors by Paper Count</h4>
+                    <div class="chart-container" style="margin-bottom:0;">
+                        <canvas id="authors-top-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <p id="authors-hint" class="data-note" style="margin-top:1rem;">Select a journal above to see author breakdowns.</p>
+        </div>
+
+        <!-- PMID Lookup panel (existing Author Metrics) -->
+        <div id="pmid-lookup" class="authors-tab-panel" style="display:none;">
+            <p class="section-desc" style="margin-top:1rem;">
+                Enter one or more PubMed IDs (PMIDs) to see each paper's rolling 24-month citation count
+                and compare it to the journal's citation rate.
+            </p>
+            <div class="search-bar">
+                <input type="text" id="pmid-input" placeholder="Enter PMIDs separated by commas (e.g., 38009535, 38031718)">
+                <button id="author-analyze-btn">Analyze</button>
+            </div>
+
+            <div id="author-results" style="display:none;">
+                <div class="metrics-row">
+                    <div class="metric-card">
+                        <span class="metric-value" id="author-papers">—</span>
+                        <span class="metric-label">Papers Found</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value" id="author-cites">—</span>
+                        <span class="metric-label">Total Citations (all time)</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value" id="author-avg">—</span>
+                        <span class="metric-label">Avg Total Citations / Paper</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-value" id="author-weighted-if">—</span>
+                        <span class="metric-label">Avg Cit/yr (2-yr window)</span>
+                    </div>
+                </div>
+                <div class="chart-container" id="author-chart-container" style="display:none;">
+                    <canvas id="author-chart"></canvas>
+                </div>
+                <div id="author-table-container"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ GEOGRAPHY ============ -->
+    <section id="geography" class="section">
+        <h2>Geographic Breakdown</h2>
+        <p class="section-desc">Where are papers published? See how a journal's country distribution has changed over time, based on first-author affiliation.</p>
+
+        <div id="geo-picker-wrap">
+            <div class="section-label">Select a journal</div>
+            <div id="geo-journal-picker"></div>
+        </div>
+
+        <div id="geo-content" style="display:none;">
+            <div class="metrics-row" id="geo-metrics-row"></div>
+
+            <div class="authors-chart-card" style="margin-bottom:1rem;">
+                <h4>Papers by Country — Over Time (First Author)</h4>
+                <div class="chart-container" style="height:420px;">
+                    <canvas id="geo-trend-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="authors-charts-grid">
+                <div class="authors-chart-card">
+                    <h4>Top Countries Overall</h4>
+                    <div class="chart-container" style="margin-bottom:0;">
+                        <canvas id="geo-top-chart"></canvas>
+                    </div>
+                </div>
+                <div class="authors-chart-card">
+                    <h4>Country Share — Most Recent 3 Years</h4>
+                    <div class="chart-container" style="margin-bottom:0;">
+                        <canvas id="geo-recent-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p id="geo-hint" class="data-note" style="margin-top:1rem;">Select a journal above to see its geographic breakdown.</p>
     </section>
 
     <!-- ============ ABOUT ============ -->
@@ -255,8 +387,8 @@
 
             <h3>Data Sources</h3>
             <p>
-                <strong>PubMed E-utilities</strong> — Paper discovery, metadata, and publication types.<br>
-                <strong>NIH iCite API</strong> — Citation data including cited_by lists for historical reconstruction.
+                <strong>PubMed Bulk Data</strong> — 40M papers with metadata, author affiliations, and publication dates.<br>
+                <strong>NIH iCite Open Citation Collection</strong> — 893M citation links, downloaded and processed locally.
             </p>
 
             <h3>Review-Excluded Citation Rate</h3>

@@ -130,3 +130,109 @@ class JournalPicker {
         return [...this.selected.keys()];
     }
 }
+
+/**
+ * SingleJournalPicker — searchable single-select for a journal.
+ *
+ * Usage:
+ *   const picker = new SingleJournalPicker('my-container-id', journals, (slug) => { ... });
+ *   picker.getSelected(); // → 'slug' or null
+ */
+class SingleJournalPicker {
+    constructor(containerId, journals, onChange) {
+        this.journals = journals;
+        this.onChange = onChange;
+        this.currentSlug = null;
+        this.container = document.getElementById(containerId);
+        this._build();
+    }
+
+    _build() {
+        this.container.className = 'single-journal-picker';
+
+        const inputWrap = document.createElement('div');
+        inputWrap.className = 'picker-input-wrap';
+
+        this.input = document.createElement('input');
+        this.input.type = 'text';
+        this.input.className = 'picker-input';
+        this.input.placeholder = 'Search journals…';
+
+        this.clearBtn = document.createElement('button');
+        this.clearBtn.className = 'single-picker-clear';
+        this.clearBtn.textContent = '×';
+        this.clearBtn.title = 'Clear selection';
+        this.clearBtn.style.display = 'none';
+        this.clearBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this._clear();
+        });
+
+        inputWrap.appendChild(this.input);
+        inputWrap.appendChild(this.clearBtn);
+
+        this.dropdown = document.createElement('div');
+        this.dropdown.className = 'picker-dropdown';
+        inputWrap.appendChild(this.dropdown);
+
+        this.container.appendChild(inputWrap);
+
+        this.input.addEventListener('input', () => this._updateDropdown());
+        this.input.addEventListener('focus', () => this._updateDropdown());
+        document.addEventListener('click', (e) => {
+            if (!this.container.contains(e.target)) this._closeDropdown();
+        });
+    }
+
+    _updateDropdown() {
+        // If a journal is already locked in and user hasn't changed the text, skip
+        const term = this.input.value.toLowerCase().trim();
+        const matches = this.journals
+            .filter(j =>
+                j.name.toLowerCase().includes(term) ||
+                (j.abbreviation || '').toLowerCase().includes(term)
+            )
+            .slice(0, 12);
+
+        if (matches.length === 0) {
+            this.dropdown.style.display = 'none';
+            return;
+        }
+
+        this.dropdown.innerHTML = '';
+        matches.forEach(journal => {
+            const opt = document.createElement('div');
+            opt.className = 'picker-option' + (journal.slug === this.currentSlug ? ' picker-option-selected' : '');
+            opt.textContent = journal.name;
+            opt.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                this._select(journal);
+            });
+            this.dropdown.appendChild(opt);
+        });
+        this.dropdown.style.display = 'block';
+    }
+
+    _select(journal) {
+        this.currentSlug = journal.slug;
+        this.input.value = journal.name;
+        this.clearBtn.style.display = '';
+        this._closeDropdown();
+        this.onChange(journal.slug);
+    }
+
+    _clear() {
+        this.currentSlug = null;
+        this.input.value = '';
+        this.clearBtn.style.display = 'none';
+        this.onChange(null);
+    }
+
+    _closeDropdown() {
+        this.dropdown.style.display = 'none';
+    }
+
+    getSelected() {
+        return this.currentSlug;
+    }
+}

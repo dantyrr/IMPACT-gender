@@ -626,6 +626,245 @@ footer a:hover {
     text-decoration: underline;
 }
 
+/* ---- Section label ---- */
+
+.section-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+/* ---- Single Journal Picker ---- */
+
+.single-journal-picker {
+    margin-bottom: 1.25rem;
+}
+
+.single-journal-picker .picker-input-wrap {
+    max-width: 480px;
+}
+
+.single-picker-clear {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+}
+
+.single-picker-clear:hover {
+    color: var(--text);
+}
+
+.picker-option-selected {
+    background: #e8f4fd;
+    font-weight: 600;
+}
+
+/* ---- Papers toolbar ---- */
+
+.papers-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.papers-search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.papers-search-input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+}
+
+.papers-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.papers-filter-label {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.papers-select {
+    padding: 0.4rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--text);
+    background: var(--surface);
+    cursor: pointer;
+}
+
+.papers-count-label {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    white-space: nowrap;
+}
+
+/* ---- Papers table scroll & sortable ---- */
+
+.table-scroll {
+    overflow-x: auto;
+    margin-bottom: 0.5rem;
+}
+
+.sortable-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sortable-table th.sortable:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.sortable-table th.sortable::after {
+    content: ' ↕';
+    opacity: 0.35;
+    font-size: 0.8em;
+}
+
+.sortable-table th.sort-active::after {
+    opacity: 1;
+}
+
+.sortable-table th.sort-asc::after {
+    content: ' ↑';
+}
+
+.sortable-table th.sort-desc::after {
+    content: ' ↓';
+}
+
+.papers-row-link {
+    cursor: pointer;
+}
+
+.papers-row-link:hover td {
+    background: #e8f4fd;
+}
+
+/* ---- Authors tab buttons ---- */
+
+.authors-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.authors-tab-btn {
+    padding: 0.6rem 1.5rem;
+    border: none;
+    background: none;
+    color: var(--text-light);
+    font-size: 0.95rem;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s;
+}
+
+.authors-tab-btn:hover {
+    color: var(--text);
+}
+
+.authors-tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+}
+
+/* ---- Authors breakdown charts ---- */
+
+.authors-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.authors-chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.authors-chart-card h4 {
+    color: var(--primary);
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+}
+
+.authors-chart-card .chart-container {
+    height: 360px;
+}
+
+/* ---- Geography placeholder ---- */
+
+.geo-placeholder {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+    max-width: 620px;
+    margin: 2rem auto;
+}
+
+.geo-placeholder-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.geo-placeholder h3 {
+    color: var(--primary);
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.geo-placeholder p {
+    color: var(--text-light);
+    margin-bottom: 1rem;
+}
+
+.geo-feature-list {
+    text-align: left;
+    max-width: 440px;
+    margin: 0 auto 1rem;
+    padding-left: 1.5rem;
+    color: var(--text);
+    line-height: 1.9;
+}
+
 /* ---- Responsive ---- */
 
 @media (max-width: 768px) {
@@ -648,5 +887,13 @@ footer a:hover {
 
     .card-grid {
         grid-template-columns: 1fr;
+    }
+
+    .authors-charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .single-journal-picker .picker-input-wrap {
+        max-width: 100%;
     }
 }

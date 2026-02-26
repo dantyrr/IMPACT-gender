@@ -125,6 +125,11 @@ def main():
         author_rows = db.get_paper_authors_for_journal(jid)
         exporter.export_journal_authors(slug, author_rows)
 
+        # Export per-journal papers browser JSON (with geo breakdown)
+        paper_rows = db.get_papers_for_export(jid)
+        geo_rows = db.get_country_by_year(jid)
+        exporter.export_journal_papers(slug, paper_rows, geo_rows)
+
         # Add to index
         index_entries.append({
             "slug": slug,

@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REPO_ROOT      = Path(__file__).parent.parent
 REGISTRY_PATH  = REPO_ROOT / "data" / "journal_registry.json"
 PROGRESS_PATH  = REPO_ROOT / "data" / "pipeline_progress.json"
+ICITE_BULK_DB  = REPO_ROOT / "data" / "icite_bulk.db"
 PYTHON         = sys.executable
 
 logging.basicConfig(
@@ -66,6 +67,9 @@ def run_journal(entry: dict, years: str) -> tuple:
         "--years", years,
         "--registry", str(REGISTRY_PATH),
     ]
+    # Use local iCite bulk DB if available (no API calls, unlimited parallelism)
+    if ICITE_BULK_DB.exists():
+        cmd += ["--icite-db", str(ICITE_BULK_DB)]
     start = time.time()
     try:
         result = subprocess.run(
@@ -80,6 +84,18 @@ def run_journal(entry: dict, years: str) -> tuple:
         return slug, False, 7200, "TIMEOUT after 2 hours"
     except Exception as e:
         return slug, False, time.time() - start, str(e)
+
+
+def checkpoint_db():
+    """Checkpoint impact.db WAL to prevent unbounded growth."""
+    import sqlite3
+    try:
+        conn = sqlite3.connect(str(REPO_ROOT / "data" / "impact.db"))
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        conn.close()
+        logger.info("WAL checkpoint complete")
+    except Exception as e:
+        logger.warning(f"WAL checkpoint failed: {e}")
 
 
 def run_snapshots_and_upload():
@@ -208,6 +224,7 @@ def main():
                     f"{len(progress['failed'])} failed, "
                     f"~{remaining/rate:.1f}h remaining at {rate:.0f} journals/hr"
                 )
+                checkpoint_db()
                 run_snapshots_and_upload()
 
     # Final snapshot + upload

@@ -44,9 +44,15 @@ class JournalPicker {
         });
     }
 
-    _colorFor(slug) {
-        const idx = this.journals.findIndex(j => j.slug === slug);
-        return this.palette[idx % this.palette.length];
+    _colorFor() {
+        // Assign color based on current selection count so chips always match chart order
+        return this.palette[this.selected.size % this.palette.length];
+    }
+
+    getColorMap() {
+        const map = {};
+        this.selected.forEach(({ color }, slug) => { map[slug] = color; });
+        return map;
     }
 
     _updateDropdown() {
@@ -65,7 +71,7 @@ class JournalPicker {
 
         this.dropdown.innerHTML = '';
         matches.forEach(journal => {
-            const color = this._colorFor(journal.slug);
+            const color = this._colorFor();
             const opt = document.createElement('div');
             opt.className = 'picker-option';
 

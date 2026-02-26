@@ -167,9 +167,10 @@ class IMPACTApp {
         const multiJournal = journalsData.length > 1;
         const multiType = checkedTypes.length > 1;
         const series = [];
+        const colorMap = this.jcPicker.getColorMap();
 
         journalsData.forEach((jData, jIdx) => {
-            const color = chartManager.palette[jIdx % chartManager.palette.length];
+            const color = colorMap[jData.slug] || chartManager.palette[jIdx % chartManager.palette.length];
             const raw = jData[this.jcWindow] || jData.timeseries;
             const startIdx = raw.findIndex(d => d.papers > 0);
             const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;

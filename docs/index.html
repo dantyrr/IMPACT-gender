@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -65,6 +66,13 @@
                 <p id="jc-hint" class="data-note">Select one or more journals above to display citation trends.</p>
                 <div class="chart-container" id="jc-chart-container" style="display:none;">
                     <canvas id="jc-chart"></canvas>
+                </div>
+                <div id="jc-download-bar" class="download-bar" style="display:none">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="dl-png">PNG</button>
+                    <button class="download-btn" id="dl-jpg">JPG</button>
+                    <button class="download-btn" id="dl-pdf">PDF</button>
+                    <button class="download-btn" id="dl-csv">CSV data</button>
                 </div>
             </div>
 
@@ -356,7 +364,7 @@
 <script src="js/chart-manager.js?v=3"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=2"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=4"></script>
 
 </body>
 </html>

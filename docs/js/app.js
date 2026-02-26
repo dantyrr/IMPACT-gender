@@ -68,21 +68,27 @@ class IMPACTApp {
 
         journals.forEach(journal => {
             const card = UIHelpers.createJournalCard(journal);
+            card.dataset.slug = journal.slug;
             card.addEventListener('click', () => this.showJournalDetail(journal.slug));
             container.appendChild(card);
         });
     }
 
     setupSearch() {
-        const input = document.getElementById('journal-search');
-        input.addEventListener('input', () => {
-            const term = input.value.toLowerCase().trim();
-            const filtered = this.journals.filter(j =>
-                j.name.toLowerCase().includes(term) ||
-                j.abbreviation.toLowerCase().includes(term) ||
-                j.slug.includes(term)
-            );
-            this.renderJournalCards(filtered);
+        document.getElementById('journal-search').addEventListener('input', () => this._renderFilteredCards());
+    }
+
+    _renderFilteredCards() {
+        const term = (document.getElementById('journal-search').value || '').toLowerCase().trim();
+        const selected = this.jcPicker ? this.jcPicker.getSelected() : [];
+        document.querySelectorAll('#journal-cards [data-slug]').forEach(card => {
+            const slug = card.dataset.slug;
+            const j = this.journals.find(j => j.slug === slug);
+            if (!j) { card.style.display = 'none'; return; }
+            const matchesSel = selected.length === 0 || selected.includes(slug);
+            const matchesSearch = !term || j.name.toLowerCase().includes(term) ||
+                (j.abbreviation || '').toLowerCase().includes(term) || j.slug.includes(term);
+            card.style.display = matchesSel && matchesSearch ? '' : 'none';
         });
     }
 
@@ -102,6 +108,11 @@ class IMPACTApp {
             this.jcWindow = windowKey;
             this.updateJournalsTrendsChart();
         }, 'data-window');
+
+        document.getElementById('dl-png').addEventListener('click', () => this._downloadChart('png'));
+        document.getElementById('dl-jpg').addEventListener('click', () => this._downloadChart('jpg'));
+        document.getElementById('dl-pdf').addEventListener('click', () => this._downloadPDF());
+        document.getElementById('dl-csv').addEventListener('click', () => this._downloadCSV());
     }
 
     async updateJournalsTrendsChart() {
@@ -118,6 +129,9 @@ class IMPACTApp {
             chartManager._destroy('jc-chart');
             chartContainer.style.display = 'none';
             hint.style.display = '';
+            document.getElementById('jc-download-bar').style.display = 'none';
+            this._jcSeriesData = null;
+            this._renderFilteredCards();
             return;
         }
 
@@ -188,7 +202,59 @@ class IMPACTApp {
             });
         });
 
+        this._jcSeriesData = series;
         chartManager.createMultiSeriesChart('jc-chart', series);
+        document.getElementById('jc-download-bar').style.display = '';
+        this._renderFilteredCards();
+    }
+
+    // ---- Chart Downloads ----
+
+    _downloadChart(format) {
+        const chart = chartManager.charts['jc-chart'];
+        if (!chart) return;
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const url = chart.toBase64Image(mime, 1);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `impact-citation-rates.${format}`;
+        a.click();
+    }
+
+    _downloadPDF() {
+        const chart = chartManager.charts['jc-chart'];
+        if (!chart || !window.jspdf) return;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const pw = doc.internal.pageSize.getWidth();
+        const ph = doc.internal.pageSize.getHeight();
+        const imgW = pw - 20;
+        const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+        doc.setFontSize(11);
+        doc.text('IMPACT — Journal Citation Rate Trends', 10, 10);
+        doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+        doc.save('impact-citation-rates.pdf');
+    }
+
+    _downloadCSV() {
+        if (!this._jcSeriesData || !this._jcSeriesData.length) return;
+        const allMonths = [...new Set(this._jcSeriesData.flatMap(s => s.months))].sort();
+        const header = ['Month', ...this._jcSeriesData.map(s => `"${s.label.replace(/"/g, '""')}"`)].join(',');
+        const rows = allMonths.map(m => {
+            const vals = this._jcSeriesData.map(s => {
+                const i = s.months.indexOf(m);
+                const v = i >= 0 ? s.values[i] : null;
+                return v != null ? v : '';
+            });
+            return [m, ...vals].join(',');
+        });
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'impact-citation-rates.csv';
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // ---- Journal Detail ----

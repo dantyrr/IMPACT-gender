@@ -1213,18 +1213,28 @@ class IMPACTApp {
 
             // NCBI HTML pages block cross-origin fetches, so we route through a CORS proxy.
             // Try multiple proxies in order in case one is down.
+            // allorigins.win/get returns JSON {contents, status}, not raw HTML.
             const proxies = [
-                `https://corsproxy.io/?url=${encodeURIComponent(val)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(val)}`,
+                { url: `https://corsproxy.io/?url=${encodeURIComponent(val)}`, json: false },
+                { url: `https://api.allorigins.win/get?url=${encodeURIComponent(val)}`, json: true },
+                { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(val)}`, json: false },
             ];
             let html = null;
-            for (const proxyUrl of proxies) {
+            for (const proxy of proxies) {
                 try {
-                    const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-                    if (resp.ok) { html = await resp.text(); break; }
+                    const resp = await fetch(proxy.url, { signal: AbortSignal.timeout(12000) });
+                    if (!resp.ok) continue;
+                    if (proxy.json) {
+                        const j = await resp.json();
+                        html = j.contents || null;
+                    } else {
+                        html = await resp.text();
+                    }
+                    if (html && html.includes('pubmed')) break;
+                    html = null; // got a response but no useful content, try next
                 } catch (e) { continue; }
             }
-            if (!html) throw new Error('All CORS proxies failed — try again or check the URL.');
+            if (!html) throw new Error('All CORS proxies failed — try again in a moment.');
             const matches = [...html.matchAll(/\/pubmed\/(\d+)/g)];
             pmids = [...new Set(matches.map(m => m[1]))];
 

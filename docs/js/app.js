@@ -998,24 +998,36 @@ class IMPACTApp {
             if (!seedPapers.length) { hint.textContent = 'None of the PMIDs were found in iCite.'; return; }
 
             // Only papers actually published in the selected journal affect its IF.
-            // Citations to papers from OTHER journals don't count in the numerator or denominator.
             const seedsInJournal = seedPapers.filter(p => this._paperInJournal(p, journalData));
 
-            // Fetch citing papers for in-journal seeds only (needed for year distribution)
-            let citingPapers = [];
-            let totalCitedBy = 0;
-            if (seedsInJournal.length) {
-                const allCitedBy = [...new Set(
-                    seedsInJournal.flatMap(p => p.cited_by || []).map(String)
-                )];
+            // Load the papers file for this journal — it contains exact citations_by_year
+            // (cy field) for the top 2000 papers, computed from our local DB.
+            // This avoids any iCite API calls and covers all citations with no cap.
+            let papersData = null;
+            try {
+                papersData = await dataLoader.loadPapers(slug);
+            } catch (e) { /* papers file may not exist yet for this journal */ }
+
+            const localCyMap = {};  // pmid_str → {year_str: count}
+            if (papersData?.papers) {
+                for (const p of papersData.papers) {
+                    if (p.cy) localCyMap[String(p.pmid)] = p.cy;
+                }
+            }
+
+            // For in-journal seeds without local data, fall back to iCite cited_by fetch
+            const needsIcite = seedsInJournal.filter(p => !localCyMap[String(p.pmid)]);
+            let citingPapers = [], totalCitedBy = 0;
+            if (needsIcite.length) {
+                const allCitedBy = [...new Set(needsIcite.flatMap(p => p.cited_by || []).map(String))];
                 totalCitedBy = allCitedBy.length;
                 if (totalCitedBy > 0) {
-                    hint.textContent = `Fetching citing papers (${Math.min(totalCitedBy, 2000).toLocaleString()} of ${totalCitedBy.toLocaleString()})…`;
+                    hint.textContent = `Fetching citing papers for ${needsIcite.length} PMID(s) not in local data…`;
                     citingPapers = await this._fetchICiteBatch(allCitedBy.slice(0, 2000));
                 }
             }
 
-            this._renderInfluenceChart(journalData, seedPapers, seedsInJournal, citingPapers, totalCitedBy);
+            this._renderInfluenceChart(journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy);
 
             hint.style.display = 'none';
             results.style.display = '';
@@ -1034,7 +1046,7 @@ class IMPACTApp {
         return jj.length > 3 && (pj === jj || pj.includes(jj) || jj.includes(pj));
     }
 
-    _renderInfluenceChart(journalData, seedPapers, seedsInJournal, citingPapers, totalCitedBy) {
+    _renderInfluenceChart(journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy) {
         // Paper info card — list each seed paper, flag those not in this journal
         const listEl = document.getElementById('inf-paper-list');
         listEl.innerHTML = seedPapers.map(p => {
@@ -1054,14 +1066,15 @@ class IMPACTApp {
         if (!ts.length) return;
 
         // rolling_if = citations / research  (research-article denominator only)
-        // We need:
-        //   adj_numerator   = citations - (citations to in-journal seeds in 12-mo window)
-        //   adj_denominator = research  - (in-journal research seeds in 24-mo paper window)
+        // adj_numerator   = citations - (citations to in-journal seeds received in 12-mo window)
+        // adj_denominator = research  - (in-journal research seeds published in 24-mo paper window)
 
-        // Build ordinal year-month for each citing paper (approximate June if only year known)
+        // Split seeds: those with exact local DB data vs. those needing iCite fallback
+        const localSeeds = seedsInJournal.filter(p => localCyMap[String(p.pmid)]);
+        const iciteSeeds = seedsInJournal.filter(p => !localCyMap[String(p.pmid)]);
+
+        // iCite fallback: citing paper ordinals + scale factor for truncated samples
         const citingOrds = citingPapers.map(p => (p.year || 0) * 12 + 6);
-
-        // Scale factor: if we fetched a sample, scale counts proportionally
         const scale = (totalCitedBy > 0 && citingPapers.length > 0 && citingPapers.length < totalCitedBy)
             ? totalCitedBy / citingPapers.length : 1;
 
@@ -1076,12 +1089,26 @@ class IMPACTApp {
             const startOrd = endOrd - 11;
             const paperWindowStart = endOrd - 23;
 
-            // Numerator: subtract scaled count of citing papers in 12-mo window
-            let seedCitsInWindow = 0;
-            for (const ord of citingOrds) {
-                if (ord >= startOrd && ord <= endOrd) seedCitsInWindow++;
+            // Part 1: local DB seeds — exact year distribution, proportional month allocation
+            let localSeedCits = 0;
+            for (const p of localSeeds) {
+                const cy = localCyMap[String(p.pmid)];
+                for (const [yearStr, cnt] of Object.entries(cy)) {
+                    const k = parseInt(yearStr, 10);
+                    const kStart = k * 12 + 1;   // Jan of year k
+                    const kEnd   = k * 12 + 12;  // Dec of year k
+                    const overlapMonths = Math.max(0,
+                        Math.min(kEnd, endOrd) - Math.max(kStart, startOrd) + 1);
+                    localSeedCits += cnt * overlapMonths / 12;
+                }
             }
-            seedCitsInWindow *= scale;
+
+            // Part 2: iCite fallback seeds — approximate June publication, scaled
+            let iciteSeedCits = 0;
+            for (const ord of citingOrds) {
+                if (ord >= startOrd && ord <= endOrd) iciteSeedCits++;
+            }
+            iciteSeedCits *= scale;
 
             // Denominator: subtract in-journal research seeds published in 24-mo window
             let seedResearchInWindow = 0;
@@ -1091,25 +1118,34 @@ class IMPACTApp {
 
             const citations = point.citations || 0;
             const research = point.research || point.papers || 1;
-            return Math.max(0, citations - seedCitsInWindow) / Math.max(1, research - seedResearchInWindow);
+            return Math.max(0, citations - localSeedCits - iciteSeedCits) / Math.max(1, research - seedResearchInWindow);
         });
 
         // Metric cards
+        const totalLocalCits = localSeeds.reduce((s, p) => {
+            const cy = localCyMap[String(p.pmid)];
+            return s + Object.values(cy).reduce((a, b) => a + b, 0);
+        }, 0);
+        const totalIciteCits = iciteSeeds.reduce((s, p) => s + (p.citation_count || 0), 0);
+        const totalCitations = totalLocalCits + totalIciteCits;
+
         const contributions = ts.map((pt, i) => Math.max(0, (pt.rolling_if || 0) - adjIf[i]));
         const maxContrib = Math.max(...contributions);
         const peakIdx = contributions.indexOf(maxContrib);
         const peakMonth = ts[peakIdx]?.month || '—';
         const meanContrib = contributions.reduce((s, v) => s + v, 0) / contributions.length;
-        const totalCitations = seedsInJournal.reduce((s, p) => s + (p.citation_count || 0), 0);
         const censorLabel = seedsInJournal.length === 1
             ? `PMID ${seedsInJournal[0].pmid}`
             : `${seedsInJournal.length} PMIDs`;
+        const dataNote = localSeeds.length > 0
+            ? ` (${localSeeds.length} from local DB${iciteSeeds.length > 0 ? `, ${iciteSeeds.length} from iCite` : ''})`
+            : '';
         const sampleNote = scale > 1
             ? ` (scaled from ${citingPapers.length.toLocaleString()} sample)` : '';
 
         document.getElementById('influence-metrics').innerHTML = [
-            [totalCitations.toLocaleString(), 'Citations (in-journal papers only)'],
-            [totalCitedBy.toLocaleString() + sampleNote, 'Unique Citing Papers'],
+            [totalCitations.toLocaleString() + dataNote, 'Citations (in-journal papers only)'],
+            [totalCitedBy > 0 ? totalCitedBy.toLocaleString() + sampleNote : '—', 'Unique Citing Papers (iCite fallback)'],
             [maxContrib.toFixed(3), `Peak IF Boost (${peakMonth})`],
             [meanContrib.toFixed(3), 'Mean Monthly IF Contribution'],
         ].map(([v, l]) =>

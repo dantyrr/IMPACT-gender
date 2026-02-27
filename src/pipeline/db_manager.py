@@ -375,6 +375,27 @@ class DatabaseManager:
         return [dict(r) for r in cursor.fetchall()]
 
 
+    def get_citations_by_year_for_pmids(self, pmids: list) -> dict:
+        """Return {pmid_str: {year_str: count}} for the given PMIDs."""
+        if not pmids:
+            return {}
+        placeholders = ','.join('?' * len(pmids))
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"""SELECT cited_pmid, citing_year, COUNT(*) as cnt
+                FROM citations
+                WHERE cited_pmid IN ({placeholders})
+                  AND citing_year IS NOT NULL
+                GROUP BY cited_pmid, citing_year""",
+            pmids,
+        )
+        result = {}
+        for row in cursor.fetchall():
+            pmid = str(row['cited_pmid'])
+            year = str(row['citing_year'])
+            result.setdefault(pmid, {})[year] = row['cnt']
+        return result
+
     def get_papers_for_export(self, journal_id: int, limit: int = 2000) -> list:
         """Return papers for the papers browser export, sorted by citation count desc."""
         cursor = self.conn.cursor()

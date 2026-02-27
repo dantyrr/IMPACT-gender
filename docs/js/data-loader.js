@@ -29,6 +29,10 @@ class DataLoader {
         return this._fetch(`${this.baseUrl}/authors/${slug}.json`);
     }
 
+    async loadPapers(slug) {
+        return this._fetch(`${this.baseUrl}/papers/${slug}.json`);
+    }
+
     async _fetch(url) {
         if (this.cache[url]) return this.cache[url];
         const response = await fetch(url);

@@ -179,10 +179,15 @@ class JSONExporter:
         return filepath
 
     def export_journal_papers(self, slug: str, rows: list,
-                              geo_rows: list = None) -> str:
+                              geo_rows: list = None,
+                              cits_by_year: dict = None) -> str:
         """
         Export per-paper data for the papers browser tab, plus country-by-year geo data.
         Saves to docs/data/papers/{slug}.json
+
+        cits_by_year: optional {pmid_str: {year_str: count}} from
+                      db.get_citations_by_year_for_pmids(); adds a compact "cy"
+                      field to each entry for exact Influence-tab computation.
         """
         papers_dir = os.path.join(self.data_dir, "papers")
         os.makedirs(papers_dir, exist_ok=True)
@@ -213,6 +218,9 @@ class JSONExporter:
             pt = row.get("pub_type") or ""
             if pt:
                 entry["pt"] = pt
+            cy = (cits_by_year or {}).get(str(row["pmid"]))
+            if cy:
+                entry["cy"] = cy  # {year_str: count} — used by Influence tab
             entries.append(entry)
 
         # Build compact geo summary: {year: {country: count}}

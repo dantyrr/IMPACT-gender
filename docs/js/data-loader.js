@@ -12,8 +12,7 @@ class DataLoader {
     constructor() {
         const isLocal = location.hostname === 'localhost' ||
                         location.hostname === '127.0.0.1' ||
-                        location.protocol === 'file:' ||
-                        location.hostname.endsWith('github.io');
+                        location.protocol === 'file:';
         this.baseUrl = isLocal ? 'data' : R2_BASE_URL;
         this.cache = {};
     }

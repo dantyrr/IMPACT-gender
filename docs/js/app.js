@@ -7,7 +7,7 @@ class IMPACTApp {
         this.journals = [];
         this.journalDataCache = {};
         this.authorDataCache = {};  // slug → {pmid: {f,fa,l,la}} or null if not available
-        this._visNetwork = null;
+        this._cyNetwork = null;
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -58,6 +58,11 @@ class IMPACTApp {
         const link = document.querySelector(`.nav-link[data-section="${sectionId}"]`);
         if (section) section.classList.add('active');
         if (link) link.classList.add('active');
+
+        // Re-measure cy canvas when papers tab becomes visible
+        if (sectionId === 'papers' && this._cyNetwork) {
+            requestAnimationFrame(() => this._cyNetwork.resize());
+        }
     }
 
     // ---- Journal List ----
@@ -569,8 +574,7 @@ class IMPACTApp {
 
             hint.style.display = 'none';
             results.style.display = '';
-            // rAF ensures the browser has laid out the container before vis.js reads its size
-            requestAnimationFrame(() => this._renderCitationNetwork(center, displayed));
+            this._renderCitationNetwork(center, displayed);
 
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
@@ -581,6 +585,8 @@ class IMPACTApp {
     _renderCitationNetwork(center, citingPapers) {
         const container = document.getElementById('citation-network');
 
+        if (this._cyNetwork) { this._cyNetwork.destroy(); this._cyNetwork = null; }
+
         const yearColor = (yr) => {
             if (!yr) return '#90CAF9';
             if (yr >= 2022) return '#1565C0';
@@ -589,76 +595,83 @@ class IMPACTApp {
             if (yr >= 2010) return '#64B5F6';
             return '#90CAF9';
         };
-        const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '—');
-        const tooltip = (p) =>
-            `<b>${trunc(p.title, 120)}</b><br>${trunc(p.authors, 60)}<br>` +
-            `${p.journal || ''}, ${p.year || ''} · ${(p.citation_count || 0).toLocaleString()} citations`;
         const lastName = (authors) => (authors || '').split(',')[0].trim().split(' ').pop() || '';
 
-        const nodesData = [{
-            id: center.pmid,
-            label: `${lastName(center.authors)}\n${center.year || ''}`,
-            title: tooltip(center),
-            size: 30,
-            color: { background: '#e74c3c', border: '#c0392b',
-                     highlight: { background: '#e74c3c', border: '#922b21' } },
-            font: { size: 13, color: '#fff', bold: true },
-            shape: 'dot',
-            fixed: { x: true, y: true },
-            x: 0, y: 0,
-        }];
+        const elements = [];
 
+        // Center node
+        elements.push({ data: {
+            id: String(center.pmid),
+            label: `${lastName(center.authors)}\n${center.year || ''}`,
+            color: '#e74c3c', borderColor: '#c0392b',
+            size: 44, isCenter: true, paper: center,
+        }});
+
+        // Citing nodes + edges
         citingPapers.forEach(p => {
             const cits = p.citation_count || 0;
-            nodesData.push({
-                id: p.pmid,
+            const size = Math.max(12, Math.min(44, 12 + Math.sqrt(cits) * 2.5));
+            elements.push({ data: {
+                id: String(p.pmid),
                 label: `${lastName(p.authors)}\n${p.year || ''}`,
-                title: tooltip(p),
-                size: Math.max(5, Math.min(22, 5 + Math.sqrt(cits) * 1.4)),
-                color: { background: yearColor(p.year), border: '#1a5276',
-                         highlight: { background: '#f39c12', border: '#d68910' } },
-                font: { size: 10 },
-                shape: 'dot',
-            });
+                color: yearColor(p.year), borderColor: '#1a5276',
+                size, paper: p,
+            }});
+            elements.push({ data: { source: String(p.pmid), target: String(center.pmid) } });
         });
 
-        const nodes = new vis.DataSet(nodesData);
-        const edges = new vis.DataSet(citingPapers.map(p => ({
-            from: p.pmid, to: center.pmid,
-            arrows: { to: { enabled: true, scaleFactor: 0.35 } },
-            color: { color: '#ccc', opacity: 0.5 },
-            width: 0.5,
-        })));
-
-        if (this._visNetwork) { this._visNetwork.destroy(); this._visNetwork = null; }
-        this._visNetwork = new vis.Network(container, { nodes, edges }, {
-            physics: {
-                solver: 'forceAtlas2Based',
-                forceAtlas2Based: {
-                    gravitationalConstant: -80,
-                    centralGravity: 0.02,
-                    springLength: 130,
-                    springConstant: 0.04,
-                    avoidOverlap: 0.4,
+        this._cyNetwork = cytoscape({
+            container,
+            elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': 'data(color)',
+                        'border-color': 'data(borderColor)',
+                        'border-width': 1.5,
+                        'width': 'data(size)', 'height': 'data(size)',
+                        'label': 'data(label)',
+                        'text-valign': 'center', 'text-halign': 'center',
+                        'font-size': 9, 'color': '#fff',
+                        'text-outline-width': 1.5, 'text-outline-color': 'data(borderColor)',
+                        'text-wrap': 'wrap',
+                    },
                 },
-                stabilization: { iterations: 150, updateInterval: 30 },
-                maxVelocity: 60,
+                {
+                    selector: 'node[?isCenter]',
+                    style: { 'border-width': 3, 'font-size': 12, 'font-weight': 'bold' },
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 0.6, 'line-color': '#ccc', 'opacity': 0.5,
+                        'target-arrow-color': '#aaa', 'target-arrow-shape': 'triangle',
+                        'curve-style': 'straight',
+                    },
+                },
+                {
+                    selector: 'node:selected',
+                    style: { 'border-color': '#f39c12', 'border-width': 3 },
+                },
+            ],
+            layout: {
+                name: 'fcose',
+                animate: true, animationDuration: 800,
+                quality: 'default', randomize: true,
+                nodeRepulsion: 5000, idealEdgeLength: 100,
+                edgeElasticity: 0.45, gravity: 0.25,
+                numIter: 2500, tile: true,
+                stop: () => this._cyNetwork && this._cyNetwork.fit(undefined, 40),
             },
-            edges: { smooth: { type: 'continuous' } },
-            interaction: { hover: true, tooltipDelay: 200, zoomView: true, dragView: true },
         });
 
-        const allPapers = [center, ...citingPapers];
-        this._visNetwork.on('click', (params) => {
-            if (params.nodes.length > 0) {
-                const paper = allPapers.find(p => p.pmid === params.nodes[0]);
-                if (paper) this._showNetworkSelected(paper);
-            }
-        });
+        // Ensure canvas fills the now-visible container
+        this._cyNetwork.resize();
 
-        // Fit all nodes into view once the physics stabilizes
-        this._visNetwork.once('stabilized', () => {
-            this._visNetwork.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+        this._cyNetwork.on('tap', 'node', (evt) => {
+            const paper = evt.target.data('paper');
+            if (paper) this._showNetworkSelected(paper);
         });
     }
 

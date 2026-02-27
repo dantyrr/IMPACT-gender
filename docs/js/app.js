@@ -1205,11 +1205,20 @@ class IMPACTApp {
 
             hint.textContent = 'Fetching NCBI bibliography…';
 
-            // NCBI HTML pages block cross-origin fetches, so we route through a CORS proxy
-            const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(val)}`;
-            const resp = await fetch(proxyUrl);
-            if (!resp.ok) throw new Error(`Failed to fetch bibliography (HTTP ${resp.status})`);
-            const html = await resp.text();
+            // NCBI HTML pages block cross-origin fetches, so we route through a CORS proxy.
+            // Try multiple proxies in order in case one is down.
+            const proxies = [
+                `https://corsproxy.io/?url=${encodeURIComponent(val)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(val)}`,
+            ];
+            let html = null;
+            for (const proxyUrl of proxies) {
+                try {
+                    const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+                    if (resp.ok) { html = await resp.text(); break; }
+                } catch (e) { continue; }
+            }
+            if (!html) throw new Error('All CORS proxies failed — try again or check the URL.');
             const matches = [...html.matchAll(/\/pubmed\/(\d+)/g)];
             pmids = [...new Set(matches.map(m => m[1]))];
 

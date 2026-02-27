@@ -735,20 +735,15 @@ class IMPACTApp {
         try {
             let pmids = [];
 
-            // Try to fetch the NCBI bibliography page and parse PMIDs
             hint.textContent = 'Fetching NCBI bibliography…';
-            try {
-                const resp = await fetch(val, { mode: 'cors' });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const html = await resp.text();
-                const matches = [...html.matchAll(/\/pubmed\/(\d+)/g)];
-                pmids = [...new Set(matches.map(m => m[1]))];
-            } catch (corsErr) {
-                hint.innerHTML = `<strong>Browser security (CORS) blocked fetching the NCBI page directly.</strong><br>
-                    To work around this, copy your PMIDs from your bibliography and paste them into this field as a comma-separated list
-                    (e.g. <code>12345678, 23456789, 34567890</code>), then click Load again.`;
-                return;
-            }
+
+            // NCBI HTML pages block cross-origin fetches, so we route through a CORS proxy
+            const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(val)}`;
+            const resp = await fetch(proxyUrl);
+            if (!resp.ok) throw new Error(`Failed to fetch bibliography (HTTP ${resp.status})`);
+            const html = await resp.text();
+            const matches = [...html.matchAll(/\/pubmed\/(\d+)/g)];
+            pmids = [...new Set(matches.map(m => m[1]))];
 
             if (!pmids.length) {
                 hint.textContent = 'No PMIDs found on that page. Make sure the bibliography is set to public.';

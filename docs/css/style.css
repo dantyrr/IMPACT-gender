@@ -271,6 +271,12 @@ h2 {
     margin-top: 0.25rem;
 }
 
+.metric-info {
+    cursor: help;
+    color: var(--primary-light);
+    font-size: 0.85em;
+}
+
 /* ---- Charts ---- */
 
 .chart-container {

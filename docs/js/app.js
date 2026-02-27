@@ -578,7 +578,12 @@ class IMPACTApp {
 
             hint.style.display = 'none';
             results.style.display = '';
-            this._renderCitationNetwork(center, displayed);
+            // Defer one frame so the browser reflows the newly-visible container
+            // before Cytoscape measures its dimensions (avoids 0×0 canvas bug)
+            requestAnimationFrame(() => {
+                try { this._renderCitationNetwork(center, displayed); }
+                catch (e) { hint.style.display = ''; hint.textContent = `Render error: ${e.message}`; console.error(e); }
+            });
 
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
@@ -660,17 +665,23 @@ class IMPACTApp {
                 },
             ],
             layout: {
-                name: 'fcose',
-                animate: true, animationDuration: 800,
-                quality: 'default', randomize: true,
-                nodeRepulsion: 5000, idealEdgeLength: 100,
-                edgeElasticity: 0.45, gravity: 0.25,
-                numIter: 2500, tile: true,
-                stop: () => this._cyNetwork && this._cyNetwork.fit(undefined, 40),
+                name: 'cose',
+                animate: false,
+                nodeRepulsion: () => 8000,
+                nodeOverlap: 20,
+                idealEdgeLength: () => 80,
+                edgeElasticity: () => 100,
+                nestingFactor: 5,
+                gravity: 0.25,
+                numIter: 1000,
+                initialTemp: 200,
+                coolingFactor: 0.95,
+                minTemp: 1.0,
             },
         });
 
-        // Ensure canvas fills the now-visible container
+        // Fit after layout (animate:false means layout is done synchronously)
+        this._cyNetwork.fit(undefined, 40);
         this._cyNetwork.resize();
 
         this._cyNetwork.on('tap', 'node', (evt) => {
@@ -842,9 +853,13 @@ class IMPACTApp {
                 ? `${this._authorTotalFound.toLocaleString()} total` : this._authorTotalFound.toLocaleString(), 'Papers on PubMed'],
             [totalCitations.toLocaleString(), 'Total Citations'],
             [hIndex, 'h-index (est.)'],
-        ].map(([v, l]) =>
-            `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
-        ).join('');
+        ].map(([v, l]) => {
+            const isHIndex = l === 'h-index (est.)';
+            const label = isHIndex
+                ? `${l} <span class="metric-info" title="Based only on PubMed-indexed citing articles. Google Scholar casts a wider net (preprints, books, non-indexed journals), so its h-index is typically higher.">ⓘ</span>`
+                : l;
+            return `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${label}</span></div>`;
+        }).join('');
 
         const pubsByYear = {};
         active.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });

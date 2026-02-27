@@ -968,6 +968,18 @@ footer a:hover {
     padding-top: 2rem;
 }
 
+.cb-cell {
+    width: 2rem;
+    text-align: center;
+    cursor: default;
+}
+
+.cb-cell input[type=checkbox] {
+    cursor: pointer;
+    width: 15px;
+    height: 15px;
+}
+
 /* ---- Citation Network ---- */
 
 #citation-network {

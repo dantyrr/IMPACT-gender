@@ -8,6 +8,9 @@ class IMPACTApp {
         this.journalDataCache = {};
         this.authorDataCache = {};  // slug → {pmid: {f,fa,l,la}} or null if not available
         this._cyNetwork = null;
+        this._authorAllPapers = [];
+        this._authorExcluded = new Set();
+        this._authorTotalFound = 0;
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -759,6 +762,7 @@ class IMPACTApp {
                 return;
             }
 
+            this._authorTotalFound = pmids.length;
             hint.style.display = 'none';
             results.style.display = '';
             this._renderAuthorSearchResults(papers, pmids.length);
@@ -770,39 +774,50 @@ class IMPACTApp {
     }
 
     async searchAuthorByName() {
-        const name = document.getElementById('author-name-input').value.trim();
-        if (!name) return;
+        const input = document.getElementById('author-name-input').value.trim();
+        if (!input) return;
+
+        const names = input.split(',').map(n => n.trim()).filter(Boolean);
 
         const hint = document.getElementById('author-search-hint');
         const results = document.getElementById('author-search-results');
-        hint.textContent = 'Searching PubMed…';
         hint.style.display = '';
         results.style.display = 'none';
 
         try {
-            const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(name)}[Author]&retmax=500&retmode=json&tool=IMPACT&email=impact-tool@umich.edu`;
-            const resp = await fetch(searchUrl);
-            if (!resp.ok) throw new Error('PubMed search failed');
-            const data = await resp.json();
-            const pmids = data.esearchresult?.idlist || [];
-            const totalFound = parseInt(data.esearchresult?.count || 0);
+            const allPmids = new Set();
+            let totalFound = 0;
 
-            if (!pmids.length) {
+            for (const name of names) {
+                hint.textContent = names.length > 1
+                    ? `Searching PubMed for "${name}" (${names.indexOf(name) + 1}/${names.length})…`
+                    : 'Searching PubMed…';
+                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(name)}[Author]&retmax=500&retmode=json&tool=IMPACT&email=impact-tool@umich.edu`;
+                const resp = await fetch(url);
+                if (!resp.ok) throw new Error('PubMed search failed');
+                const data = await resp.json();
+                (data.esearchresult?.idlist || []).forEach(id => allPmids.add(id));
+                totalFound += parseInt(data.esearchresult?.count || 0);
+            }
+
+            if (!allPmids.size) {
                 hint.textContent = 'No papers found. Try "Lastname AB" format (e.g. "Smith J").';
                 return;
             }
 
-            hint.textContent = `Found ${totalFound.toLocaleString()} papers. Fetching citation data…`;
-            const papers = await this._fetchICiteBatch(pmids);
+            const label = names.length > 1 ? names.join(' + ') : names[0];
+            hint.textContent = `Found ${allPmids.size.toLocaleString()} unique papers for ${label}. Fetching citation data…`;
+            const papers = await this._fetchICiteBatch([...allPmids]);
 
             if (!papers.length) {
                 hint.textContent = 'Papers found on PubMed but no citation data available yet.';
                 return;
             }
 
+            this._authorTotalFound = totalFound;
             hint.style.display = 'none';
             results.style.display = '';
-            this._renderAuthorSearchResults(papers, totalFound);
+            this._renderAuthorSearchResults(papers, allPmids.size);
 
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
@@ -811,57 +826,85 @@ class IMPACTApp {
     }
 
     _renderAuthorSearchResults(papers, totalFound) {
-        const totalCitations = papers.reduce((s, p) => s + (p.citation_count || 0), 0);
-        const hIndex = this._computeHIndex(papers.map(p => p.citation_count || 0));
+        this._authorAllPapers = papers;
+        this._authorExcluded = new Set();
+        this._authorTotalFound = totalFound;
+        this._renderAuthorPapersTable();
+        this._refreshAuthorMetrics();
+    }
 
+    _refreshAuthorMetrics() {
+        const active = this._authorAllPapers.filter(p => !this._authorExcluded.has(String(p.pmid)));
+        const excluded = this._authorAllPapers.length - active.length;
+        const totalCitations = active.reduce((s, p) => s + (p.citation_count || 0), 0);
+        const hIndex = this._computeHIndex(active.map(p => p.citation_count || 0));
+
+        const excTag = excluded ? ` <span style="font-size:.7em;color:#c0392b;font-weight:normal">(−${excluded} excluded)</span>` : '';
         document.getElementById('author-search-metrics').innerHTML = [
-            [papers.length.toLocaleString(), 'Papers Loaded'],
-            [totalFound > papers.length ? `${totalFound.toLocaleString()} total` : totalFound.toLocaleString(), 'Papers on PubMed'],
+            [`${active.length.toLocaleString()}${excTag}`, 'Papers Included'],
+            [this._authorTotalFound > this._authorAllPapers.length
+                ? `${this._authorTotalFound.toLocaleString()} total` : this._authorTotalFound.toLocaleString(), 'Papers on PubMed'],
             [totalCitations.toLocaleString(), 'Total Citations'],
             [hIndex, 'h-index (est.)'],
         ].map(([v, l]) =>
             `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
         ).join('');
 
-        // Publications per year
         const pubsByYear = {};
-        papers.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
+        active.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
         const sortedYears = Object.keys(pubsByYear).sort();
         chartManager.createBarChart('author-pubs-chart', sortedYears,
             sortedYears.map(y => pubsByYear[y]), 'Papers', { horizontal: false });
 
-        // Citations by publication year
         const citsByYear = {};
-        papers.forEach(p => { if (p.year) citsByYear[p.year] = (citsByYear[p.year] || 0) + (p.citation_count || 0); });
+        active.forEach(p => { if (p.year) citsByYear[p.year] = (citsByYear[p.year] || 0) + (p.citation_count || 0); });
         chartManager.createBarChart('author-cits-chart', sortedYears,
             sortedYears.map(y => citsByYear[y] || 0), 'Citations', { horizontal: false });
 
-        // Top journals
         const jCounts = {};
-        papers.forEach(p => { if (p.journal) jCounts[p.journal] = (jCounts[p.journal] || 0) + 1; });
+        active.forEach(p => { if (p.journal) jCounts[p.journal] = (jCounts[p.journal] || 0) + 1; });
         const topJ = Object.entries(jCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
         chartManager.createBarChart('author-journals-chart',
             topJ.map(x => x[0]), topJ.map(x => x[1]), 'Papers');
+    }
 
-        // Most-cited papers table
-        const sorted = [...papers].sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0)).slice(0, 50);
+    _renderAuthorPapersTable() {
+        const sorted = [...this._authorAllPapers].sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0));
         const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
         const tbody = sorted.map(p => {
             const title = p.title ? (p.title.length > 90 ? p.title.slice(0, 90) + '…' : p.title) : '—';
-            return `<tr class="papers-row-link" data-pmid="${p.pmid}" title="Open in PubMed">` +
-                `<td>${esc(title)}</td><td>${esc(p.journal || '—')}</td>` +
-                `<td>${p.year || '—'}</td><td>${(p.citation_count || 0).toLocaleString()}</td></tr>`;
+            return `<tr data-pmid="${p.pmid}">` +
+                `<td class="cb-cell"><input type="checkbox" class="paper-cb" data-pmid="${p.pmid}" checked></td>` +
+                `<td class="papers-row-link" title="Open in PubMed">${esc(title)}</td>` +
+                `<td>${esc(p.journal || '—')}</td>` +
+                `<td>${p.year || '—'}</td>` +
+                `<td>${(p.citation_count || 0).toLocaleString()}</td></tr>`;
         }).join('');
 
         const container = document.getElementById('author-papers-list');
         container.innerHTML =
-            `<h4 style="margin-bottom:.5rem">Most-Cited Papers (top ${sorted.length} of ${papers.length})</h4>` +
+            `<h4 style="margin-bottom:.25rem">All Papers <span id="author-papers-count">(${sorted.length})</span></h4>` +
+            `<p class="data-note" style="margin-bottom:.5rem">Uncheck papers to exclude them from metrics and charts. Click a title to open in PubMed.</p>` +
             `<div class="table-scroll"><table class="data-table"><thead><tr>` +
-            `<th>Title</th><th>Journal</th><th>Year</th><th>Citations</th>` +
-            `</tr></thead><tbody>${tbody}</tbody></table></div>` +
-            `<p class="data-note">Click any row to open in PubMed. Name search may return papers from multiple authors with similar names — verify by institution or co-authors.</p>`;
+            `<th style="width:2rem"></th><th>Title</th><th>Journal</th><th>Year</th><th>Citations</th>` +
+            `</tr></thead><tbody>${tbody}</tbody></table></div>`;
 
+        // Checkbox toggles — update excluded set and refresh metrics without re-rendering table
+        container.querySelector('tbody').addEventListener('change', (e) => {
+            if (!e.target.matches('.paper-cb')) return;
+            const pmid = String(e.target.dataset.pmid);
+            if (e.target.checked) {
+                this._authorExcluded.delete(pmid);
+            } else {
+                this._authorExcluded.add(pmid);
+            }
+            this._refreshAuthorMetrics();
+        });
+
+        // Title click → PubMed (ignore checkbox clicks)
         container.querySelector('tbody').addEventListener('click', (e) => {
+            if (e.target.matches('.paper-cb')) return;
             const tr = e.target.closest('tr[data-pmid]');
             if (tr) window.open(`https://pubmed.ncbi.nlm.nih.gov/${tr.dataset.pmid}/`, '_blank');
         });

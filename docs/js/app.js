@@ -997,17 +997,10 @@ class IMPACTApp {
 
             if (!seedPapers.length) { hint.textContent = 'None of the PMIDs were found in iCite.'; return; }
 
-            // Union of all cited_by lists (deduplicated so a paper citing multiple seeds is counted once)
-            const allCitedBy = [...new Set(seedPapers.flatMap(p => p.cited_by || []).map(String))];
-            if (!allCitedBy.length) {
-                hint.textContent = 'None of the listed papers have citing papers yet in iCite.';
-                return;
-            }
-
-            hint.textContent = `Fetching up to ${Math.min(allCitedBy.length, 2000).toLocaleString()} unique citing papers…`;
-            const citingPapers = await this._fetchICiteBatch(allCitedBy.slice(0, 2000));
-
-            this._renderInfluenceChart(journalData, seedPapers, citingPapers, allCitedBy.length);
+            // No need to fetch citing papers individually — iCite returns citations_per_year
+            // directly on each seed paper, giving us the full year-by-year citation distribution
+            // for ALL citations with no 2k cap.
+            this._renderInfluenceChart(journalData, seedPapers);
 
             hint.style.display = 'none';
             results.style.display = '';
@@ -1017,7 +1010,7 @@ class IMPACTApp {
         }
     }
 
-    _renderInfluenceChart(journalData, seedPapers, citingPapers, totalCitedBy) {
+    _renderInfluenceChart(journalData, seedPapers) {
         // Paper info card — list each seed paper
         const listEl = document.getElementById('inf-paper-list');
         listEl.innerHTML = seedPapers.map(p => `
@@ -1032,25 +1025,33 @@ class IMPACTApp {
         const ts = journalData.timeseries || [];
         if (!ts.length) return;
 
-        // Citing paper dates: iCite only provides year → approximate month as June
-        const citingDates = citingPapers.map(p => ({
-            yOrd: (p.year || 0) * 12 + 6,  // ordinal: year*12 + approxMonth
-        }));
+        // Aggregate citations_per_year across all seed papers.
+        // iCite returns this field directly — no need to fetch citing papers individually,
+        // so there is no 2k cap and all citations are included.
+        const citsByYear = {};
+        for (const p of seedPapers) {
+            for (const [yr, cnt] of Object.entries(p.citations_per_year || {})) {
+                citsByYear[yr] = (citsByYear[yr] || 0) + cnt;
+            }
+        }
 
-        // For each timeseries point, compute censored IF
-        // Timeseries fields: papers (24-mo window), citations (12-mo window), rolling_if
+        // For each timeseries snapshot month, estimate how many seed-paper citations
+        // fall within its 12-month citation window using proportional year allocation.
         const adjIf = ts.map(point => {
             const [y, m] = point.month.split('-').map(Number);
-            // 12-month window ending at (y,m): ordinal range [endOrd-11, endOrd]
             const endOrd = y * 12 + m;
             const startOrd = endOrd - 11;
-            let pmidCitsInWindow = 0;
-            for (const d of citingDates) {
-                if (d.yOrd >= startOrd && d.yOrd <= endOrd) pmidCitsInWindow++;
+            let seedCitsInWindow = 0;
+            for (const [yr, cnt] of Object.entries(citsByYear)) {
+                const k = parseInt(yr);
+                // Ordinal month range for year k: [k*12+1, k*12+12]
+                const overlapMonths = Math.max(0,
+                    Math.min(endOrd, k * 12 + 12) - Math.max(startOrd, k * 12 + 1) + 1);
+                seedCitsInWindow += cnt * overlapMonths / 12;
             }
             const papers = point.papers || 1;
             const citations = point.citations || 0;
-            return Math.max(0, citations - pmidCitsInWindow) / papers;
+            return Math.max(0, citations - seedCitsInWindow) / papers;
         });
 
         // Metric cards
@@ -1059,16 +1060,15 @@ class IMPACTApp {
         const peakIdx = contributions.indexOf(maxContrib);
         const peakMonth = ts[peakIdx]?.month || '—';
         const meanContrib = contributions.reduce((s, v) => s + v, 0) / contributions.length;
-        const capped = citedBy => citedBy < 2000 ? '' : ' (top 2k analyzed)';
-
         const totalCitations = seedPapers.reduce((s, p) => s + (p.citation_count || 0), 0);
+        const trackedCits = Object.values(citsByYear).reduce((s, v) => s + v, 0);
         const censorLabel = seedPapers.length === 1
             ? `PMID ${seedPapers[0].pmid}`
             : `${seedPapers.length} PMIDs`;
 
         document.getElementById('influence-metrics').innerHTML = [
-            [totalCitations.toLocaleString(), seedPapers.length === 1 ? 'Total Citations (all journals)' : 'Combined Citations (all journals)'],
-            [citingPapers.length.toLocaleString() + (totalCitedBy > 2000 ? ' (top 2k)' : ''), 'Unique Citing Papers Analyzed'],
+            [totalCitations.toLocaleString(), seedPapers.length === 1 ? 'Total Citations' : 'Combined Citations'],
+            [trackedCits.toLocaleString(), 'Citations with Year Data (all included)'],
             [maxContrib.toFixed(3), `Peak IF Boost (${peakMonth})`],
             [meanContrib.toFixed(3), 'Mean Monthly IF Contribution'],
         ].map(([v, l]) =>
@@ -1129,7 +1129,7 @@ class IMPACTApp {
                                 const cens = items.find(i => i.datasetIndex === 1);
                                 if (orig && cens) {
                                     const diff = orig.parsed.y - cens.parsed.y;
-                                    return `PMID contribution: +${diff.toFixed(3)}`;
+                                    return `Contribution: +${diff.toFixed(3)}`;
                                 }
                                 return '';
                             },

@@ -604,7 +604,10 @@ class IMPACTApp {
             if (yr >= 2010) return '#64B5F6';
             return '#90CAF9';
         };
-        const lastName = (authors) => (authors || '').split(',')[0].trim().split(' ').pop() || '';
+        const lastName = (authors) => {
+            const s = Array.isArray(authors) ? authors[0] || '' : (authors || '');
+            return s.split(',')[0].trim().split(' ').pop() || '';
+        };
 
         const elements = [];
 

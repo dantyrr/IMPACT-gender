@@ -722,7 +722,8 @@ class IMPACTApp {
             size: 44, isCenter: true, paper: center,
         }});
         citingPapers.forEach(p => {
-            const size = Math.max(10, Math.min(44, 10 + Math.sqrt(p.citation_count || 0) * 2.5));
+            const cits = p.citation_count || 0;
+            const size = cits === 0 ? 8 : Math.max(8, Math.min(62, 8 + Math.log2(cits + 1) * 6));
             elements.push({ data: {
                 id: String(p.pmid),
                 color: this._nodeColor(p), borderColor: '#1a5276',
@@ -800,7 +801,8 @@ class IMPACTApp {
                 return Math.ceil(((node.data('paper')?.citation_count || 0) / maxCit) * 9) + 1;
             },
             levelWidth: () => 1,
-            minNodeSpacing: 6, padding: 40, startAngle: Math.PI / 2, clockwise: true,
+            minNodeSpacing: 4, spacingFactor: 1.15, equidistant: true,
+            padding: 30, startAngle: Math.PI / 2, clockwise: true,
         }).run();
         setTimeout(() => this._cyNetwork && this._cyNetwork.fit(undefined, 40), 550);
     }

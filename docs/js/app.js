@@ -713,6 +713,60 @@ class IMPACTApp {
         document.getElementById('author-name-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.searchAuthorByName();
         });
+        document.getElementById('author-ncbi-btn').addEventListener('click', () => this.loadFromNCBIUrl());
+        document.getElementById('author-ncbi-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.loadFromNCBIUrl();
+        });
+    }
+
+    async loadFromNCBIUrl() {
+        const val = document.getElementById('author-ncbi-input').value.trim();
+        if (!val) return;
+
+        const hint = document.getElementById('author-search-hint');
+        const results = document.getElementById('author-search-results');
+        hint.style.display = '';
+        results.style.display = 'none';
+
+        try {
+            let pmids = [];
+
+            // Try to fetch the NCBI bibliography page and parse PMIDs
+            hint.textContent = 'Fetching NCBI bibliography…';
+            try {
+                const resp = await fetch(val, { mode: 'cors' });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const html = await resp.text();
+                const matches = [...html.matchAll(/\/pubmed\/(\d+)/g)];
+                pmids = [...new Set(matches.map(m => m[1]))];
+            } catch (corsErr) {
+                hint.innerHTML = `<strong>Browser security (CORS) blocked fetching the NCBI page directly.</strong><br>
+                    To work around this, copy your PMIDs from your bibliography and paste them into this field as a comma-separated list
+                    (e.g. <code>12345678, 23456789, 34567890</code>), then click Load again.`;
+                return;
+            }
+
+            if (!pmids.length) {
+                hint.textContent = 'No PMIDs found on that page. Make sure the bibliography is set to public.';
+                return;
+            }
+
+            hint.textContent = `Found ${pmids.length} papers. Fetching citation data…`;
+            const papers = await this._fetchICiteBatch(pmids);
+
+            if (!papers.length) {
+                hint.textContent = 'Papers found but no iCite data available yet.';
+                return;
+            }
+
+            hint.style.display = 'none';
+            results.style.display = '';
+            this._renderAuthorSearchResults(papers, pmids.length);
+
+        } catch (e) {
+            hint.textContent = `Error: ${e.message}`;
+            console.error('NCBI bibliography load error:', e);
+        }
     }
 
     async searchAuthorByName() {

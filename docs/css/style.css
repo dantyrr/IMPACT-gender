@@ -931,6 +931,43 @@ footer a:hover {
     border-color: #2e86c1;
 }
 
+/* ---- Author search modes ---- */
+
+.author-search-modes {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.author-mode-block {
+    flex: 1;
+    min-width: 260px;
+}
+
+.author-mode-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    color: #1a2e44;
+}
+
+.author-mode-hint {
+    font-size: 0.8rem;
+    color: #666;
+    margin: 0 0 0.6rem;
+}
+
+.author-mode-divider {
+    align-self: center;
+    font-size: 0.85rem;
+    color: #999;
+    font-style: italic;
+    padding-top: 2rem;
+}
+
 /* ---- Citation Network ---- */
 
 #citation-network {

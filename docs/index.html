@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMPACT — Independent Metrics for Publication Analysis and Citation Tracking</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script src="https://unpkg.com/cytoscape-fcose@2.2.0/cytoscape-fcose.js"></script>
@@ -223,11 +223,28 @@
     <!-- ============ AUTHORS ============ -->
     <section id="authors" class="section">
         <h2>Author Search</h2>
-        <p class="section-desc">Search for an author by name to explore their publications, citation trends, and most-cited papers. Use "Lastname AB" format (e.g. "Horvath S") for best results.</p>
+        <p class="section-desc">Search by name or load directly from an NCBI bibliography URL for precise results.</p>
 
-        <div class="search-bar">
-            <input type="text" id="author-name-input" placeholder='e.g. "Horvath S" or "Steve Horvath"' autocomplete="off">
-            <button id="author-name-search-btn">Search</button>
+        <div class="author-search-modes">
+            <div class="author-mode-block">
+                <label class="author-mode-label">Search by name</label>
+                <p class="author-mode-hint">May return multiple authors with similar names. Use "Lastname AB" format for best results.</p>
+                <div class="search-bar">
+                    <input type="text" id="author-name-input" placeholder='e.g. "Tyrrell D" or "Daniel Tyrrell"' autocomplete="off">
+                    <button id="author-name-search-btn">Search</button>
+                </div>
+            </div>
+
+            <div class="author-mode-divider">or</div>
+
+            <div class="author-mode-block">
+                <label class="author-mode-label">Load from NCBI bibliography URL</label>
+                <p class="author-mode-hint">Paste your public MyNCBI bibliography URL for exact results. Find yours at <a href="https://www.ncbi.nlm.nih.gov/myncbi/" target="_blank" rel="noopener">ncbi.nlm.nih.gov/myncbi</a>.</p>
+                <div class="search-bar">
+                    <input type="text" id="author-ncbi-input" placeholder="https://www.ncbi.nlm.nih.gov/myncbi/yourname/bibliography/public/" autocomplete="off">
+                    <button id="author-ncbi-btn">Load</button>
+                </div>
+            </div>
         </div>
 
         <div id="author-search-results" style="display:none">
@@ -383,7 +400,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=7"></script>
+<script src="js/app.js?v=8"></script>
 
 </body>
 </html>

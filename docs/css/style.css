@@ -1002,21 +1002,55 @@ tr.row-excluded td {
     color: #999;
 }
 
-/* ---- Network view toggle ---- */
+/* ---- Network controls ---- */
 
-#network-view-toggle {
+.network-controls {
     display: flex;
-    gap: 0.4rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
     margin-bottom: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.net-ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.net-ctrl-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-right: 0.1rem;
+}
+
+.net-ctrl-hint {
+    font-size: 0.78rem;
+    color: var(--text-light);
+}
+
+.net-ctrl-group select {
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: white;
 }
 
 .btn-view {
-    padding: 0.3rem 0.9rem;
+    padding: 0.25rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 4px;
     background: white;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text);
 }
 
@@ -1028,6 +1062,23 @@ tr.row-excluded td {
 
 .btn-view:hover:not(.active) {
     background: var(--bg);
+}
+
+.network-rcr-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.78rem;
+}
+
+.rcr-swatch {
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 /* ---- Citation Network ---- */

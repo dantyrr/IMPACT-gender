@@ -8,6 +8,11 @@ class IMPACTApp {
         this.journalDataCache = {};
         this.authorDataCache = {};  // slug → {pmid: {f,fa,l,la}} or null if not available
         this._cyNetwork = null;
+        this._networkCenter = null;
+        this._networkCitedBy = [];
+        this._networkPaperCache = new Map();
+        this._networkColorMode = 'year';
+        this._networkLayoutMode = 'force';
         this._authorAllPapers = [];
         this._authorExcluded = new Set();
         this._authorTotalFound = 0;
@@ -541,7 +546,12 @@ class IMPACTApp {
         hint.style.display = '';
         results.style.display = 'none';
         document.getElementById('network-selected-panel').style.display = 'none';
-        document.getElementById('network-view-toggle').style.display = 'none';
+        document.getElementById('network-controls').style.display = 'none';
+
+        // Reset cache for new paper
+        this._networkPaperCache = new Map();
+        this._networkCenter = null;
+        this._networkCitedBy = [];
 
         try {
             const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`);
@@ -557,39 +567,136 @@ class IMPACTApp {
                 return;
             }
 
-            hint.textContent = `Found ${center.citation_count.toLocaleString()} citations. Loading citing papers…`;
-
-            // Fetch up to 300, then keep top 200 by citation count
-            const citing = await this._fetchICiteBatch(citedBy.slice(0, 300));
-            citing.sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0));
-            const displayed = citing.slice(0, 200);
+            this._networkCenter = center;
+            this._networkCitedBy = citedBy;
 
             document.getElementById('network-metrics').innerHTML = [
                 [center.citation_count.toLocaleString(), 'Total Citations'],
                 [citedBy.length.toLocaleString(), 'Citing Papers'],
-                [displayed.length, 'Shown in Network'],
                 [center.year || '—', 'Year Published'],
             ].map(([v, l]) =>
                 `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
             ).join('');
 
-            document.getElementById('network-note').textContent = citedBy.length > displayed.length
-                ? `Showing ${displayed.length} highest-cited papers of ${citedBy.length} total citers. Click any node for details.`
-                : `Showing all ${displayed.length} citing papers. Click any node for details.`;
-
             hint.style.display = 'none';
             results.style.display = '';
-            // Defer one frame so the browser reflows the newly-visible container
-            // before Cytoscape measures its dimensions (avoids 0×0 canvas bug)
-            requestAnimationFrame(() => {
-                try { this._renderCitationNetwork(center, displayed); }
-                catch (e) { hint.style.display = ''; hint.textContent = `Render error: ${e.message}`; console.error(e); }
-            });
+
+            const count = parseInt(document.getElementById('network-count-select').value) || 200;
+            hint.style.display = '';
+            hint.textContent = `Loading ${Math.min(count, citedBy.length).toLocaleString()} citing papers…`;
+            await this._fetchAndRenderNetwork(count);
+            hint.style.display = 'none';
+
+            this._setupNetworkControls();
 
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
             console.error('Citation network error:', e);
         }
+    }
+
+    async _fetchAndRenderNetwork(count) {
+        const toFetchPmids = this._networkCitedBy.slice(0, count).map(String);
+        const uncached = toFetchPmids.filter(p => !this._networkPaperCache.has(p));
+        if (uncached.length) {
+            const papers = await this._fetchICiteBatch(uncached);
+            papers.forEach(p => this._networkPaperCache.set(String(p.pmid), p));
+        }
+        const papers = toFetchPmids
+            .map(p => this._networkPaperCache.get(p))
+            .filter(Boolean);
+        papers.sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0));
+
+        document.getElementById('network-note').textContent =
+            this._networkCitedBy.length > papers.length
+                ? `Showing ${papers.length.toLocaleString()} of ${this._networkCitedBy.length.toLocaleString()} total citers. Click any node for details.`
+                : `Showing all ${papers.length.toLocaleString()} citing papers. Click any node for details.`;
+
+        await new Promise(resolve => requestAnimationFrame(() => {
+            try { this._renderCitationNetwork(this._networkCenter, papers); }
+            catch (e) {
+                const hint = document.getElementById('network-hint');
+                hint.style.display = '';
+                hint.textContent = `Render error: ${e.message}`;
+                console.error(e);
+            }
+            resolve();
+        }));
+    }
+
+    _setupNetworkControls() {
+        const ctrl = document.getElementById('network-controls');
+        ctrl.style.display = '';
+
+        // Layout buttons
+        ctrl.querySelectorAll('.btn-view[data-view]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === this._networkLayoutMode);
+            btn.onclick = () => {
+                ctrl.querySelectorAll('.btn-view[data-view]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this._networkLayoutMode = btn.dataset.view;
+                if (btn.dataset.view === 'force') this._applyForceLayout();
+                else if (btn.dataset.view === 'concentric') this._applyConcentricLayout();
+                else this._applyTimelineLayout();
+            };
+        });
+
+        // Count selector
+        const countSel = document.getElementById('network-count-select');
+        countSel.onchange = async () => {
+            const hint = document.getElementById('network-hint');
+            hint.style.display = '';
+            hint.textContent = `Loading ${parseInt(countSel.value).toLocaleString()} citing papers…`;
+            await this._fetchAndRenderNetwork(parseInt(countSel.value));
+            hint.style.display = 'none';
+            // Re-apply current layout
+            if (this._networkLayoutMode === 'concentric') this._applyConcentricLayout();
+            else if (this._networkLayoutMode === 'timeline') this._applyTimelineLayout();
+        };
+
+        // Color buttons
+        ctrl.querySelectorAll('.btn-view[data-color]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.color === this._networkColorMode);
+            btn.onclick = () => {
+                ctrl.querySelectorAll('.btn-view[data-color]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this._networkColorMode = btn.dataset.color;
+                this._applyNodeColors();
+                // Toggle RCR legend
+                document.getElementById('network-rcr-legend').style.display =
+                    btn.dataset.color === 'rcr' ? '' : 'none';
+            };
+        });
+    }
+
+    _nodeColor(paper) {
+        if (!paper) return '#90A4AE';
+        if (this._networkColorMode === 'rcr') {
+            const rcr = paper.relative_citation_ratio;
+            if (rcr == null) return '#CFD8DC';
+            if (rcr >= 10)  return '#b71c1c';
+            if (rcr >= 5)   return '#e53935';
+            if (rcr >= 2)   return '#FB8C00';
+            if (rcr >= 1)   return '#FDD835';
+            if (rcr >= 0.5) return '#66BB6A';
+            return '#90A4AE';
+        }
+        // year mode
+        const yr = paper.year;
+        if (!yr) return '#90CAF9';
+        if (yr >= 2022) return '#1565C0';
+        if (yr >= 2018) return '#1976D2';
+        if (yr >= 2014) return '#42A5F5';
+        if (yr >= 2010) return '#64B5F6';
+        return '#90CAF9';
+    }
+
+    _applyNodeColors() {
+        if (!this._cyNetwork) return;
+        this._cyNetwork.nodes().forEach(node => {
+            if (node.hasClass('year-label') || node.data('isCenter')) return;
+            node.style('background-color', this._nodeColor(node.data('paper')));
+        });
     }
 
     _fmtAuthors(authors) {
@@ -606,115 +713,60 @@ class IMPACTApp {
 
     _renderCitationNetwork(center, citingPapers) {
         const container = document.getElementById('citation-network');
-
         if (this._cyNetwork) { this._cyNetwork.destroy(); this._cyNetwork = null; }
 
-        const yearColor = (yr) => {
-            if (!yr) return '#90CAF9';
-            if (yr >= 2022) return '#1565C0';
-            if (yr >= 2018) return '#1976D2';
-            if (yr >= 2014) return '#42A5F5';
-            if (yr >= 2010) return '#64B5F6';
-            return '#90CAF9';
-        };
-
         const elements = [];
-
-        // Center node
         elements.push({ data: {
             id: String(center.pmid),
             color: '#e74c3c', borderColor: '#c0392b',
             size: 44, isCenter: true, paper: center,
         }});
-
-        // Citing nodes + edges
         citingPapers.forEach(p => {
-            const cits = p.citation_count || 0;
-            const size = Math.max(12, Math.min(44, 12 + Math.sqrt(cits) * 2.5));
+            const size = Math.max(10, Math.min(44, 10 + Math.sqrt(p.citation_count || 0) * 2.5));
             elements.push({ data: {
                 id: String(p.pmid),
-                color: yearColor(p.year), borderColor: '#1a5276',
+                color: this._nodeColor(p), borderColor: '#1a5276',
                 size, paper: p,
             }});
             elements.push({ data: { source: String(p.pmid), target: String(center.pmid) } });
         });
 
         this._cyNetwork = cytoscape({
-            container,
-            elements,
+            container, elements,
             style: [
-                {
-                    selector: 'node',
-                    style: {
-                        'background-color': 'data(color)',
-                        'border-color': 'data(borderColor)',
-                        'border-width': 1.5,
-                        'width': 'data(size)', 'height': 'data(size)',
-                        'label': '',
-                    },
-                },
-                {
-                    selector: 'node[?isCenter]',
-                    style: { 'border-width': 3 },
-                },
-                {
-                    selector: 'node.year-label',
-                    style: {
-                        'background-opacity': 0, 'border-width': 0,
-                        'label': 'data(label)',
-                        'color': '#888', 'font-size': 11,
-                        'text-valign': 'center', 'text-halign': 'center',
-                        'width': 50, 'height': 20, 'events': 'no',
-                    },
-                },
-                {
-                    selector: 'edge',
-                    style: {
-                        'width': 0.6, 'line-color': '#ccc', 'opacity': 0.5,
-                        'target-arrow-color': '#aaa', 'target-arrow-shape': 'triangle',
-                        'curve-style': 'straight',
-                    },
-                },
-                {
-                    selector: 'node:selected',
-                    style: { 'border-color': '#f39c12', 'border-width': 3 },
-                },
+                { selector: 'node', style: {
+                    'background-color': 'data(color)', 'border-color': 'data(borderColor)',
+                    'border-width': 1.5, 'width': 'data(size)', 'height': 'data(size)', 'label': '',
+                }},
+                { selector: 'node[?isCenter]', style: { 'border-width': 3 }},
+                { selector: 'node.year-label', style: {
+                    'background-opacity': 0, 'border-width': 0, 'label': 'data(label)',
+                    'color': '#888', 'font-size': 11, 'text-valign': 'center',
+                    'text-halign': 'center', 'width': 50, 'height': 20, 'events': 'no',
+                }},
+                { selector: 'edge', style: {
+                    'width': 0.6, 'line-color': '#ccc', 'opacity': 0.4,
+                    'target-arrow-color': '#aaa', 'target-arrow-shape': 'triangle',
+                    'curve-style': 'straight',
+                }},
+                { selector: 'node:selected', style: { 'border-color': '#f39c12', 'border-width': 3 }},
             ],
             layout: {
-                name: 'cose',
-                animate: false,
-                nodeRepulsion: () => 8000,
-                nodeOverlap: 20,
-                idealEdgeLength: () => 80,
-                edgeElasticity: () => 100,
-                nestingFactor: 5,
-                gravity: 0.25,
-                numIter: 1000,
-                initialTemp: 200,
-                coolingFactor: 0.95,
-                minTemp: 1.0,
+                name: 'cose', animate: false,
+                nodeRepulsion: () => 8000, nodeOverlap: 20,
+                idealEdgeLength: () => 80, edgeElasticity: () => 100,
+                nestingFactor: 5, gravity: 0.25, numIter: 1000,
+                initialTemp: 200, coolingFactor: 0.95, minTemp: 1.0,
             },
         });
 
         this._cyNetwork.fit(undefined, 40);
         this._cyNetwork.resize();
+        this._networkLayoutMode = 'force';
 
         this._cyNetwork.on('tap', 'node', (evt) => {
             const paper = evt.target.data('paper');
             if (paper) this._showNetworkSelected(paper);
-        });
-
-        // Set up view-toggle buttons
-        const toggle = document.getElementById('network-view-toggle');
-        toggle.style.display = '';
-        toggle.querySelectorAll('.btn-view').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.view === 'force');
-            btn.onclick = () => {
-                toggle.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                if (btn.dataset.view === 'force') this._applyForceLayout();
-                else this._applyTimelineLayout();
-            };
         });
     }
 
@@ -732,16 +784,36 @@ class IMPACTApp {
         this._cyNetwork.fit(undefined, 40);
     }
 
+    _applyConcentricLayout() {
+        if (!this._cyNetwork) return;
+        this._cyNetwork.remove('node.year-label');
+        this._cyNetwork.edges().style('display', 'element');
+        let maxCit = 1;
+        this._cyNetwork.nodes().forEach(n => {
+            if (!n.data('isCenter')) maxCit = Math.max(maxCit, n.data('paper')?.citation_count || 0);
+        });
+        this._cyNetwork.layout({
+            name: 'concentric', animate: true, animationDuration: 500,
+            concentric: node => {
+                if (node.data('isCenter')) return 100;
+                // More-cited papers closer to center
+                return Math.ceil(((node.data('paper')?.citation_count || 0) / maxCit) * 9) + 1;
+            },
+            levelWidth: () => 1,
+            minNodeSpacing: 6, padding: 40, startAngle: Math.PI / 2, clockwise: true,
+        }).run();
+        setTimeout(() => this._cyNetwork && this._cyNetwork.fit(undefined, 40), 550);
+    }
+
     _applyTimelineLayout() {
         if (!this._cyNetwork) return;
         this._cyNetwork.remove('node.year-label');
 
-        // Group paper nodes by year
         const byYear = {};
         this._cyNetwork.nodes().forEach(node => {
             const yr = node.data('paper')?.year;
-            const key = yr ? String(yr) : null;
-            if (!key) return;
+            if (!yr) return;
+            const key = String(yr);
             if (!byYear[key]) byYear[key] = [];
             byYear[key].push(node);
         });
@@ -752,7 +824,6 @@ class IMPACTApp {
 
         const positions = {};
         sortedYears.forEach((yr, xi) => {
-            // Sort within year by citation count descending
             byYear[yr].sort((a, b) =>
                 (b.data('paper')?.citation_count || 0) - (a.data('paper')?.citation_count || 0));
             byYear[yr].forEach((node, yi) => {
@@ -760,31 +831,26 @@ class IMPACTApp {
             });
         });
 
-        // Year label nodes at the bottom of each column
-        const labelNodes = sortedYears.map((yr, xi) => ({
-            data: { id: `yl-${yr}`, label: yr },
-            classes: 'year-label',
+        this._cyNetwork.add(sortedYears.map((yr, xi) => ({
+            data: { id: `yl-${yr}`, label: yr }, classes: 'year-label',
             position: { x: xi * xStep, y: maxNodes * yStep + 25 },
-        }));
-        this._cyNetwork.add(labelNodes);
-        // Hide edges in timeline view (they all point to center — just clutter)
+        })));
         this._cyNetwork.edges().style('display', 'none');
 
         this._cyNetwork.layout({
-            name: 'preset',
-            positions: node => positions[node.id()],
-            animate: true, animationDuration: 500,
-            fit: false,
+            name: 'preset', positions: node => positions[node.id()],
+            animate: true, animationDuration: 500, fit: false,
         }).run();
-
         setTimeout(() => this._cyNetwork && this._cyNetwork.fit(undefined, 50), 550);
     }
 
     _showNetworkSelected(paper) {
         document.getElementById('network-sel-title').textContent = paper.title || 'Unknown title';
         const authors = this._fmtAuthors(paper.authors);
+        const rcr = paper.relative_citation_ratio;
+        const rcrStr = rcr != null ? ` · RCR ${rcr.toFixed(2)}` : '';
         document.getElementById('network-sel-meta').textContent =
-            `${authors} · ${paper.journal || ''} · ${paper.year || ''} · ${(paper.citation_count || 0).toLocaleString()} citations`;
+            `${authors} · ${paper.journal || ''} · ${paper.year || ''} · ${(paper.citation_count || 0).toLocaleString()} citations${rcrStr}`;
         document.getElementById('network-sel-link').href = `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}/`;
         document.getElementById('network-selected-panel').style.display = '';
     }

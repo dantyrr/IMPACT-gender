@@ -207,9 +207,40 @@
 
         <div id="network-results" style="display:none">
             <div class="metrics-row" id="network-metrics"></div>
-            <div id="network-view-toggle" style="display:none">
-                <button class="btn-view active" data-view="force">Force Layout</button>
-                <button class="btn-view" data-view="timeline">Timeline by Year</button>
+            <div id="network-controls" class="network-controls" style="display:none">
+                <div class="net-ctrl-group">
+                    <span class="net-ctrl-label">Layout</span>
+                    <button class="btn-view active" data-view="force">Force</button>
+                    <button class="btn-view" data-view="concentric">Concentric</button>
+                    <button class="btn-view" data-view="timeline">Timeline</button>
+                </div>
+                <div class="net-ctrl-group">
+                    <span class="net-ctrl-label">Show</span>
+                    <select id="network-count-select">
+                        <option value="100">100</option>
+                        <option value="200" selected>200</option>
+                        <option value="500">500</option>
+                        <option value="1000">1,000</option>
+                        <option value="2000">2,000</option>
+                        <option value="5000">5,000</option>
+                    </select>
+                    <span class="net-ctrl-hint">citing papers</span>
+                </div>
+                <div class="net-ctrl-group">
+                    <span class="net-ctrl-label">Color</span>
+                    <button class="btn-view active" data-color="year">Year</button>
+                    <button class="btn-view" data-color="rcr">RCR</button>
+                </div>
+            </div>
+            <div id="network-rcr-legend" class="network-rcr-legend" style="display:none">
+                <span class="rcr-swatch" style="background:#b71c1c">≥10</span>
+                <span class="rcr-swatch" style="background:#e53935">≥5</span>
+                <span class="rcr-swatch" style="background:#FB8C00">≥2</span>
+                <span class="rcr-swatch" style="background:#FDD835;color:#555">≥1</span>
+                <span class="rcr-swatch" style="background:#66BB6A">≥0.5</span>
+                <span class="rcr-swatch" style="background:#90A4AE">&lt;0.5</span>
+                <span class="rcr-swatch" style="background:#CFD8DC;color:#555">no data</span>
+                <span style="font-size:0.75rem;color:#888;margin-left:4px">RCR = field-normalized citation rate (1.0 = average for field)</span>
             </div>
             <div id="citation-network"></div>
             <p class="data-note" id="network-note"></p>
@@ -403,7 +434,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=14"></script>
+<script src="js/app.js?v=15"></script>
 
 </body>
 </html>

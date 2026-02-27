@@ -541,6 +541,7 @@ class IMPACTApp {
         hint.style.display = '';
         results.style.display = 'none';
         document.getElementById('network-selected-panel').style.display = 'none';
+        document.getElementById('network-view-toggle').style.display = 'none';
 
         try {
             const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`);
@@ -591,6 +592,18 @@ class IMPACTApp {
         }
     }
 
+    _fmtAuthors(authors) {
+        if (!authors) return '';
+        if (typeof authors === 'string') return authors;
+        if (Array.isArray(authors)) {
+            return authors.map(a => {
+                if (typeof a === 'string') return a;
+                return a.name || a.lastname || a.family || a.collective || '';
+            }).filter(Boolean).join(', ');
+        }
+        return '';
+    }
+
     _renderCitationNetwork(center, citingPapers) {
         const container = document.getElementById('citation-network');
 
@@ -604,18 +617,12 @@ class IMPACTApp {
             if (yr >= 2010) return '#64B5F6';
             return '#90CAF9';
         };
-        const lastName = (authors) => {
-            let s = Array.isArray(authors) ? (authors[0] || '') : (authors || '');
-            if (typeof s !== 'string') s = '';
-            return s.split(',')[0].trim().split(' ').pop() || '';
-        };
 
         const elements = [];
 
         // Center node
         elements.push({ data: {
             id: String(center.pmid),
-            label: `${lastName(center.authors)}\n${center.year || ''}`,
             color: '#e74c3c', borderColor: '#c0392b',
             size: 44, isCenter: true, paper: center,
         }});
@@ -626,7 +633,6 @@ class IMPACTApp {
             const size = Math.max(12, Math.min(44, 12 + Math.sqrt(cits) * 2.5));
             elements.push({ data: {
                 id: String(p.pmid),
-                label: `${lastName(p.authors)}\n${p.year || ''}`,
                 color: yearColor(p.year), borderColor: '#1a5276',
                 size, paper: p,
             }});
@@ -644,16 +650,22 @@ class IMPACTApp {
                         'border-color': 'data(borderColor)',
                         'border-width': 1.5,
                         'width': 'data(size)', 'height': 'data(size)',
-                        'label': 'data(label)',
-                        'text-valign': 'center', 'text-halign': 'center',
-                        'font-size': 9, 'color': '#fff',
-                        'text-outline-width': 1.5, 'text-outline-color': 'data(borderColor)',
-                        'text-wrap': 'wrap',
+                        'label': '',
                     },
                 },
                 {
                     selector: 'node[?isCenter]',
-                    style: { 'border-width': 3, 'font-size': 12, 'font-weight': 'bold' },
+                    style: { 'border-width': 3 },
+                },
+                {
+                    selector: 'node.year-label',
+                    style: {
+                        'background-opacity': 0, 'border-width': 0,
+                        'label': 'data(label)',
+                        'color': '#888', 'font-size': 11,
+                        'text-valign': 'center', 'text-halign': 'center',
+                        'width': 50, 'height': 20, 'events': 'no',
+                    },
                 },
                 {
                     selector: 'edge',
@@ -684,7 +696,6 @@ class IMPACTApp {
             },
         });
 
-        // Fit after layout (animate:false means layout is done synchronously)
         this._cyNetwork.fit(undefined, 40);
         this._cyNetwork.resize();
 
@@ -692,12 +703,88 @@ class IMPACTApp {
             const paper = evt.target.data('paper');
             if (paper) this._showNetworkSelected(paper);
         });
+
+        // Set up view-toggle buttons
+        const toggle = document.getElementById('network-view-toggle');
+        toggle.style.display = '';
+        toggle.querySelectorAll('.btn-view').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === 'force');
+            btn.onclick = () => {
+                toggle.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (btn.dataset.view === 'force') this._applyForceLayout();
+                else this._applyTimelineLayout();
+            };
+        });
+    }
+
+    _applyForceLayout() {
+        if (!this._cyNetwork) return;
+        this._cyNetwork.remove('node.year-label');
+        this._cyNetwork.edges().style('display', 'element');
+        this._cyNetwork.layout({
+            name: 'cose', animate: false,
+            nodeRepulsion: () => 8000, nodeOverlap: 20,
+            idealEdgeLength: () => 80, edgeElasticity: () => 100,
+            nestingFactor: 5, gravity: 0.25, numIter: 1000,
+            initialTemp: 200, coolingFactor: 0.95, minTemp: 1.0,
+        }).run();
+        this._cyNetwork.fit(undefined, 40);
+    }
+
+    _applyTimelineLayout() {
+        if (!this._cyNetwork) return;
+        this._cyNetwork.remove('node.year-label');
+
+        // Group paper nodes by year
+        const byYear = {};
+        this._cyNetwork.nodes().forEach(node => {
+            const yr = node.data('paper')?.year;
+            const key = yr ? String(yr) : null;
+            if (!key) return;
+            if (!byYear[key]) byYear[key] = [];
+            byYear[key].push(node);
+        });
+
+        const sortedYears = Object.keys(byYear).sort();
+        const xStep = 130, yStep = 50;
+        const maxNodes = Math.max(...sortedYears.map(y => byYear[y].length), 1);
+
+        const positions = {};
+        sortedYears.forEach((yr, xi) => {
+            // Sort within year by citation count descending
+            byYear[yr].sort((a, b) =>
+                (b.data('paper')?.citation_count || 0) - (a.data('paper')?.citation_count || 0));
+            byYear[yr].forEach((node, yi) => {
+                positions[node.id()] = { x: xi * xStep, y: yi * yStep };
+            });
+        });
+
+        // Year label nodes at the bottom of each column
+        const labelNodes = sortedYears.map((yr, xi) => ({
+            data: { id: `yl-${yr}`, label: yr },
+            classes: 'year-label',
+            position: { x: xi * xStep, y: maxNodes * yStep + 25 },
+        }));
+        this._cyNetwork.add(labelNodes);
+        // Hide edges in timeline view (they all point to center — just clutter)
+        this._cyNetwork.edges().style('display', 'none');
+
+        this._cyNetwork.layout({
+            name: 'preset',
+            positions: node => positions[node.id()],
+            animate: true, animationDuration: 500,
+            fit: false,
+        }).run();
+
+        setTimeout(() => this._cyNetwork && this._cyNetwork.fit(undefined, 50), 550);
     }
 
     _showNetworkSelected(paper) {
         document.getElementById('network-sel-title').textContent = paper.title || 'Unknown title';
+        const authors = this._fmtAuthors(paper.authors);
         document.getElementById('network-sel-meta').textContent =
-            `${paper.authors || ''} · ${paper.journal || ''} · ${paper.year || ''} · ${(paper.citation_count || 0).toLocaleString()} citations`;
+            `${authors} · ${paper.journal || ''} · ${paper.year || ''} · ${(paper.citation_count || 0).toLocaleString()} citations`;
         document.getElementById('network-sel-link').href = `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}/`;
         document.getElementById('network-selected-panel').style.display = '';
     }

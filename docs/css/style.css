@@ -1002,6 +1002,34 @@ tr.row-excluded td {
     color: #999;
 }
 
+/* ---- Network view toggle ---- */
+
+#network-view-toggle {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.btn-view {
+    padding: 0.3rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.btn-view.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.btn-view:hover:not(.active) {
+    background: var(--bg);
+}
+
 /* ---- Citation Network ---- */
 
 #citation-network {

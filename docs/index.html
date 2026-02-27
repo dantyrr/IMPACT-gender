@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMPACT — Independent Metrics for Publication Analysis and Citation Tracking</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=3">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -23,6 +23,7 @@
         <a href="#papers" class="nav-link" data-section="papers">Papers</a>
         <a href="#authors" class="nav-link" data-section="authors">Authors</a>
         <a href="#geography" class="nav-link" data-section="geography">Geography</a>
+        <a href="#influence" class="nav-link" data-section="influence">Influence</a>
         <a href="#about" class="nav-link" data-section="about">About</a>
     </nav>
 </header>
@@ -244,6 +245,12 @@
             </div>
             <div id="citation-network"></div>
             <p class="data-note" id="network-note"></p>
+            <div id="network-download-bar" class="download-bar" style="display:none">
+                <span class="download-label">Download network:</span>
+                <button class="download-btn" id="net-dl-png">PNG</button>
+                <button class="download-btn" id="net-dl-jpg">JPG</button>
+                <button class="download-btn" id="net-dl-pdf">PDF</button>
+            </div>
             <div id="network-selected-panel" class="network-selected-panel" style="display:none">
                 <h4 id="network-sel-title"></h4>
                 <p id="network-sel-meta"></p>
@@ -351,6 +358,56 @@
         <p id="geo-hint" class="data-note" style="margin-top:1rem;">Select a journal above to see its geographic breakdown.</p>
     </section>
 
+    <!-- ============ INFLUENCE ============ -->
+    <section id="influence" class="section">
+        <h2>PMID Influence</h2>
+        <p class="section-desc">Select a journal and enter a PMID to see how that single paper affects the journal's rolling 24-month citation rate. Toggle censoring to compare the original vs. the counterfactual (without that paper's citations).</p>
+
+        <div class="influence-ctrl-row">
+            <div class="influence-picker-wrap">
+                <label class="influence-label">Journal</label>
+                <div id="influence-journal-picker"></div>
+            </div>
+            <div class="influence-pmid-wrap">
+                <label class="influence-label">PMID</label>
+                <div class="search-bar" style="margin-top:0">
+                    <input type="text" id="influence-pmid-input" placeholder="e.g. 26799652" autocomplete="off">
+                    <button id="influence-analyze-btn">Analyze</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="influence-results" style="display:none">
+            <div id="influence-paper-card" class="network-selected-panel" style="margin-bottom:1rem">
+                <h4 id="inf-paper-title"></h4>
+                <p id="inf-paper-meta"></p>
+                <a id="inf-paper-link" class="pubmed-link" target="_blank" rel="noopener">Open in PubMed →</a>
+            </div>
+
+            <div class="metrics-row" id="influence-metrics"></div>
+
+            <div class="influence-toggle-row">
+                <label class="influence-toggle-label">
+                    <input type="checkbox" id="influence-censor-toggle" checked>
+                    Show censored line (without PMID citations)
+                </label>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="influence-chart"></canvas>
+            </div>
+
+            <div class="download-bar" id="influence-download-bar">
+                <span class="download-label">Download:</span>
+                <button class="download-btn" id="inf-dl-png">PNG</button>
+                <button class="download-btn" id="inf-dl-jpg">JPG</button>
+                <button class="download-btn" id="inf-dl-pdf">PDF</button>
+            </div>
+        </div>
+
+        <p id="influence-hint" class="data-note" style="margin-top:1rem;">Select a journal and enter a PMID above to analyze its contribution to the citation rate.</p>
+    </section>
+
     <!-- ============ ABOUT ============ -->
     <section id="about" class="section">
         <h2>About IMPACT</h2>
@@ -434,7 +491,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=17"></script>
+<script src="js/app.js?v=18"></script>
 
 </body>
 </html>

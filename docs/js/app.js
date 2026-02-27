@@ -13,6 +13,7 @@ class IMPACTApp {
         this._networkPaperCache = new Map();
         this._networkColorMode = 'year';
         this._networkLayoutMode = 'force';
+        this._influenceJournalSlug = null;
         this._authorAllPapers = [];
         this._authorExcluded = new Set();
         this._authorTotalFound = 0;
@@ -38,6 +39,7 @@ class IMPACTApp {
             this.setupCitationNetwork();
             this.setupAuthorSearch();
             this.setupGeography();
+            this.setupInfluence();
             this.setupAboutJournalList();
             this.updateTimestamp(index.generated);
         } catch (error) {
@@ -547,6 +549,7 @@ class IMPACTApp {
         results.style.display = 'none';
         document.getElementById('network-selected-panel').style.display = 'none';
         document.getElementById('network-controls').style.display = 'none';
+        document.getElementById('network-download-bar').style.display = 'none';
 
         // Reset state for new paper
         this._networkPaperCache = new Map();
@@ -628,6 +631,13 @@ class IMPACTApp {
     _setupNetworkControls() {
         const ctrl = document.getElementById('network-controls');
         ctrl.style.display = '';
+
+        // Download buttons
+        const dlBar = document.getElementById('network-download-bar');
+        dlBar.style.display = '';
+        document.getElementById('net-dl-png').onclick = () => this._downloadNetwork('png');
+        document.getElementById('net-dl-jpg').onclick = () => this._downloadNetwork('jpg');
+        document.getElementById('net-dl-pdf').onclick = () => this._downloadNetwork('pdf');
 
         // Layout buttons
         ctrl.querySelectorAll('.btn-view[data-view]').forEach(btn => {
@@ -886,6 +896,39 @@ class IMPACTApp {
         document.getElementById('network-selected-panel').style.display = '';
     }
 
+    _downloadNetwork(format) {
+        if (!this._cyNetwork) return;
+        const pmid = this._networkCenter?.pmid || 'export';
+        const filename = `citation-network-pmid${pmid}`;
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const imgData = this._cyNetwork.png({ full: true, scale: 2, bg: 'white' });
+            const img = new Image();
+            img.onload = () => {
+                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const pw = doc.internal.pageSize.getWidth();
+                const ph = doc.internal.pageSize.getHeight();
+                const ratio = img.naturalWidth / img.naturalHeight;
+                const imgW = pw - 20;
+                const imgH = Math.min(imgW / ratio, ph - 28);
+                doc.setFontSize(11);
+                doc.text(`IMPACT — Citation Network (PMID ${pmid})`, 10, 10);
+                doc.addImage(imgData, 'PNG', 10, 16, imgW, imgH);
+                doc.save(`${filename}.pdf`);
+            };
+            img.src = imgData;
+            return;
+        }
+        const imgData = format === 'jpg'
+            ? this._cyNetwork.jpg({ full: true, scale: 2, bg: 'white' })
+            : this._cyNetwork.png({ full: true, scale: 2, bg: 'white' });
+        const a = document.createElement('a');
+        a.href = imgData;
+        a.download = `${filename}.${format}`;
+        a.click();
+    }
+
     async _fetchICiteBatch(pmids, batchSize = 100) {
         const results = [];
         for (let i = 0; i < pmids.length; i += batchSize) {
@@ -907,6 +950,232 @@ class IMPACTApp {
             if (sorted[i] >= i + 1) h = i + 1; else break;
         }
         return h;
+    }
+
+    // ---- Influence Analysis ----
+
+    setupInfluence() {
+        this._influencePicker = new SingleJournalPicker('influence-journal-picker', this.journals, (slug) => {
+            this._influenceJournalSlug = slug;
+        });
+        document.getElementById('influence-analyze-btn').addEventListener('click', () => this.loadInfluenceData());
+        document.getElementById('influence-pmid-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.loadInfluenceData();
+        });
+        document.getElementById('influence-censor-toggle').addEventListener('change', (e) => {
+            this._toggleCensoredLine(e.target.checked);
+        });
+        document.getElementById('inf-dl-png').onclick = () => this._downloadInfluence('png');
+        document.getElementById('inf-dl-jpg').onclick = () => this._downloadInfluence('jpg');
+        document.getElementById('inf-dl-pdf').onclick = () => this._downloadInfluence('pdf');
+    }
+
+    async loadInfluenceData() {
+        const pmid = document.getElementById('influence-pmid-input').value.trim().replace(/\D/g, '');
+        const slug = this._influenceJournalSlug;
+        const hint = document.getElementById('influence-hint');
+        const results = document.getElementById('influence-results');
+
+        if (!pmid || !slug) {
+            hint.textContent = 'Please select a journal and enter a PMID.';
+            hint.style.display = '';
+            return;
+        }
+
+        hint.textContent = 'Fetching journal and PMID data…';
+        hint.style.display = '';
+        results.style.display = 'none';
+
+        try {
+            const [journalData, pmidResp] = await Promise.all([
+                this.journalDataCache[slug]
+                    ? Promise.resolve(this.journalDataCache[slug])
+                    : dataLoader.loadJournal(slug).then(d => { this.journalDataCache[slug] = d; return d; }),
+                fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`),
+            ]);
+
+            if (!pmidResp.ok) throw new Error('iCite API error');
+            const pmidJson = await pmidResp.json();
+            const pmidItems = Array.isArray(pmidJson) ? pmidJson : (pmidJson.data || []);
+            if (!pmidItems.length) { hint.textContent = 'PMID not found in iCite.'; return; }
+
+            const pmidData = pmidItems[0];
+            const citedBy = pmidData.cited_by || [];
+            if (!citedBy.length) {
+                hint.textContent = 'This PMID has no citing papers yet in iCite.';
+                return;
+            }
+
+            hint.textContent = `Fetching up to ${Math.min(citedBy.length, 2000).toLocaleString()} citing papers…`;
+            const citingPmids = citedBy.slice(0, 2000).map(String);
+            const citingPapers = await this._fetchICiteBatch(citingPmids);
+
+            this._renderInfluenceChart(journalData, pmidData, citingPapers);
+
+            hint.style.display = 'none';
+            results.style.display = '';
+        } catch (e) {
+            hint.textContent = `Error: ${e.message}`;
+            console.error('Influence error:', e);
+        }
+    }
+
+    _renderInfluenceChart(journalData, pmidData, citingPapers) {
+        // Paper info card
+        document.getElementById('inf-paper-title').textContent = pmidData.title || 'Unknown title';
+        document.getElementById('inf-paper-meta').textContent =
+            `${this._fmtAuthors(pmidData.authors)} · ${pmidData.journal || ''} · ${pmidData.year || ''} · ${(pmidData.citation_count || 0).toLocaleString()} total citations`;
+        document.getElementById('inf-paper-link').href = `https://pubmed.ncbi.nlm.nih.gov/${pmidData.pmid}/`;
+
+        // Use 24-month timeseries
+        const ts = journalData.timeseries || [];
+        if (!ts.length) return;
+
+        // Citing paper dates: iCite only provides year → approximate month as June
+        const citingDates = citingPapers.map(p => ({
+            yOrd: (p.year || 0) * 12 + 6,  // ordinal: year*12 + approxMonth
+        }));
+
+        // For each timeseries point, compute censored IF
+        // Timeseries fields: papers (24-mo window), citations (12-mo window), rolling_if
+        const adjIf = ts.map(point => {
+            const [y, m] = point.month.split('-').map(Number);
+            // 12-month window ending at (y,m): ordinal range [endOrd-11, endOrd]
+            const endOrd = y * 12 + m;
+            const startOrd = endOrd - 11;
+            let pmidCitsInWindow = 0;
+            for (const d of citingDates) {
+                if (d.yOrd >= startOrd && d.yOrd <= endOrd) pmidCitsInWindow++;
+            }
+            const papers = point.papers || 1;
+            const citations = point.citations || 0;
+            return Math.max(0, citations - pmidCitsInWindow) / papers;
+        });
+
+        // Metric cards
+        const contributions = ts.map((pt, i) => Math.max(0, (pt.rolling_if || 0) - adjIf[i]));
+        const maxContrib = Math.max(...contributions);
+        const peakIdx = contributions.indexOf(maxContrib);
+        const peakMonth = ts[peakIdx]?.month || '—';
+        const meanContrib = contributions.reduce((s, v) => s + v, 0) / contributions.length;
+        const capped = citedBy => citedBy < 2000 ? '' : ' (top 2k analyzed)';
+
+        document.getElementById('influence-metrics').innerHTML = [
+            [(pmidData.citation_count || 0).toLocaleString(), 'Total Citations (all journals)'],
+            [citingPapers.length.toLocaleString() + capped(pmidData.cited_by?.length || 0), 'Citing Papers Analyzed'],
+            [maxContrib.toFixed(3), `Peak IF Boost (${peakMonth})`],
+            [meanContrib.toFixed(3), 'Mean Monthly IF Contribution'],
+        ].map(([v, l]) =>
+            `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+        ).join('');
+
+        // Chart
+        const labels = ts.map(d => d.month);
+        chartManager._destroy('influence-chart');
+        const ctx = document.getElementById('influence-chart');
+        const isCensored = document.getElementById('influence-censor-toggle').checked;
+        chartManager.charts['influence-chart'] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Original IF (with PMID)',
+                        data: ts.map(d => d.rolling_if),
+                        borderColor: chartManager.palette[0],
+                        backgroundColor: 'rgba(0, 114, 178, 0.08)',
+                        borderWidth: 2.5,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                    },
+                    {
+                        label: `Censored IF (without PMID ${pmidData.pmid})`,
+                        data: adjIf,
+                        borderColor: chartManager.palette[1],
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [6, 3],
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        hidden: !isCensored,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `${journalData.journal} — Rolling 24-Month Citation Rate`,
+                        font: { size: 14 },
+                    },
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)}`,
+                            afterBody: (items) => {
+                                const orig = items.find(i => i.datasetIndex === 0);
+                                const cens = items.find(i => i.datasetIndex === 1);
+                                if (orig && cens) {
+                                    const diff = orig.parsed.y - cens.parsed.y;
+                                    return `PMID contribution: +${diff.toFixed(3)}`;
+                                }
+                                return '';
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Month' },
+                        ticks: { maxTicksLimit: 12 },
+                    },
+                    y: {
+                        title: { display: true, text: 'Citation Rate (24-mo)' },
+                        beginAtZero: false,
+                    },
+                },
+            },
+        });
+    }
+
+    _toggleCensoredLine(show) {
+        const chart = chartManager.charts['influence-chart'];
+        if (!chart) return;
+        chart.data.datasets[1].hidden = !show;
+        chart.update();
+    }
+
+    _downloadInfluence(format) {
+        const chart = chartManager.charts['influence-chart'];
+        if (!chart) return;
+        const slug = this._influenceJournalSlug || 'journal';
+        const filename = `influence-${slug}`;
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+            const imgW = pw - 20;
+            const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+            doc.setFontSize(11);
+            doc.text('IMPACT — PMID Influence Analysis', 10, 10);
+            doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+            doc.save(`${filename}.pdf`);
+            return;
+        }
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const url = chart.toBase64Image(mime, 1);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.${format}`;
+        a.click();
     }
 
     // ---- Author Name Search ----

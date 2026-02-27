@@ -1123,3 +1123,44 @@ tr.row-excluded td {
 .pubmed-link:hover {
     text-decoration: underline;
 }
+
+/* ---- Influence Section ---- */
+
+.influence-ctrl-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+.influence-picker-wrap {
+    flex: 2;
+    min-width: 280px;
+}
+
+.influence-pmid-wrap {
+    flex: 1;
+    min-width: 240px;
+}
+
+.influence-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    color: #1a2e44;
+}
+
+.influence-toggle-row {
+    margin: 0.75rem 0;
+}
+
+.influence-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: var(--text);
+}

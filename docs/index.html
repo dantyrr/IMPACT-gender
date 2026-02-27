@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMPACT — Independent Metrics for Publication Analysis and Citation Tracking</title>
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <title>IMPACT — Studying Publication Bias, Impact Factor Inflation &amp; H-Index Gaming</title>
+    <link rel="stylesheet" href="css/style.css?v=6">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,7 +15,7 @@
     <div class="header-content">
         <h1>IMPACT</h1>
         <p class="subtitle">Independent Metrics for Publication Analysis and Citation Tracking</p>
-        <p class="tagline">Open-source rolling 24-month journal citation rates computed from PubMed &amp; iCite data</p>
+        <p class="tagline">Open tools to study publication bias, impact factor inflation, and h-index gaming — using transparent, reproducible metrics from PubMed &amp; iCite data</p>
     </div>
     <nav>
         <a href="#journals" class="nav-link active" data-section="journals">Journals</a>
@@ -264,7 +264,7 @@
     <!-- ============ AUTHORS ============ -->
     <section id="authors" class="section">
         <h2>Author Search</h2>
-        <p class="section-desc">Search by name or load directly from an NCBI bibliography URL for precise results.</p>
+        <p class="section-desc">Search by name, load from an NCBI bibliography URL, or paste a list of PMIDs to analyze any author's publication record — including estimated h-index, citation trends, top journals, and article type breakdown.</p>
 
         <div class="author-search-modes">
             <div class="author-mode-block">
@@ -280,26 +280,51 @@
 
             <div class="author-mode-block">
                 <label class="author-mode-label">Load from NCBI bibliography URL</label>
-                <p class="author-mode-hint">Paste your public MyNCBI bibliography URL for exact results. Find yours at <a href="https://www.ncbi.nlm.nih.gov/myncbi/" target="_blank" rel="noopener">ncbi.nlm.nih.gov/myncbi</a>.</p>
+                <p class="author-mode-hint">Paste your public MyNCBI bibliography URL. All pages are fetched automatically. Find yours at <a href="https://www.ncbi.nlm.nih.gov/myncbi/" target="_blank" rel="noopener">ncbi.nlm.nih.gov/myncbi</a>.</p>
                 <div class="search-bar">
                     <input type="text" id="author-ncbi-input" placeholder="https://www.ncbi.nlm.nih.gov/myncbi/yourname/bibliography/public/" autocomplete="off">
                     <button id="author-ncbi-btn">Load</button>
                 </div>
+            </div>
+
+            <div class="author-mode-divider">or</div>
+
+            <div class="author-mode-block">
+                <label class="author-mode-label">Paste PMID list</label>
+                <p class="author-mode-hint">Paste PMIDs one per line or comma-separated (e.g. exported via NCBI "Manage Citations → Export File").</p>
+                <textarea id="author-pmid-paste" class="paste-pmid-area" rows="4" placeholder="41177156&#10;40504687&#10;39757022&#10;..."></textarea>
+                <button id="author-pmid-paste-btn">Load PMIDs</button>
             </div>
         </div>
 
         <div id="author-search-results" style="display:none">
             <div class="metrics-row" id="author-search-metrics"></div>
 
+            <div id="author-type-filters" class="type-filter-pills" style="display:none"></div>
+
             <div class="authors-charts-grid">
                 <div class="authors-chart-card">
-                    <h4>Publications per Year</h4>
+                    <div class="card-header-row">
+                        <h4>Publications per Year</h4>
+                        <div class="card-dl-bar">
+                            <button class="dl-btn-sm" id="dl-pubs-png">PNG</button>
+                            <button class="dl-btn-sm" id="dl-pubs-jpg">JPG</button>
+                            <button class="dl-btn-sm" id="dl-pubs-pdf">PDF</button>
+                        </div>
+                    </div>
                     <div class="chart-container" style="height:240px; margin-bottom:0">
                         <canvas id="author-pubs-chart"></canvas>
                     </div>
                 </div>
                 <div class="authors-chart-card">
-                    <h4>Citations by Publication Year</h4>
+                    <div class="card-header-row">
+                        <h4>Citations by Publication Year</h4>
+                        <div class="card-dl-bar">
+                            <button class="dl-btn-sm" id="dl-cits-png">PNG</button>
+                            <button class="dl-btn-sm" id="dl-cits-jpg">JPG</button>
+                            <button class="dl-btn-sm" id="dl-cits-pdf">PDF</button>
+                        </div>
+                    </div>
                     <div class="chart-container" style="height:240px; margin-bottom:0">
                         <canvas id="author-cits-chart"></canvas>
                     </div>
@@ -307,9 +332,25 @@
             </div>
 
             <div class="authors-chart-card" style="margin-top:1rem">
-                <h4>Top Journals</h4>
-                <div class="chart-container" style="height:280px; margin-bottom:0">
+                <div class="card-header-row">
+                    <h4>Top Journals <span id="author-journals-drill-hint" style="font-size:0.78rem;font-weight:400;color:#888;margin-left:0.4rem">(click a bar to see pubs per year)</span></h4>
+                    <div class="card-dl-bar">
+                        <button class="dl-btn-sm" id="dl-journals-png">PNG</button>
+                        <button class="dl-btn-sm" id="dl-journals-jpg">JPG</button>
+                        <button class="dl-btn-sm" id="dl-journals-pdf">PDF</button>
+                    </div>
+                </div>
+                <div class="chart-container" style="height:360px; margin-bottom:0">
                     <canvas id="author-journals-chart"></canvas>
+                </div>
+                <div id="author-journal-drill" style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border)">
+                    <div class="card-header-row">
+                        <h4 id="author-journal-drill-title">Publications per Year</h4>
+                        <button class="dl-btn-sm" id="author-journal-drill-close">✕ Close</button>
+                    </div>
+                    <div class="chart-container" style="height:200px">
+                        <canvas id="author-journal-drill-chart"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -361,7 +402,7 @@
     <!-- ============ INFLUENCE ============ -->
     <section id="influence" class="section">
         <h2>PMID Influence</h2>
-        <p class="section-desc">Select a journal and enter one or more PMIDs (comma-separated) to see how those papers affect the journal's rolling 24-month citation rate. Citations to any of the listed papers are pooled and subtracted together for the counterfactual.</p>
+        <p class="section-desc">Select a journal and enter one or more PMIDs (comma-separated) to see how those papers inflate the journal's rolling 24-month citation rate. View as a <strong>combined</strong> counterfactual (all PMIDs removed together) or as <strong>individual</strong> dashed lines showing each paper's standalone contribution.</p>
 
         <div class="influence-ctrl-row">
             <div class="influence-picker-wrap">
@@ -384,10 +425,21 @@
 
             <div class="metrics-row" id="influence-metrics"></div>
 
+            <div class="influence-view-row">
+                <label>
+                    <input type="radio" name="inf-view" id="inf-view-combined" value="combined" checked>
+                    Combined (all PMIDs censored together)
+                </label>
+                <label>
+                    <input type="radio" name="inf-view" id="inf-view-individual" value="individual">
+                    Individual (one line per PMID)
+                </label>
+            </div>
+
             <div class="influence-toggle-row">
                 <label class="influence-toggle-label">
                     <input type="checkbox" id="influence-censor-toggle" checked>
-                    Show censored line (without listed PMID citations)
+                    Show censored line(s)
                 </label>
             </div>
 
@@ -413,9 +465,19 @@
             <h3>What is IMPACT?</h3>
             <p>
                 IMPACT (Independent Metrics for Publication Analysis and Citation Tracking)
-                is an open-source tool that computes rolling 24-month journal citation rates
-                using freely available data from PubMed and NIH iCite, providing a transparent
-                alternative to Clarivate's proprietary Journal Impact Factor.
+                is an open-source tool built to study <strong>publication bias</strong>,
+                <strong>impact factor inflation</strong>, and <strong>h-index gaming</strong>
+                in the current academic publishing system. It computes rolling 24-month journal
+                citation rates from freely available PubMed and NIH iCite data, providing a
+                transparent, reproducible alternative to Clarivate's proprietary Journal Impact
+                Factor.
+            </p>
+            <p>
+                Key questions IMPACT helps investigate: Which journals boost their metrics with
+                highly-cited review articles? How much does a single landmark paper or clinical
+                guideline inflate a journal's citation rate? How do author h-indexes vary by
+                article type, and are they padded by self-citations or review series? These
+                questions matter for how science is evaluated, funded, and incentivized.
             </p>
 
             <h3>How is the Rolling 24-Month Citation Rate Calculated?</h3>
@@ -489,7 +551,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=25"></script>
+<script src="js/app.js?v=26"></script>
 
 </body>
 </html>

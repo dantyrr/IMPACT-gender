@@ -2,7 +2,7 @@
 
 **Independent Metrics for Publication Analysis and Citation Tracking**
 
-An open-source alternative to Clarivate's Journal Impact Factor, computed from freely available [PubMed](https://pubmed.ncbi.nlm.nih.gov/) and [NIH iCite](https://icite.od.nih.gov/) data.
+An open-source toolkit for studying **publication bias**, **impact factor inflation**, and **h-index gaming** in academic publishing — computed from freely available [PubMed](https://pubmed.ncbi.nlm.nih.gov/) and [NIH iCite](https://icite.od.nih.gov/) data.
 
 🌐 **Live site:** https://dantyrr.github.io/IMPACT
 
@@ -10,12 +10,19 @@ An open-source alternative to Clarivate's Journal Impact Factor, computed from f
 
 ## Why IMPACT?
 
-The official Journal Impact Factor (JIF) is computed by Clarivate using proprietary Web of Science citation data, behind a paywall, with limited methodological transparency. IMPACT provides:
+The way science is evaluated — through journal impact factors, h-indexes, and citation counts — shapes what gets funded, published, and promoted. IMPACT provides open tools to study how these metrics can be gamed or inflated:
+
+- **Impact factor inflation** — Which journals boost their JIF with highly-cited reviews or clinical guidelines? How much does a single landmark paper raise a journal's citation rate?
+- **H-index padding** — How do h-indexes vary when you filter by article type (reviews vs. original research)? Are self-citations or invited review series inflating an author's index?
+- **Publication bias** — Which journals, institutions, or countries dominate the literature in a given field?
+
+IMPACT provides the transparent, reproducible metrics needed to investigate these questions:
 
 - **Rolling 24-month citation rate** updated continuously, not just annually
 - **Three window variants** — 12-month, 24-month (standard), and 5-year (years 2–6)
 - **Review-excluded rate** to detect inflation from highly-cited review articles
-- **Full article-type breakdown** — research, reviews, editorials, letters, other
+- **PMID Influence tab** — quantify how much a specific paper (or group of papers) inflates a journal's citation rate, with counterfactual "censored IF" curves
+- **Author analysis** — h-index, publication timeline, top journals, article type breakdown, filterable by type
 - **8,000+ journals** — all PubMed-indexed journals processed from the bulk data
 - **Open data** — all code, metrics, and methodology are public on GitHub
 

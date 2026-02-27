@@ -14,10 +14,12 @@ class IMPACTApp {
         this._networkColorMode = 'year';
         this._networkLayoutMode = 'force';
         this._influenceJournalSlug = null;
+        this._lastInfluenceRenderArgs = null;
         this._authorAllPapers = [];
         this._authorExcluded = new Set();
         this._authorTotalFound = 0;
         this._authorSort = { col: 'citations', dir: 'desc' };
+        this._authorActiveTypes = null;  // null = all; Set<string> = specific types
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -965,6 +967,11 @@ class IMPACTApp {
         document.getElementById('influence-censor-toggle').addEventListener('change', (e) => {
             this._toggleCensoredLine(e.target.checked);
         });
+        document.getElementById('influence-view-row').addEventListener('change', () => {
+            if (this._lastInfluenceRenderArgs) {
+                this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
+            }
+        });
         document.getElementById('inf-dl-png').onclick = () => this._downloadInfluence('png');
         document.getElementById('inf-dl-jpg').onclick = () => this._downloadInfluence('jpg');
         document.getElementById('inf-dl-pdf').onclick = () => this._downloadInfluence('pdf');
@@ -1027,7 +1034,8 @@ class IMPACTApp {
                 }
             }
 
-            this._renderInfluenceChart(journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy);
+            this._lastInfluenceRenderArgs = [journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy];
+            this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
 
             hint.style.display = 'none';
             results.style.display = '';
@@ -1046,8 +1054,67 @@ class IMPACTApp {
         return jj.length > 3 && (pj === jj || pj.includes(jj) || jj.includes(pj));
     }
 
+    // Helper: compute the censored IF timeseries for a given set of in-journal seeds.
+    // localSeeds: seeds with exact cy data; iciteSeeds: seeds using iCite cited_by fallback.
+    // Each iCite seed contributes independently (additive, handles multi-seed double-counting).
+    _computeAdjIf(ts, localSeeds, iciteSeeds, citingPapers, localCyMap) {
+        return ts.map(point => {
+            const [y, m] = point.month.split('-').map(Number);
+            const endOrd = y * 12 + m;
+            const startOrd = endOrd - 11;
+            const paperWindowStart = endOrd - 23;
+
+            // Part 1: local DB seeds — exact year counts, proportional month allocation
+            let localSeedCits = 0;
+            for (const p of localSeeds) {
+                const cy = localCyMap[String(p.pmid)];
+                for (const [yearStr, cnt] of Object.entries(cy)) {
+                    const k = parseInt(yearStr, 10);
+                    const kStart = k * 12 + 1;
+                    const kEnd   = k * 12 + 12;
+                    const overlapMonths = Math.max(0,
+                        Math.min(kEnd, endOrd) - Math.max(kStart, startOrd) + 1);
+                    localSeedCits += cnt * overlapMonths / 12;
+                }
+            }
+
+            // Part 2: iCite seeds — compute each seed's contribution independently,
+            // then sum. This correctly handles the case where one citing paper cites
+            // multiple seeds (counts as separate citation events for each).
+            let iciteSeedCits = 0;
+            for (const seed of iciteSeeds) {
+                const seedCitedBySet = new Set((seed.cited_by || []).map(String));
+                const seedInSample = citingPapers.filter(p => seedCitedBySet.has(String(p.pmid)));
+                const seedTotal = seedCitedBySet.size;
+                const seedScale = (seedTotal > 0 && seedInSample.length > 0 && seedInSample.length < seedTotal)
+                    ? seedTotal / seedInSample.length : 1;
+                let count = 0;
+                for (const p of seedInSample) {
+                    const ord = (p.year || 0) * 12 + 6;
+                    if (ord >= startOrd && ord <= endOrd) count++;
+                }
+                iciteSeedCits += count * seedScale;
+            }
+
+            // Denominator: subtract in-journal research seeds published in 24-mo paper window
+            const allSeeds = [...localSeeds, ...iciteSeeds];
+            let seedResearchInWindow = 0;
+            for (const s of allSeeds) {
+                if (s.is_research_article === 'Yes' || s.is_research_article === true) {
+                    const ord = (s.year || 0) * 12 + 6;
+                    if (ord >= paperWindowStart && ord <= endOrd) seedResearchInWindow++;
+                }
+            }
+
+            const citations = point.citations || 0;
+            const research = point.research || point.papers || 1;
+            return Math.max(0, citations - localSeedCits - iciteSeedCits) /
+                   Math.max(1, research - seedResearchInWindow);
+        });
+    }
+
     _renderInfluenceChart(journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy) {
-        // Paper info card — list each seed paper, flag those not in this journal
+        // Paper info card
         const listEl = document.getElementById('inf-paper-list');
         listEl.innerHTML = seedPapers.map(p => {
             const inJ = seedsInJournal.some(s => s.pmid === p.pmid);
@@ -1061,133 +1128,105 @@ class IMPACTApp {
             </div>`;
         }).join('<hr class="inf-paper-divider">');
 
-        // Use 24-month timeseries
         const ts = journalData.timeseries || [];
         if (!ts.length) return;
 
-        // rolling_if = citations / research  (research-article denominator only)
-        // adj_numerator   = citations - (citations to in-journal seeds received in 12-mo window)
-        // adj_denominator = research  - (in-journal research seeds published in 24-mo paper window)
-
-        // Split seeds: those with exact local DB data vs. those needing iCite fallback
         const localSeeds = seedsInJournal.filter(p => localCyMap[String(p.pmid)]);
         const iciteSeeds = seedsInJournal.filter(p => !localCyMap[String(p.pmid)]);
 
-        // iCite fallback: citing paper ordinals + scale factor for truncated samples
-        const citingOrds = citingPapers.map(p => (p.year || 0) * 12 + 6);
-        const scale = (totalCitedBy > 0 && citingPapers.length > 0 && citingPapers.length < totalCitedBy)
-            ? totalCitedBy / citingPapers.length : 1;
+        // Combined adjIf — all seeds removed together (used for metrics always)
+        const adjIf = this._computeAdjIf(ts, localSeeds, iciteSeeds, citingPapers, localCyMap);
 
-        // Pre-compute in-journal seed publication ordinals for denominator adjustment
-        const seedDenomData = seedsInJournal
-            .filter(p => p.is_research_article === 'Yes' || p.is_research_article === true)
-            .map(p => (p.year || 0) * 12 + 6);  // approximate June pub
-
-        const adjIf = ts.map(point => {
-            const [y, m] = point.month.split('-').map(Number);
-            const endOrd = y * 12 + m;
-            const startOrd = endOrd - 11;
-            const paperWindowStart = endOrd - 23;
-
-            // Part 1: local DB seeds — exact year distribution, proportional month allocation
-            let localSeedCits = 0;
-            for (const p of localSeeds) {
-                const cy = localCyMap[String(p.pmid)];
-                for (const [yearStr, cnt] of Object.entries(cy)) {
-                    const k = parseInt(yearStr, 10);
-                    const kStart = k * 12 + 1;   // Jan of year k
-                    const kEnd   = k * 12 + 12;  // Dec of year k
-                    const overlapMonths = Math.max(0,
-                        Math.min(kEnd, endOrd) - Math.max(kStart, startOrd) + 1);
-                    localSeedCits += cnt * overlapMonths / 12;
-                }
-            }
-
-            // Part 2: iCite fallback seeds — approximate June publication, scaled
-            let iciteSeedCits = 0;
-            for (const ord of citingOrds) {
-                if (ord >= startOrd && ord <= endOrd) iciteSeedCits++;
-            }
-            iciteSeedCits *= scale;
-
-            // Denominator: subtract in-journal research seeds published in 24-mo window
-            let seedResearchInWindow = 0;
-            for (const ord of seedDenomData) {
-                if (ord >= paperWindowStart && ord <= endOrd) seedResearchInWindow++;
-            }
-
-            const citations = point.citations || 0;
-            const research = point.research || point.papers || 1;
-            return Math.max(0, citations - localSeedCits - iciteSeedCits) / Math.max(1, research - seedResearchInWindow);
-        });
-
-        // Metric cards
+        // Metric cards (always based on combined)
         const totalLocalCits = localSeeds.reduce((s, p) => {
             const cy = localCyMap[String(p.pmid)];
             return s + Object.values(cy).reduce((a, b) => a + b, 0);
         }, 0);
         const totalIciteCits = iciteSeeds.reduce((s, p) => s + (p.citation_count || 0), 0);
         const totalCitations = totalLocalCits + totalIciteCits;
-
         const contributions = ts.map((pt, i) => Math.max(0, (pt.rolling_if || 0) - adjIf[i]));
         const maxContrib = Math.max(...contributions);
         const peakIdx = contributions.indexOf(maxContrib);
         const peakMonth = ts[peakIdx]?.month || '—';
         const meanContrib = contributions.reduce((s, v) => s + v, 0) / contributions.length;
-        const censorLabel = seedsInJournal.length === 1
-            ? `PMID ${seedsInJournal[0].pmid}`
-            : `${seedsInJournal.length} PMIDs`;
         const dataNote = localSeeds.length > 0
-            ? ` (${localSeeds.length} from local DB${iciteSeeds.length > 0 ? `, ${iciteSeeds.length} from iCite` : ''})`
-            : '';
-        const sampleNote = scale > 1
-            ? ` (scaled from ${citingPapers.length.toLocaleString()} sample)` : '';
+            ? ` (${localSeeds.length} exact${iciteSeeds.length > 0 ? `, ${iciteSeeds.length} via iCite` : ''})`
+            : iciteSeeds.length > 0 ? ' (via iCite — rerun compute_snapshots for exact data)' : '';
 
         document.getElementById('influence-metrics').innerHTML = [
             [totalCitations.toLocaleString() + dataNote, 'Citations (in-journal papers only)'],
-            [totalCitedBy > 0 ? totalCitedBy.toLocaleString() + sampleNote : '—', 'Unique Citing Papers (iCite fallback)'],
             [maxContrib.toFixed(3), `Peak IF Boost (${peakMonth})`],
             [meanContrib.toFixed(3), 'Mean Monthly IF Contribution'],
         ].map(([v, l]) =>
             `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
         ).join('');
 
-        // Chart
+        // Build chart datasets based on view mode
+        const viewMode = document.querySelector('input[name="inf-view"]:checked')?.value || 'combined';
+        const isCensored = document.getElementById('influence-censor-toggle').checked;
         const labels = ts.map(d => d.month);
+
+        const originalDataset = {
+            label: 'Original IF',
+            data: ts.map(d => d.rolling_if),
+            borderColor: chartManager.palette[0],
+            backgroundColor: 'rgba(0, 114, 178, 0.08)',
+            borderWidth: 2.5,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+        };
+
+        let datasets;
+        if (viewMode === 'individual' && seedsInJournal.length > 1) {
+            // One dashed line per in-journal seed showing its standalone contribution
+            const seedDatasets = seedsInJournal.map((seed, idx) => {
+                const sl = localCyMap[String(seed.pmid)] ? [seed] : [];
+                const si = localCyMap[String(seed.pmid)] ? [] : [seed];
+                const singleAdjIf = this._computeAdjIf(ts, sl, si, citingPapers, localCyMap);
+                return {
+                    label: `Without PMID ${seed.pmid}`,
+                    data: singleAdjIf,
+                    borderColor: chartManager.palette[(idx + 1) % chartManager.palette.length],
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.8,
+                    borderDash: [6, 3],
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    hidden: !isCensored,
+                };
+            });
+            datasets = [originalDataset, ...seedDatasets];
+        } else {
+            // Combined: one censored line = IF with all seeds removed together
+            const censorLabel = seedsInJournal.length === 1
+                ? `PMID ${seedsInJournal[0].pmid}` : `${seedsInJournal.length} PMIDs`;
+            datasets = [
+                originalDataset,
+                {
+                    label: `Censored IF (without ${censorLabel})`,
+                    data: adjIf,
+                    borderColor: chartManager.palette[1],
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [6, 3],
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    hidden: !isCensored,
+                },
+            ];
+        }
+
         chartManager._destroy('influence-chart');
         const ctx = document.getElementById('influence-chart');
-        const isCensored = document.getElementById('influence-censor-toggle').checked;
         chartManager.charts['influence-chart'] = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Original IF (with PMIDs)',
-                        data: ts.map(d => d.rolling_if),
-                        borderColor: chartManager.palette[0],
-                        backgroundColor: 'rgba(0, 114, 178, 0.08)',
-                        borderWidth: 2.5,
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                    },
-                    {
-                        label: `Censored IF (without ${censorLabel})`,
-                        data: adjIf,
-                        borderColor: chartManager.palette[1],
-                        backgroundColor: 'transparent',
-                        borderWidth: 2,
-                        borderDash: [6, 3],
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                        hidden: !isCensored,
-                    },
-                ],
-            },
+            data: { labels, datasets },
             options: {
                 responsive: true,
                 interaction: { intersect: false, mode: 'index' },
@@ -1202,11 +1241,11 @@ class IMPACTApp {
                         callbacks: {
                             label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)}`,
                             afterBody: (items) => {
+                                if (viewMode !== 'combined') return '';
                                 const orig = items.find(i => i.datasetIndex === 0);
                                 const cens = items.find(i => i.datasetIndex === 1);
-                                if (orig && cens) {
-                                    const diff = orig.parsed.y - cens.parsed.y;
-                                    return `Contribution: +${diff.toFixed(3)}`;
+                                if (orig && cens && !cens.dataset.hidden) {
+                                    return `Contribution: +${(orig.parsed.y - cens.parsed.y).toFixed(3)}`;
                                 }
                                 return '';
                             },
@@ -1230,7 +1269,8 @@ class IMPACTApp {
     _toggleCensoredLine(show) {
         const chart = chartManager.charts['influence-chart'];
         if (!chart) return;
-        chart.data.datasets[1].hidden = !show;
+        // Toggle all datasets except the first (original IF)
+        chart.data.datasets.slice(1).forEach(ds => { ds.hidden = !show; });
         chart.update();
     }
 
@@ -1272,6 +1312,7 @@ class IMPACTApp {
         document.getElementById('author-ncbi-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.loadFromNCBIUrl();
         });
+        document.getElementById('author-pmid-paste-btn').addEventListener('click', () => this.loadFromPastedPMIDs());
     }
 
     async loadFromNCBIUrl() {
@@ -1284,13 +1325,11 @@ class IMPACTApp {
         results.style.display = 'none';
 
         try {
-            let pmids = [];
-
             hint.textContent = 'Fetching NCBI bibliography…';
 
-            // Race all proxies in parallel — whichever responds first with valid HTML wins.
-            // allorigins.win/get returns JSON {contents, status}, not raw HTML.
-            const enc = encodeURIComponent(val);
+            // Strip trailing params to get clean base URL for pagination
+            const baseUrl = val.replace(/[?#].*$/, '').replace(/\/+$/, '');
+
             const fetchProxy = async (url, json) => {
                 const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -1298,19 +1337,73 @@ class IMPACTApp {
                 if (!body || !body.includes('pubmed')) throw new Error('no pubmed links');
                 return body;
             };
-            const html = await Promise.any([
-                fetchProxy(`https://corsproxy.io/?url=${enc}`, false),
-                fetchProxy(`https://api.allorigins.win/get?url=${enc}`, true),
-                fetchProxy(`https://api.codetabs.com/v1/proxy?quest=${enc}`, false),
-            ]).catch(() => { throw new Error('All CORS proxies failed — try again in a moment.'); });
-            const matches = [...html.matchAll(/\/pubmed\/(\d+)/g)];
-            pmids = [...new Set(matches.map(m => m[1]))];
 
-            if (!pmids.length) {
-                hint.textContent = 'No PMIDs found on that page. Make sure the bibliography is set to public.';
+            const fetchPage = (pageNum) => {
+                const pageUrl = pageNum === 1 ? val : `${baseUrl}?page=${pageNum}`;
+                const enc = encodeURIComponent(pageUrl);
+                return Promise.any([
+                    fetchProxy(`https://corsproxy.io/?url=${enc}`, false),
+                    fetchProxy(`https://api.allorigins.win/get?url=${enc}`, true),
+                    fetchProxy(`https://api.codetabs.com/v1/proxy?quest=${enc}`, false),
+                ]);
+            };
+
+            const extractPmids = html =>
+                [...html.matchAll(/\/pubmed\/(\d+)/g)].map(m => m[1]);
+
+            const page1Html = await fetchPage(1).catch(() => {
+                throw new Error('All CORS proxies failed — try again in a moment.');
+            });
+
+            const page1Pmids = extractPmids(page1Html);
+            if (!page1Pmids.length) {
+                hint.textContent = 'No PMIDs found. Make sure the bibliography is set to public.';
                 return;
             }
 
+            const allPmids = new Set(page1Pmids);
+
+            // Try to detect the total publication count from page 1 HTML
+            const totalMatch =
+                page1Html.match(/\((\d[\d,]*)\s+publications?\)/i) ||
+                page1Html.match(/(\d[\d,]*)\s+publications?/i) ||
+                page1Html.match(/"count"\s*:\s*(\d+)/i) ||
+                page1Html.match(/result_count[^>]*>\s*(\d[\d,]+)/i);
+            const totalCount = totalMatch
+                ? parseInt(totalMatch[1].replace(/,/g, ''), 10) : null;
+
+            const PAGE_SIZE = page1Pmids.length || 50;
+            const MAX_PAGES = 40;
+
+            if (totalCount && totalCount > allPmids.size) {
+                const pagesNeeded = Math.min(Math.ceil(totalCount / PAGE_SIZE), MAX_PAGES);
+                hint.textContent = `${totalCount} papers found — loading ${pagesNeeded} pages…`;
+
+                // Fetch remaining pages in batches of 3
+                for (let p = 2; p <= pagesNeeded; p += 3) {
+                    const batch = [p, p + 1, p + 2].filter(n => n <= pagesNeeded);
+                    hint.textContent = `Loading pages ${batch[0]}–${batch[batch.length - 1]} of ${pagesNeeded}… (${allPmids.size} papers so far)`;
+                    const batchHtml = await Promise.all(
+                        batch.map(n => fetchPage(n).then(extractPmids).catch(() => []))
+                    );
+                    batchHtml.flat().forEach(id => allPmids.add(id));
+                }
+            } else if (!totalCount && page1Pmids.length >= PAGE_SIZE) {
+                // Unknown total, but page is full — loop until empty
+                hint.textContent = `${page1Pmids.length} papers on page 1, checking for more…`;
+                for (let p = 2; p <= MAX_PAGES; p++) {
+                    const pageHtml = await fetchPage(p).catch(() => null);
+                    if (!pageHtml) break;
+                    const pids = extractPmids(pageHtml);
+                    if (!pids.length) break;
+                    const before = allPmids.size;
+                    pids.forEach(id => allPmids.add(id));
+                    if (allPmids.size === before) break;
+                    hint.textContent = `${allPmids.size} papers loaded (page ${p})…`;
+                }
+            }
+
+            const pmids = [...allPmids];
             hint.textContent = `Found ${pmids.length} papers. Fetching citation data…`;
             const papers = await this._fetchICiteBatch(pmids);
 
@@ -1327,6 +1420,44 @@ class IMPACTApp {
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
             console.error('NCBI bibliography load error:', e);
+        }
+    }
+
+    async loadFromPastedPMIDs() {
+        const val = document.getElementById('author-pmid-paste').value.trim();
+        if (!val) return;
+
+        const hint = document.getElementById('author-search-hint');
+        const results = document.getElementById('author-search-results');
+        hint.style.display = '';
+        results.style.display = 'none';
+
+        const pmids = [...new Set(
+            val.split(/[\s,;]+/).map(s => s.replace(/\D/g, '')).filter(Boolean)
+        )];
+
+        if (!pmids.length) {
+            hint.textContent = 'No valid PMIDs found. Enter one PMID per line or comma-separated.';
+            return;
+        }
+
+        try {
+            hint.textContent = `Found ${pmids.length} PMIDs. Fetching citation data…`;
+            const papers = await this._fetchICiteBatch(pmids);
+
+            if (!papers.length) {
+                hint.textContent = 'No iCite data found for these PMIDs.';
+                return;
+            }
+
+            this._authorTotalFound = pmids.length;
+            hint.style.display = 'none';
+            results.style.display = '';
+            this._renderAuthorSearchResults(papers, pmids.length);
+
+        } catch (e) {
+            hint.textContent = `Error: ${e.message}`;
+            console.error('PMID paste load error:', e);
         }
     }
 
@@ -1349,7 +1480,7 @@ class IMPACTApp {
                 hint.textContent = names.length > 1
                     ? `Searching PubMed for "${name}" (${names.indexOf(name) + 1}/${names.length})…`
                     : 'Searching PubMed…';
-                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(name)}[Author]&retmax=500&retmode=json&tool=IMPACT&email=impact-tool@umich.edu`;
+                const url = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(name)}[Author]&retmax=2000&retmode=json&tool=IMPACT&email=impact-tool@umich.edu`;
                 const resp = await fetch(url);
                 if (!resp.ok) throw new Error('PubMed search failed');
                 const data = await resp.json();
@@ -1385,28 +1516,78 @@ class IMPACTApp {
     _renderAuthorSearchResults(papers, totalFound) {
         this._authorAllPapers = papers;
         this._authorExcluded = new Set();
+        this._authorActiveTypes = null;
         this._authorTotalFound = totalFound;
+        this._setupTypeFilters(papers);
         this._renderAuthorPapersTable();
         this._refreshAuthorMetrics();
     }
 
+    _setupTypeFilters(papers) {
+        const typeSet = new Set();
+        papers.forEach(p => (p.pub_types || []).forEach(t => typeSet.add(t)));
+        const container = document.getElementById('author-type-filters');
+        if (!typeSet.size) { container.style.display = 'none'; return; }
+
+        const allTypes = [...typeSet].sort();
+        const render = () => {
+            container.innerHTML = '<span class="filter-label">Article type:</span> ' +
+                ['All', ...allTypes].map(t => {
+                    const isAll = t === 'All';
+                    const active = isAll ? !this._authorActiveTypes : this._authorActiveTypes?.has(t);
+                    return `<button class="type-pill${active ? ' active' : ''}" data-type="${t}">${t}</button>`;
+                }).join('');
+            container.querySelectorAll('.type-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const t = btn.dataset.type;
+                    if (t === 'All') {
+                        this._authorActiveTypes = null;
+                    } else {
+                        if (!this._authorActiveTypes) this._authorActiveTypes = new Set(allTypes);
+                        if (this._authorActiveTypes.has(t)) {
+                            this._authorActiveTypes.delete(t);
+                            if (!this._authorActiveTypes.size) this._authorActiveTypes = null;
+                        } else {
+                            this._authorActiveTypes.add(t);
+                        }
+                    }
+                    render();
+                    this._refreshAuthorMetrics();
+                });
+            });
+        };
+        render();
+        container.style.display = '';
+    }
+
     _refreshAuthorMetrics() {
-        const active = this._authorAllPapers.filter(p => !this._authorExcluded.has(String(p.pmid)));
+        // Filter by excluded checkboxes AND by active article type toggles
+        const active = this._authorAllPapers.filter(p => {
+            if (this._authorExcluded.has(String(p.pmid))) return false;
+            if (this._authorActiveTypes) {
+                const types = p.pub_types || [];
+                if (!types.some(t => this._authorActiveTypes.has(t))) return false;
+            }
+            return true;
+        });
         const excluded = this._authorAllPapers.length - active.length;
         const totalCitations = active.reduce((s, p) => s + (p.citation_count || 0), 0);
         const hIndex = this._computeHIndex(active.map(p => p.citation_count || 0));
 
-        const excTag = excluded ? ` <span style="font-size:.7em;color:#c0392b;font-weight:normal">(−${excluded} excluded)</span>` : '';
+        const excTag = excluded
+            ? ` <span style="font-size:.7em;color:#c0392b;font-weight:normal">(−${excluded} excluded)</span>` : '';
+        const tipText = 'Based only on PubMed-indexed citing articles. Google Scholar casts a wider net (preprints, books, non-indexed journals), so its h-index is typically higher.';
         document.getElementById('author-search-metrics').innerHTML = [
             [`${active.length.toLocaleString()}${excTag}`, 'Papers Included'],
             [this._authorTotalFound > this._authorAllPapers.length
-                ? `${this._authorTotalFound.toLocaleString()} total` : this._authorTotalFound.toLocaleString(), 'Papers on PubMed'],
+                ? `${this._authorTotalFound.toLocaleString()} total` : this._authorTotalFound.toLocaleString(),
+             'Papers on PubMed'],
             [totalCitations.toLocaleString(), 'Total Citations'],
             [hIndex, 'h-index (est.)'],
         ].map(([v, l]) => {
             const isHIndex = l === 'h-index (est.)';
             const label = isHIndex
-                ? `${l} <span class="metric-info" title="Based only on PubMed-indexed citing articles. Google Scholar casts a wider net (preprints, books, non-indexed journals), so its h-index is typically higher.">ⓘ</span>`
+                ? `${l} <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`
                 : l;
             return `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${label}</span></div>`;
         }).join('');
@@ -1427,6 +1608,79 @@ class IMPACTApp {
         const topJ = Object.entries(jCounts).sort((a, b) => b[1] - a[1]).slice(0, 15);
         chartManager.createBarChart('author-journals-chart',
             topJ.map(x => x[0]), topJ.map(x => x[1]), 'Papers');
+
+        // Wire journal bar click → pubs/year drill-down
+        const jChart = chartManager.charts['author-journals-chart'];
+        if (jChart) {
+            jChart.options.onClick = (event, elements) => {
+                if (!elements.length) return;
+                this._showJournalDrill(topJ[elements[0].index][0]);
+            };
+            jChart.options.plugins.tooltip = jChart.options.plugins.tooltip || {};
+            jChart.update('none');
+        }
+
+        // Wire download buttons
+        const wireChart = (prefix, canvasId, title) => {
+            ['png', 'jpg', 'pdf'].forEach(fmt => {
+                const btn = document.getElementById(`dl-${prefix}-${fmt}`);
+                if (btn) btn.onclick = () => this._downloadAuthorChart(canvasId, title, fmt);
+            });
+        };
+        wireChart('pubs', 'author-pubs-chart', 'Publications per Year');
+        wireChart('cits', 'author-cits-chart', 'Citations by Publication Year');
+        wireChart('journals', 'author-journals-chart', 'Top Journals');
+
+        // Close drill-down
+        const closeBtn = document.getElementById('author-journal-drill-close');
+        if (closeBtn) closeBtn.onclick = () => {
+            document.getElementById('author-journal-drill').style.display = 'none';
+        };
+    }
+
+    _downloadAuthorChart(canvasId, title, format) {
+        const chart = chartManager.charts[canvasId];
+        if (!chart) return;
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+            const imgW = pw - 20;
+            const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+            doc.setFontSize(11);
+            doc.text(`IMPACT — ${title}`, 10, 10);
+            doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+            doc.save(`impact-${canvasId}.pdf`);
+            return;
+        }
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const a = document.createElement('a');
+        a.href = chart.toBase64Image(mime, 1);
+        a.download = `impact-${canvasId}.${format}`;
+        a.click();
+    }
+
+    _showJournalDrill(journalName) {
+        const active = this._authorAllPapers.filter(p => {
+            if (this._authorExcluded.has(String(p.pmid))) return false;
+            if (this._authorActiveTypes) {
+                const types = p.pub_types || [];
+                if (!types.some(t => this._authorActiveTypes.has(t))) return false;
+            }
+            return p.journal === journalName;
+        });
+        const pubsByYear = {};
+        active.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
+        const sortedYears = Object.keys(pubsByYear).sort();
+
+        const esc = s => String(s).replace(/</g, '&lt;');
+        document.getElementById('author-journal-drill-title').textContent =
+            `${journalName} — Publications per Year`;
+        document.getElementById('author-journal-drill').style.display = '';
+        chartManager.createBarChart('author-journal-drill-chart', sortedYears,
+            sortedYears.map(y => pubsByYear[y]), 'Papers', { horizontal: false });
     }
 
     _renderAuthorPapersTable() {

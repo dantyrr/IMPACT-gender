@@ -1200,3 +1200,157 @@ tr.row-excluded td {
     border: 1px solid #ffd666;
     vertical-align: middle;
 }
+
+/* ---- Card header row (title + inline download buttons) ---- */
+
+.card-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.card-header-row h4 {
+    margin-bottom: 0;
+    color: var(--primary);
+    font-size: 0.95rem;
+}
+
+.card-dl-bar {
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.dl-btn-sm {
+    padding: 0.18rem 0.48rem;
+    font-size: 0.72rem;
+    border: 1px solid #c8d6e5;
+    border-radius: 3px;
+    background: #f0f4f8;
+    color: #2e4a6d;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.dl-btn-sm:hover {
+    background: #dce8f3;
+    border-color: #2e86c1;
+}
+
+/* ---- Custom CSS tooltip for h-index info icon ---- */
+
+.metric-info {
+    position: relative;
+    cursor: help;
+    color: var(--primary-light);
+    font-size: 0.85em;
+    display: inline-block;
+}
+
+.metric-info::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a2e44;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 400;
+    padding: 0.5rem 0.7rem;
+    border-radius: 5px;
+    width: 260px;
+    white-space: normal;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 500;
+    line-height: 1.45;
+}
+
+.metric-info:hover::after {
+    opacity: 1;
+}
+
+/* ---- Article type filter pills ---- */
+
+.type-filter-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.filter-label {
+    font-size: 0.82rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.type-pill {
+    padding: 0.2rem 0.65rem;
+    font-size: 0.78rem;
+    border: 1px solid #c8d6e5;
+    border-radius: 12px;
+    background: #f0f4f8;
+    color: #2e4a6d;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.type-pill.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.type-pill:hover:not(.active) {
+    background: #dce8f3;
+    border-color: #2e86c1;
+}
+
+/* ---- Influence view mode toggle ---- */
+
+.influence-view-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin: 0.5rem 0 0.75rem;
+    font-size: 0.88rem;
+    color: var(--text);
+    flex-wrap: wrap;
+}
+
+.influence-view-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+}
+
+/* ---- Paste PMIDs textarea ---- */
+
+.paste-pmid-area {
+    width: 100%;
+    font-family: monospace;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.5rem;
+    resize: vertical;
+    color: var(--text);
+    background: white;
+    box-sizing: border-box;
+    margin-bottom: 0.4rem;
+}
+
+.paste-pmid-area:focus {
+    outline: none;
+    border-color: var(--primary);
+}

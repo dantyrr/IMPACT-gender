@@ -605,7 +605,8 @@ class IMPACTApp {
             return '#90CAF9';
         };
         const lastName = (authors) => {
-            const s = Array.isArray(authors) ? authors[0] || '' : (authors || '');
+            let s = Array.isArray(authors) ? (authors[0] || '') : (authors || '');
+            if (typeof s !== 'string') s = '';
             return s.split(',')[0].trim().split(' ').pop() || '';
         };
 

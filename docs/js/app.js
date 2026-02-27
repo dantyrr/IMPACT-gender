@@ -548,10 +548,11 @@ class IMPACTApp {
         document.getElementById('network-selected-panel').style.display = 'none';
         document.getElementById('network-controls').style.display = 'none';
 
-        // Reset cache for new paper
+        // Reset state for new paper
         this._networkPaperCache = new Map();
         this._networkCenter = null;
         this._networkCitedBy = [];
+        this._networkLayoutMode = 'force';
 
         try {
             const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`);
@@ -647,11 +648,15 @@ class IMPACTApp {
             const hint = document.getElementById('network-hint');
             hint.style.display = '';
             hint.textContent = `Loading ${parseInt(countSel.value).toLocaleString()} citing papers…`;
+            const savedLayout = this._networkLayoutMode;
             await this._fetchAndRenderNetwork(parseInt(countSel.value));
             hint.style.display = 'none';
-            // Re-apply current layout
-            if (this._networkLayoutMode === 'concentric') this._applyConcentricLayout();
-            else if (this._networkLayoutMode === 'timeline') this._applyTimelineLayout();
+            // Re-apply saved layout (render always resets to force internally)
+            this._networkLayoutMode = savedLayout;
+            ctrl.querySelectorAll('.btn-view[data-view]').forEach(b =>
+                b.classList.toggle('active', b.dataset.view === savedLayout));
+            if (savedLayout === 'concentric') this._applyConcentricLayout();
+            else if (savedLayout === 'timeline') this._applyTimelineLayout();
         };
 
         // Color buttons
@@ -742,8 +747,18 @@ class IMPACTApp {
                 { selector: 'node[?isCenter]', style: { 'border-width': 3 }},
                 { selector: 'node.year-label', style: {
                     'background-opacity': 0, 'border-width': 0, 'label': 'data(label)',
-                    'color': '#888', 'font-size': 11, 'text-valign': 'center',
-                    'text-halign': 'center', 'width': 50, 'height': 20, 'events': 'no',
+                    'color': '#555', 'font-size': 13, 'font-weight': 'bold',
+                    'text-valign': 'center', 'text-halign': 'center',
+                    'width': 55, 'height': 22, 'events': 'no',
+                }},
+                { selector: 'node.axis-anchor', style: {
+                    'background-opacity': 0, 'border-width': 0, 'label': '',
+                    'width': 1, 'height': 1, 'events': 'no',
+                }},
+                { selector: 'edge.axis-edge', style: {
+                    'width': 1.5, 'line-color': '#aaa', 'line-style': 'solid',
+                    'target-arrow-shape': 'none', 'source-arrow-shape': 'none',
+                    'opacity': 0.7,
                 }},
                 { selector: 'edge', style: {
                     'width': 0.6, 'line-color': '#ccc', 'opacity': 0.4,
@@ -763,7 +778,6 @@ class IMPACTApp {
 
         this._cyNetwork.fit(undefined, 40);
         this._cyNetwork.resize();
-        this._networkLayoutMode = 'force';
 
         this._cyNetwork.on('tap', 'node', (evt) => {
             const paper = evt.target.data('paper');
@@ -773,7 +787,7 @@ class IMPACTApp {
 
     _applyForceLayout() {
         if (!this._cyNetwork) return;
-        this._cyNetwork.remove('node.year-label');
+        this._cyNetwork.remove('node.year-label, node.axis-anchor, edge.axis-edge');
         this._cyNetwork.edges().style('display', 'element');
         this._cyNetwork.layout({
             name: 'cose', animate: false,
@@ -787,7 +801,7 @@ class IMPACTApp {
 
     _applyConcentricLayout() {
         if (!this._cyNetwork) return;
-        this._cyNetwork.remove('node.year-label');
+        this._cyNetwork.remove('node.year-label, node.axis-anchor, edge.axis-edge');
         this._cyNetwork.edges().style('display', 'element');
         let maxCit = 1;
         this._cyNetwork.nodes().forEach(n => {
@@ -809,7 +823,7 @@ class IMPACTApp {
 
     _applyTimelineLayout() {
         if (!this._cyNetwork) return;
-        this._cyNetwork.remove('node.year-label');
+        this._cyNetwork.remove('node.year-label, node.axis-anchor, edge.axis-edge');
 
         const byYear = {};
         this._cyNetwork.nodes().forEach(node => {
@@ -833,11 +847,26 @@ class IMPACTApp {
             });
         });
 
+        const axisY = maxNodes * yStep + 30;
+        // Year label nodes
         this._cyNetwork.add(sortedYears.map((yr, xi) => ({
             data: { id: `yl-${yr}`, label: yr }, classes: 'year-label',
-            position: { x: xi * xStep, y: maxNodes * yStep + 25 },
+            position: { x: xi * xStep, y: axisY },
         })));
-        this._cyNetwork.edges().style('display', 'none');
+        // Axis tick nodes (invisible, just anchors for the axis line)
+        if (sortedYears.length > 1) {
+            this._cyNetwork.add([
+                { data: { id: 'axis-start' }, classes: 'axis-anchor',
+                  position: { x: 0, y: axisY - 18 } },
+                { data: { id: 'axis-end' }, classes: 'axis-anchor',
+                  position: { x: (sortedYears.length - 1) * xStep, y: axisY - 18 } },
+            ]);
+            this._cyNetwork.add([{
+                data: { id: 'axis-line', source: 'axis-start', target: 'axis-end' },
+                classes: 'axis-edge',
+            }]);
+        }
+        this._cyNetwork.edges().not('.axis-edge').style('display', 'none');
 
         this._cyNetwork.layout({
             name: 'preset', positions: node => positions[node.id()],

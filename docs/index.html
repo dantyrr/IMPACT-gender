@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMPACT — Independent Metrics for Publication Analysis and Citation Tracking</title>
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -361,7 +361,7 @@
     <!-- ============ INFLUENCE ============ -->
     <section id="influence" class="section">
         <h2>PMID Influence</h2>
-        <p class="section-desc">Select a journal and enter a PMID to see how that single paper affects the journal's rolling 24-month citation rate. Toggle censoring to compare the original vs. the counterfactual (without that paper's citations).</p>
+        <p class="section-desc">Select a journal and enter one or more PMIDs (comma-separated) to see how those papers affect the journal's rolling 24-month citation rate. Citations to any of the listed papers are pooled and subtracted together for the counterfactual.</p>
 
         <div class="influence-ctrl-row">
             <div class="influence-picker-wrap">
@@ -369,9 +369,9 @@
                 <div id="influence-journal-picker"></div>
             </div>
             <div class="influence-pmid-wrap">
-                <label class="influence-label">PMID</label>
+                <label class="influence-label">PMID(s)</label>
                 <div class="search-bar" style="margin-top:0">
-                    <input type="text" id="influence-pmid-input" placeholder="e.g. 26799652" autocomplete="off">
+                    <input type="text" id="influence-pmid-input" placeholder="e.g. 26799652, 33634751" autocomplete="off">
                     <button id="influence-analyze-btn">Analyze</button>
                 </div>
             </div>
@@ -379,9 +379,7 @@
 
         <div id="influence-results" style="display:none">
             <div id="influence-paper-card" class="network-selected-panel" style="margin-bottom:1rem">
-                <h4 id="inf-paper-title"></h4>
-                <p id="inf-paper-meta"></p>
-                <a id="inf-paper-link" class="pubmed-link" target="_blank" rel="noopener">Open in PubMed →</a>
+                <div id="inf-paper-list"></div>
             </div>
 
             <div class="metrics-row" id="influence-metrics"></div>
@@ -389,7 +387,7 @@
             <div class="influence-toggle-row">
                 <label class="influence-toggle-label">
                     <input type="checkbox" id="influence-censor-toggle" checked>
-                    Show censored line (without PMID citations)
+                    Show censored line (without listed PMID citations)
                 </label>
             </div>
 
@@ -491,7 +489,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=19"></script>
+<script src="js/app.js?v=20"></script>
 
 </body>
 </html>

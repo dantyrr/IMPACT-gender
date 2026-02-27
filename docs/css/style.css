@@ -1164,3 +1164,26 @@ tr.row-excluded td {
     cursor: pointer;
     color: var(--text);
 }
+
+.inf-paper-row {
+    padding: 0.25rem 0;
+}
+
+.inf-paper-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a3a52;
+    margin-bottom: 0.2rem;
+    line-height: 1.4;
+}
+
+.inf-paper-meta {
+    font-size: 0.83rem;
+    color: #555;
+}
+
+.inf-paper-divider {
+    border: none;
+    border-top: 1px solid #d0dce8;
+    margin: 0.6rem 0;
+}

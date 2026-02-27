@@ -971,46 +971,43 @@ class IMPACTApp {
     }
 
     async loadInfluenceData() {
-        const pmid = document.getElementById('influence-pmid-input').value.trim().replace(/\D/g, '');
+        const raw = document.getElementById('influence-pmid-input').value;
+        const pmids = [...new Set(raw.split(',').map(s => s.trim().replace(/\D/g, '')).filter(Boolean))];
         const slug = this._influenceJournalSlug;
         const hint = document.getElementById('influence-hint');
         const results = document.getElementById('influence-results');
 
-        if (!pmid || !slug) {
-            hint.textContent = 'Please select a journal and enter a PMID.';
+        if (!pmids.length || !slug) {
+            hint.textContent = 'Please select a journal and enter at least one PMID.';
             hint.style.display = '';
             return;
         }
 
-        hint.textContent = 'Fetching journal and PMID data…';
+        hint.textContent = `Fetching journal and ${pmids.length} PMID(s)…`;
         hint.style.display = '';
         results.style.display = 'none';
 
         try {
-            const [journalData, pmidResp] = await Promise.all([
+            const [journalData, seedPapers] = await Promise.all([
                 this.journalDataCache[slug]
                     ? Promise.resolve(this.journalDataCache[slug])
                     : dataLoader.loadJournal(slug).then(d => { this.journalDataCache[slug] = d; return d; }),
-                fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`),
+                this._fetchICiteBatch(pmids),
             ]);
 
-            if (!pmidResp.ok) throw new Error('iCite API error');
-            const pmidJson = await pmidResp.json();
-            const pmidItems = Array.isArray(pmidJson) ? pmidJson : (pmidJson.data || []);
-            if (!pmidItems.length) { hint.textContent = 'PMID not found in iCite.'; return; }
+            if (!seedPapers.length) { hint.textContent = 'None of the PMIDs were found in iCite.'; return; }
 
-            const pmidData = pmidItems[0];
-            const citedBy = pmidData.cited_by || [];
-            if (!citedBy.length) {
-                hint.textContent = 'This PMID has no citing papers yet in iCite.';
+            // Union of all cited_by lists (deduplicated so a paper citing multiple seeds is counted once)
+            const allCitedBy = [...new Set(seedPapers.flatMap(p => p.cited_by || []).map(String))];
+            if (!allCitedBy.length) {
+                hint.textContent = 'None of the listed papers have citing papers yet in iCite.';
                 return;
             }
 
-            hint.textContent = `Fetching up to ${Math.min(citedBy.length, 2000).toLocaleString()} citing papers…`;
-            const citingPmids = citedBy.slice(0, 2000).map(String);
-            const citingPapers = await this._fetchICiteBatch(citingPmids);
+            hint.textContent = `Fetching up to ${Math.min(allCitedBy.length, 2000).toLocaleString()} unique citing papers…`;
+            const citingPapers = await this._fetchICiteBatch(allCitedBy.slice(0, 2000));
 
-            this._renderInfluenceChart(journalData, pmidData, citingPapers);
+            this._renderInfluenceChart(journalData, seedPapers, citingPapers, allCitedBy.length);
 
             hint.style.display = 'none';
             results.style.display = '';
@@ -1020,12 +1017,16 @@ class IMPACTApp {
         }
     }
 
-    _renderInfluenceChart(journalData, pmidData, citingPapers) {
-        // Paper info card
-        document.getElementById('inf-paper-title').textContent = pmidData.title || 'Unknown title';
-        document.getElementById('inf-paper-meta').textContent =
-            `${this._fmtAuthors(pmidData.authors)} · ${pmidData.journal || ''} · ${pmidData.year || ''} · ${(pmidData.citation_count || 0).toLocaleString()} total citations`;
-        document.getElementById('inf-paper-link').href = `https://pubmed.ncbi.nlm.nih.gov/${pmidData.pmid}/`;
+    _renderInfluenceChart(journalData, seedPapers, citingPapers, totalCitedBy) {
+        // Paper info card — list each seed paper
+        const listEl = document.getElementById('inf-paper-list');
+        listEl.innerHTML = seedPapers.map(p => `
+            <div class="inf-paper-row">
+                <div class="inf-paper-title">${p.title || 'Unknown title'}</div>
+                <div class="inf-paper-meta">${this._fmtAuthors(p.authors)} · ${p.journal || ''} · ${p.year || ''} · ${(p.citation_count || 0).toLocaleString()} citations ·
+                    <a href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" class="pubmed-link" target="_blank" rel="noopener">PMID ${p.pmid}</a>
+                </div>
+            </div>`).join('<hr class="inf-paper-divider">');
 
         // Use 24-month timeseries
         const ts = journalData.timeseries || [];
@@ -1060,9 +1061,14 @@ class IMPACTApp {
         const meanContrib = contributions.reduce((s, v) => s + v, 0) / contributions.length;
         const capped = citedBy => citedBy < 2000 ? '' : ' (top 2k analyzed)';
 
+        const totalCitations = seedPapers.reduce((s, p) => s + (p.citation_count || 0), 0);
+        const censorLabel = seedPapers.length === 1
+            ? `PMID ${seedPapers[0].pmid}`
+            : `${seedPapers.length} PMIDs`;
+
         document.getElementById('influence-metrics').innerHTML = [
-            [(pmidData.citation_count || 0).toLocaleString(), 'Total Citations (all journals)'],
-            [citingPapers.length.toLocaleString() + capped(pmidData.cited_by?.length || 0), 'Citing Papers Analyzed'],
+            [totalCitations.toLocaleString(), seedPapers.length === 1 ? 'Total Citations (all journals)' : 'Combined Citations (all journals)'],
+            [citingPapers.length.toLocaleString() + (totalCitedBy > 2000 ? ' (top 2k)' : ''), 'Unique Citing Papers Analyzed'],
             [maxContrib.toFixed(3), `Peak IF Boost (${peakMonth})`],
             [meanContrib.toFixed(3), 'Mean Monthly IF Contribution'],
         ].map(([v, l]) =>
@@ -1080,7 +1086,7 @@ class IMPACTApp {
                 labels,
                 datasets: [
                     {
-                        label: 'Original IF (with PMID)',
+                        label: 'Original IF (with PMIDs)',
                         data: ts.map(d => d.rolling_if),
                         borderColor: chartManager.palette[0],
                         backgroundColor: 'rgba(0, 114, 178, 0.08)',
@@ -1091,7 +1097,7 @@ class IMPACTApp {
                         pointHoverRadius: 5,
                     },
                     {
-                        label: `Censored IF (without PMID ${pmidData.pmid})`,
+                        label: `Censored IF (without ${censorLabel})`,
                         data: adjIf,
                         borderColor: chartManager.palette[1],
                         backgroundColor: 'transparent',

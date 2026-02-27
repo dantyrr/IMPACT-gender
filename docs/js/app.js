@@ -11,6 +11,7 @@ class IMPACTApp {
         this._authorAllPapers = [];
         this._authorExcluded = new Set();
         this._authorTotalFound = 0;
+        this._authorSort = { col: 'citations', dir: 'desc' };
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
         this.currentType = 'all';
@@ -869,44 +870,84 @@ class IMPACTApp {
     }
 
     _renderAuthorPapersTable() {
-        const sorted = [...this._authorAllPapers].sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0));
-        const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        this._authorSort = { col: 'citations', dir: 'desc' };
 
-        const tbody = sorted.map(p => {
+        const container = document.getElementById('author-papers-list');
+        container.innerHTML =
+            `<h4 style="margin-bottom:.25rem">All Papers (${this._authorAllPapers.length})</h4>` +
+            `<p class="data-note" style="margin-bottom:.5rem">Click column headers to sort. Uncheck papers to exclude from metrics.</p>` +
+            `<div class="table-scroll"><table class="data-table"><thead><tr>` +
+            `<th style="width:2rem"></th>` +
+            `<th class="sort-header" data-col="title">Title</th>` +
+            `<th class="sort-header" data-col="journal">Journal</th>` +
+            `<th class="sort-header" data-col="year">Year</th>` +
+            `<th class="sort-header" data-col="citations">Citations ↓</th>` +
+            `</tr></thead><tbody id="author-papers-tbody"></tbody></table></div>`;
+
+        container.querySelectorAll('.sort-header').forEach(th => {
+            th.addEventListener('click', () => this._sortAuthorTable(th.dataset.col));
+        });
+
+        // Delegated listeners on the tbody parent (stable across tbody replacements)
+        const tableWrap = container.querySelector('.table-scroll');
+        tableWrap.addEventListener('change', (e) => {
+            if (!e.target.matches('.paper-cb')) return;
+            const pmid = String(e.target.dataset.pmid);
+            if (e.target.checked) this._authorExcluded.delete(pmid);
+            else this._authorExcluded.add(pmid);
+            this._refreshAuthorMetrics();
+        });
+        tableWrap.addEventListener('click', (e) => {
+            if (e.target.matches('.paper-cb')) return;
+            const tr = e.target.closest('tr[data-pmid]');
+            if (tr) window.open(`https://pubmed.ncbi.nlm.nih.gov/${tr.dataset.pmid}/`, '_blank');
+        });
+
+        this._renderAuthorTableBody();
+    }
+
+    _sortAuthorTable(col) {
+        if (this._authorSort.col === col) {
+            this._authorSort.dir = this._authorSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            this._authorSort.col = col;
+            this._authorSort.dir = (col === 'title' || col === 'journal') ? 'asc' : 'desc';
+        }
+        this._renderAuthorTableBody();
+    }
+
+    _renderAuthorTableBody() {
+        const tbody = document.getElementById('author-papers-tbody');
+        if (!tbody) return;
+
+        const { col, dir } = this._authorSort;
+        const sorted = [...this._authorAllPapers].sort((a, b) => {
+            let va, vb;
+            if      (col === 'year')     { va = a.year || 0;              vb = b.year || 0; }
+            else if (col === 'citations'){ va = a.citation_count || 0;    vb = b.citation_count || 0; }
+            else if (col === 'journal')  { va = (a.journal||'').toLowerCase(); vb = (b.journal||'').toLowerCase(); }
+            else                         { va = (a.title||'').toLowerCase();   vb = (b.title||'').toLowerCase(); }
+            return dir === 'asc' ? (va < vb ? -1 : va > vb ? 1 : 0)
+                                 : (va > vb ? -1 : va < vb ? 1 : 0);
+        });
+
+        const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        tbody.innerHTML = sorted.map(p => {
+            const excluded = this._authorExcluded.has(String(p.pmid));
             const title = p.title ? (p.title.length > 90 ? p.title.slice(0, 90) + '…' : p.title) : '—';
-            return `<tr data-pmid="${p.pmid}">` +
-                `<td class="cb-cell"><input type="checkbox" class="paper-cb" data-pmid="${p.pmid}" checked></td>` +
+            return `<tr data-pmid="${p.pmid}"${excluded ? ' class="row-excluded"' : ''}>` +
+                `<td class="cb-cell"><input type="checkbox" class="paper-cb" data-pmid="${p.pmid}"${excluded ? '' : ' checked'}></td>` +
                 `<td class="papers-row-link" title="Open in PubMed">${esc(title)}</td>` +
                 `<td>${esc(p.journal || '—')}</td>` +
                 `<td>${p.year || '—'}</td>` +
                 `<td>${(p.citation_count || 0).toLocaleString()}</td></tr>`;
         }).join('');
 
-        const container = document.getElementById('author-papers-list');
-        container.innerHTML =
-            `<h4 style="margin-bottom:.25rem">All Papers <span id="author-papers-count">(${sorted.length})</span></h4>` +
-            `<p class="data-note" style="margin-bottom:.5rem">Uncheck papers to exclude them from metrics and charts. Click a title to open in PubMed.</p>` +
-            `<div class="table-scroll"><table class="data-table"><thead><tr>` +
-            `<th style="width:2rem"></th><th>Title</th><th>Journal</th><th>Year</th><th>Citations</th>` +
-            `</tr></thead><tbody>${tbody}</tbody></table></div>`;
-
-        // Checkbox toggles — update excluded set and refresh metrics without re-rendering table
-        container.querySelector('tbody').addEventListener('change', (e) => {
-            if (!e.target.matches('.paper-cb')) return;
-            const pmid = String(e.target.dataset.pmid);
-            if (e.target.checked) {
-                this._authorExcluded.delete(pmid);
-            } else {
-                this._authorExcluded.add(pmid);
-            }
-            this._refreshAuthorMetrics();
-        });
-
-        // Title click → PubMed (ignore checkbox clicks)
-        container.querySelector('tbody').addEventListener('click', (e) => {
-            if (e.target.matches('.paper-cb')) return;
-            const tr = e.target.closest('tr[data-pmid]');
-            if (tr) window.open(`https://pubmed.ncbi.nlm.nih.gov/${tr.dataset.pmid}/`, '_blank');
+        // Update sort indicators on headers
+        document.querySelectorAll('.sort-header').forEach(th => {
+            const labels = { title: 'Title', journal: 'Journal', year: 'Year', citations: 'Citations' };
+            const arrow = th.dataset.col === col ? (dir === 'asc' ? ' ↑' : ' ↓') : '';
+            th.textContent = labels[th.dataset.col] + arrow;
         });
     }
 

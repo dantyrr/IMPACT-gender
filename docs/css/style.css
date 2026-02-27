@@ -980,6 +980,22 @@ footer a:hover {
     height: 15px;
 }
 
+.sort-header {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sort-header:hover {
+    background: #dce8f3;
+}
+
+tr.row-excluded td {
+    opacity: 0.4;
+    text-decoration: line-through;
+    color: #999;
+}
+
 /* ---- Citation Network ---- */
 
 #citation-network {

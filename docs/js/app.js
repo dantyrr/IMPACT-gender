@@ -29,6 +29,7 @@ class IMPACTApp {
         this.jcYZero = false;
         this._journalYZero = false;
         this._influenceYZero = false;
+        this.papersDataCache = {};
         this.init();
     }
 
@@ -1841,11 +1842,8 @@ class IMPACTApp {
         content.style.display = 'none';
 
         try {
-            if (!this.papersDataCache[slug]) {
-                const resp = await fetch(`data/papers/${slug}.json`);
-                if (!resp.ok) throw new Error('No data');
-                const d = await resp.json();
-                this.papersDataCache[slug] = d.papers || [];
+            if (!this.papersDataCache[`${slug}__geo`]) {
+                const d = await dataLoader.loadPapers(slug);
                 this.papersDataCache[`${slug}__geo`] = d.geo || null;
             }
 

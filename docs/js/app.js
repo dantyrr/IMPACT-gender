@@ -30,6 +30,7 @@ class IMPACTApp {
         this._journalYZero = false;
         this._influenceYZero = false;
         this.papersDataCache = {};
+        this._worldTopology = null;
         this.init();
     }
 
@@ -1900,6 +1901,9 @@ class IMPACTApp {
             hint.style.display = 'none';
             content.style.display = '';
 
+            // World map
+            this._renderGeoMap(totals);
+
             // Trend chart: stacked bars by year, top 10 countries
             const trendDatasets = top10.map((country, i) => ({
                 label: country,
@@ -1924,6 +1928,142 @@ class IMPACTApp {
             hint.style.display = '';
             console.error('Geo error:', e);
         }
+    }
+
+    async _renderGeoMap(geoTotals) {
+        const container = document.getElementById('geo-map');
+        if (!container || typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
+        container.innerHTML = '';
+
+        // Country name → [longitude, latitude] centroid
+        const CENTROIDS = {
+            'USA': [-98.5, 38.5], 'Canada': [-96.5, 60.0], 'Mexico': [-102.5, 23.6],
+            'Brazil': [-51.9, -14.2], 'Argentina': [-63.6, -38.4], 'Chile': [-71.5, -35.7],
+            'Colombia': [-74.3, 4.6], 'Peru': [-75.0, -9.2], 'Venezuela': [-66.6, 6.4],
+            'Ecuador': [-78.5, -1.8], 'Cuba': [-79.5, 21.5], 'Uruguay': [-55.8, -32.8],
+            'Bolivia': [-64.7, -16.7], 'Paraguay': [-58.4, -23.4],
+            'United Kingdom': [-1.5, 52.4], 'France': [2.2, 46.2], 'Germany': [10.5, 51.2],
+            'Italy': [12.6, 42.5], 'Spain': [-3.7, 40.4], 'Netherlands': [5.3, 52.1],
+            'Belgium': [4.5, 50.5], 'Switzerland': [8.2, 46.8], 'Austria': [14.6, 47.7],
+            'Sweden': [18.6, 59.3], 'Norway': [8.5, 60.5], 'Denmark': [9.5, 56.3],
+            'Finland': [25.7, 61.9], 'Portugal': [-8.2, 39.6], 'Ireland': [-8.2, 53.2],
+            'Poland': [19.1, 52.0], 'Czech Republic': [15.5, 49.8], 'Hungary': [19.5, 47.2],
+            'Romania': [24.9, 45.9], 'Bulgaria': [25.5, 42.7], 'Slovakia': [19.7, 48.7],
+            'Croatia': [15.2, 45.1], 'Serbia': [21.0, 44.0], 'Slovenia': [14.8, 46.1],
+            'Greece': [21.8, 39.1], 'Ukraine': [31.2, 49.0], 'Russia': [60.0, 60.0],
+            'Turkey': [35.2, 39.0], 'Belarus': [28.0, 53.7], 'Luxembourg': [6.1, 49.8],
+            'Estonia': [25.0, 58.6], 'Latvia': [24.6, 56.9], 'Lithuania': [23.9, 56.0],
+            'Iceland': [-19.0, 64.9], 'Albania': [20.2, 41.2], 'Cyprus': [33.4, 35.1],
+            'Bosnia and Herzegovina': [17.8, 44.0], 'North Macedonia': [21.7, 41.6],
+            'Moldova': [28.4, 47.4], 'Kazakhstan': [66.9, 48.0], 'Georgia': [43.4, 42.3],
+            'Azerbaijan': [47.6, 40.1], 'Armenia': [45.0, 40.1], 'Uzbekistan': [63.9, 41.4],
+            'China': [104.2, 35.9], 'Japan': [138.3, 36.2], 'South Korea': [127.8, 36.5],
+            'India': [78.9, 20.6], 'Taiwan': [120.9, 23.7], 'Singapore': [103.8, 1.4],
+            'Hong Kong': [114.2, 22.3], 'Israel': [34.9, 31.5], 'Iran': [53.7, 32.4],
+            'Saudi Arabia': [45.1, 23.9], 'Pakistan': [69.3, 30.4], 'Bangladesh': [90.4, 23.7],
+            'Malaysia': [109.7, 4.2], 'Thailand': [100.9, 15.9], 'Indonesia': [113.9, -0.8],
+            'Philippines': [122.9, 12.9], 'Vietnam': [108.3, 14.1], 'Sri Lanka': [80.8, 7.9],
+            'Nepal': [84.1, 28.4], 'Myanmar': [96.5, 19.2], 'Mongolia': [103.8, 46.9],
+            'United Arab Emirates': [53.8, 23.4], 'Jordan': [36.2, 31.2],
+            'Lebanon': [35.5, 33.9], 'Kuwait': [47.5, 29.3], 'Qatar': [51.2, 25.4],
+            'Bahrain': [50.6, 26.2], 'Iraq': [43.7, 33.2], 'Oman': [57.5, 21.5],
+            'Egypt': [30.8, 26.8], 'Morocco': [-7.1, 31.8], 'Tunisia': [9.5, 34.0],
+            'Algeria': [2.6, 28.0], 'Libya': [17.2, 26.3], 'Ethiopia': [40.5, 9.1],
+            'South Africa': [25.1, -29.0], 'Nigeria': [8.7, 9.1], 'Kenya': [37.9, 0.0],
+            'Ghana': [-1.0, 7.9], 'Tanzania': [35.0, -6.4], 'Uganda': [32.3, 1.4],
+            'Cameroon': [12.4, 3.9], 'Sudan': [30.2, 15.6],
+            'Australia': [133.8, -25.7], 'New Zealand': [172.5, -41.5],
+            'North Korea': [127.5, 40.3], 'Cambodia': [104.9, 12.6],
+        };
+
+        // Load and cache world topology from CDN
+        if (!this._worldTopology) {
+            try {
+                const r = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+                if (!r.ok) throw new Error('fetch failed');
+                this._worldTopology = await r.json();
+            } catch (e) {
+                container.innerHTML = '<p class="data-note" style="padding:1rem;">Map unavailable (network error).</p>';
+                return;
+            }
+        }
+
+        const W = 960, H = 500;
+        const projection = d3.geoMercator()
+            .scale(W / (2 * Math.PI) * 0.92)
+            .translate([W / 2, H / 1.58]);
+        const path = d3.geoPath().projection(projection);
+
+        const svg = d3.select(container)
+            .append('svg')
+            .attr('viewBox', `0 0 ${W} ${H}`)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .style('width', '100%')
+            .style('height', 'auto')
+            .style('display', 'block');
+
+        svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#daeaf5');
+
+        const worldFeatures = topojson.feature(this._worldTopology, this._worldTopology.objects.countries);
+        svg.append('g').selectAll('path')
+            .data(worldFeatures.features)
+            .join('path')
+            .attr('d', path)
+            .attr('fill', '#c8d8e2')
+            .attr('stroke', '#a0b4be')
+            .attr('stroke-width', 0.4);
+
+        // Sort largest first so smaller circles render on top
+        const entries = Object.entries(geoTotals)
+            .filter(([c]) => CENTROIDS[c])
+            .sort((a, b) => b[1] - a[1]);
+
+        if (!entries.length) {
+            container.innerHTML = '<p class="data-note" style="padding:1rem;">No mappable location data.</p>';
+            return;
+        }
+
+        const maxN = entries[0][1];
+        const rScale = d3.scaleSqrt().domain([0, maxN]).range([0, 38]);
+
+        const tip = d3.select(container)
+            .append('div')
+            .style('position', 'absolute')
+            .style('background', 'rgba(15,30,50,0.9)')
+            .style('color', '#fff')
+            .style('padding', '5px 10px')
+            .style('border-radius', '4px')
+            .style('font-size', '0.82rem')
+            .style('pointer-events', 'none')
+            .style('white-space', 'nowrap')
+            .style('opacity', 0)
+            .style('z-index', 10);
+
+        svg.append('g').selectAll('circle')
+            .data(entries)
+            .join('circle')
+            .attr('cx', ([c]) => { const pt = projection(CENTROIDS[c]); return pt ? pt[0] : -9999; })
+            .attr('cy', ([c]) => { const pt = projection(CENTROIDS[c]); return pt ? pt[1] : -9999; })
+            .attr('r', ([, n]) => Math.max(3, rScale(n)))
+            .attr('fill', '#0072B2')
+            .attr('fill-opacity', 0.55)
+            .attr('stroke', '#004e80')
+            .attr('stroke-width', 0.7)
+            .style('cursor', 'default')
+            .on('mouseover', function(event, [c, n]) {
+                d3.select(this).attr('fill-opacity', 0.85);
+                tip.html(`<strong>${c}</strong><br>${n.toLocaleString()} papers`)
+                    .style('opacity', 1);
+            })
+            .on('mousemove', function(event) {
+                const rect = container.getBoundingClientRect();
+                tip.style('left', (event.clientX - rect.left + 12) + 'px')
+                   .style('top',  (event.clientY - rect.top  - 36) + 'px');
+            })
+            .on('mouseout', function() {
+                d3.select(this).attr('fill-opacity', 0.55);
+                tip.style('opacity', 0);
+            });
     }
 
     // ---- Author Metrics ----

@@ -384,6 +384,11 @@
             <div class="metrics-row" id="geo-metrics-row"></div>
 
             <div class="authors-chart-card" style="margin-bottom:1rem;">
+                <h4>Papers by Country — World Map (First Author, All Years)</h4>
+                <div id="geo-map" style="position:relative; width:100%; border-radius:6px; overflow:hidden;"></div>
+            </div>
+
+            <div class="authors-chart-card" style="margin-bottom:1rem;">
                 <h4>Papers by Country — Over Time (First Author)</h4>
                 <div class="chart-container" style="height:420px;">
                     <canvas id="geo-trend-chart"></canvas>
@@ -562,11 +567,13 @@
     Suggestions? <a href="https://github.com/dantyrr/IMPACT/issues/new" target="_blank" rel="noopener">Open an issue on GitHub.</a></p>
 </footer>
 
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script src="js/data-loader.js?v=6"></script>
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=2"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=26"></script>
+<script src="js/app.js?v=27"></script>
 
 </body>
 </html>

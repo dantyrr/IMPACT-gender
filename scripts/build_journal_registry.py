@@ -28,7 +28,7 @@ import requests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.pipeline.config import PUBMED_BULK_DB_PATH
 
-NLM_URL   = "https://ftp.ncbi.nlm.nih.gov/pubmed/J_Medline.txt"
+NLM_URL   = "https://ftp.ncbi.nlm.nih.gov/pubmed/J_Entrez.txt"
 OUTPUT    = Path("data/journal_registry.json")
 
 logging.basicConfig(

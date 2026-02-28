@@ -1,4 +1,22 @@
 /**
+ * Score a journal name against a search term.
+ * Lower = better match. Used to sort dropdown results.
+ *   1 = exact name match
+ *   2 = name starts with term
+ *   3 = a word in the name starts with term
+ *   4 = substring match (anywhere)
+ */
+function _matchRank(name, abbr, term) {
+    if (!term) return 4;
+    const n = name.toLowerCase();
+    const a = (abbr || '').toLowerCase();
+    if (n === term || a === term) return 1;
+    if (n.startsWith(term) || a.startsWith(term)) return 2;
+    if (n.split(/\s+/).some(w => w.startsWith(term))) return 3;
+    return 4;
+}
+
+/**
  * JournalPicker — searchable multi-select with chip tags.
  *
  * Usage:
@@ -62,6 +80,7 @@ class JournalPicker {
                 j.name.toLowerCase().includes(term) ||
                 (j.abbreviation || '').toLowerCase().includes(term)
             ))
+            .sort((a, b) => _matchRank(a.name, a.abbreviation, term) - _matchRank(b.name, b.abbreviation, term))
             .slice(0, 10);
 
         if (matches.length === 0) {
@@ -198,6 +217,7 @@ class SingleJournalPicker {
                 j.name.toLowerCase().includes(term) ||
                 (j.abbreviation || '').toLowerCase().includes(term)
             )
+            .sort((a, b) => _matchRank(a.name, a.abbreviation, term) - _matchRank(b.name, b.abbreviation, term))
             .slice(0, 12);
 
         if (matches.length === 0) {

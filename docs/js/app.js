@@ -26,6 +26,9 @@ class IMPACTApp {
         this.compareMetric = 'rolling_if';
         this.compareWindow = 'timeseries';
         this.jcWindow = 'timeseries';
+        this.jcYZero = false;
+        this._journalYZero = false;
+        this._influenceYZero = false;
         this.init();
     }
 
@@ -127,6 +130,11 @@ class IMPACTApp {
             this.updateJournalsTrendsChart();
         }, 'data-window');
 
+        this._setupToggleGroup('jc-y-toggle', (val) => {
+            this.jcYZero = val === 'zero';
+            this.updateJournalsTrendsChart();
+        }, 'data-y');
+
         document.getElementById('dl-png').addEventListener('click', () => this._downloadChart('png'));
         document.getElementById('dl-jpg').addEventListener('click', () => this._downloadChart('jpg'));
         document.getElementById('dl-pdf').addEventListener('click', () => this._downloadPDF());
@@ -222,7 +230,7 @@ class IMPACTApp {
         });
 
         this._jcSeriesData = series;
-        chartManager.createMultiSeriesChart('jc-chart', series);
+        chartManager.createMultiSeriesChart('jc-chart', series, this.jcYZero);
         document.getElementById('jc-download-bar').style.display = '';
         this._renderFilteredCards();
     }
@@ -401,7 +409,7 @@ class IMPACTApp {
         const redraw = () => {
             const ts = this._getDisplayTimeseries(data);
             const rateLabel = `Citation Rate — ${this._typeLabel(this.currentType)} (${this._windowLabel(this.currentWindow)})`;
-            chartManager.createJournalChart('journal-chart', ts, data.official_jif_2024, rateLabel);
+            chartManager.createJournalChart('journal-chart', ts, data.official_jif_2024, rateLabel, this._journalYZero);
             chartManager.createCitationChart('citation-chart', ts, this._citationChartMode());
             chartManager.createCompositionChart('composition-chart', ts);
             chartManager.createPapersChart('papers-chart', ts);
@@ -418,6 +426,12 @@ class IMPACTApp {
             this.currentType = typeKey;
             redraw();
         }, 'data-type');
+
+        // Y-axis zero toggle
+        this._setupToggleGroup('journal-y-toggle', (val) => {
+            this._journalYZero = val === 'zero';
+            redraw();
+        }, 'data-y');
 
         // Citation chart mode toggle (independent)
         this._setupToggleGroup('citation-chart-toggle', (mode) => {
@@ -972,6 +986,13 @@ class IMPACTApp {
                 this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
             }
         });
+
+        this._setupToggleGroup('influence-y-toggle', (val) => {
+            this._influenceYZero = val === 'zero';
+            if (this._lastInfluenceRenderArgs) {
+                this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
+            }
+        }, 'data-y');
         document.getElementById('inf-dl-png').onclick = () => this._downloadInfluence('png');
         document.getElementById('inf-dl-jpg').onclick = () => this._downloadInfluence('jpg');
         document.getElementById('inf-dl-pdf').onclick = () => this._downloadInfluence('pdf');
@@ -1179,7 +1200,7 @@ class IMPACTApp {
         };
 
         let datasets;
-        if (viewMode === 'individual' && seedsInJournal.length > 1) {
+        if (viewMode === 'individual' && seedsInJournal.length >= 1) {
             // One dashed line per in-journal seed showing its standalone contribution
             const seedDatasets = seedsInJournal.map((seed, idx) => {
                 const sl = localCyMap[String(seed.pmid)] ? [seed] : [];
@@ -1259,7 +1280,7 @@ class IMPACTApp {
                     },
                     y: {
                         title: { display: true, text: 'Citation Rate (24-mo)' },
-                        beginAtZero: false,
+                        beginAtZero: this._influenceYZero,
                     },
                 },
             },

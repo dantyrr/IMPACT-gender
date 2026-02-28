@@ -26,7 +26,7 @@ class ChartManager {
      * Create a journal citation rate time series chart.
      * rateLabel: label shown on the legend (e.g. 'Citation Rate (Research)')
      */
-    createJournalChart(canvasId, timeseries, officialJif, rateLabel = 'Citation Rate') {
+    createJournalChart(canvasId, timeseries, officialJif, rateLabel = 'Citation Rate', beginAtZero = false) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -87,7 +87,7 @@ class ChartManager {
                     },
                     y: {
                         title: { display: true, text: 'Citation Rate' },
-                        beginAtZero: false,
+                        beginAtZero,
                     }
                 }
             }
@@ -457,7 +457,7 @@ class ChartManager {
      * Create a multi-series chart with per-journal colors and per-type dash patterns.
      * series: [{label, color, dash, months, values}]
      */
-    createMultiSeriesChart(canvasId, series) {
+    createMultiSeriesChart(canvasId, series, beginAtZero = false) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -511,7 +511,7 @@ class ChartManager {
                     },
                     y: {
                         title: { display: true, text: 'Citation Rate' },
-                        beginAtZero: false,
+                        beginAtZero,
                     }
                 }
             }

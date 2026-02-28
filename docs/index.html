@@ -46,6 +46,11 @@
                         <button class="toggle-btn active" data-window="timeseries">24-month</button>
                         <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
                     </div>
+                    <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
+                    <div class="toggle-group" id="jc-y-toggle">
+                        <button class="toggle-btn active" data-y="auto">Auto</button>
+                        <button class="toggle-btn" data-y="zero">From Zero</button>
+                    </div>
                 </div>
                 <div class="jc-selector-row">
                     <div class="jc-selector-group">
@@ -134,6 +139,11 @@
                     <button class="toggle-btn" data-type="editorial">Editorials</button>
                     <button class="toggle-btn" data-type="letter">Letters</button>
                     <button class="toggle-btn" data-type="other">Other</button>
+                </div>
+                <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
+                <div class="toggle-group" id="journal-y-toggle">
+                    <button class="toggle-btn active" data-y="auto">Auto</button>
+                    <button class="toggle-btn" data-y="zero">From Zero</button>
                 </div>
             </div>
 
@@ -441,6 +451,11 @@
                     <input type="checkbox" id="influence-censor-toggle" checked>
                     Show censored line(s)
                 </label>
+                <span style="margin-left:1.5rem; font-size:0.85rem; color:#555;">Y-axis:</span>
+                <div class="toggle-group" id="influence-y-toggle" style="margin-left:0.5rem;">
+                    <button class="toggle-btn active" data-y="auto">Auto</button>
+                    <button class="toggle-btn" data-y="zero">From Zero</button>
+                </div>
             </div>
 
             <div class="chart-container">

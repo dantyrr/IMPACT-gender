@@ -1154,6 +1154,10 @@ tr.row-excluded td {
 
 .influence-toggle-row {
     margin: 0.75rem 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
 
 .influence-toggle-label {

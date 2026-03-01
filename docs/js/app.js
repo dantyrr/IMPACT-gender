@@ -992,8 +992,17 @@ class IMPACTApp {
         return checkAuthor(parts[0]) || checkAuthor(parts[parts.length - 1]);
     }
 
-    _refreshFLCharts(active) {
-        this._lastActiveForFL = active;
+    _refreshFLCharts() {
+        // Compute active papers using the same logic as _refreshAuthorMetrics
+        const active = this._authorAllPapers.filter(p => {
+            if (this._authorExcluded.has(String(p.pmid))) return false;
+            if (this._authorActiveTypes) {
+                const types = p.pub_types || [];
+                if (!types.some(t => this._authorActiveTypes.has(t))) return false;
+            }
+            return true;
+        });
+
         const name = this._authorFilterName;
 
         const flEntries = [
@@ -1007,19 +1016,26 @@ class IMPACTApp {
                 const phEl = document.getElementById(ph);
                 if (phEl) phEl.style.display = '';
                 const canvas = document.getElementById(canvasId);
-                if (canvas) canvas.closest('.chart-container').style.display = 'none';
+                if (canvas) {
+                    const container = canvas.closest('.chart-container');
+                    if (container) container.style.display = 'none';
+                }
             });
             return;
         }
 
-        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
-
+        // Show chart containers, hide placeholders first
         flEntries.forEach(({ ph, canvasId }) => {
             const phEl = document.getElementById(ph);
             if (phEl) phEl.style.display = 'none';
             const canvas = document.getElementById(canvasId);
-            if (canvas) canvas.closest('.chart-container').style.display = '';
+            if (canvas) {
+                const container = canvas.closest('.chart-container');
+                if (container) container.style.display = '';
+            }
         });
+
+        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
 
         const pubsByYear = {};
         flPapers.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
@@ -1494,7 +1510,7 @@ class IMPACTApp {
 
         const applyFL = () => {
             this._authorFilterName = document.getElementById('author-fl-name').value.trim();
-            this._refreshFLCharts(this._lastActiveForFL || []);
+            this._refreshFLCharts();
         };
         document.getElementById('author-fl-apply').addEventListener('click', applyFL);
         document.getElementById('author-fl-name').addEventListener('keydown', (e) => {
@@ -1531,7 +1547,6 @@ class IMPACTApp {
                 }
             }
             if (extracted) {
-                this._authorFilterName = extracted;
                 const flInput = document.getElementById('author-fl-name');
                 if (flInput) flInput.value = extracted;
             }
@@ -1685,9 +1700,8 @@ class IMPACTApp {
 
         const names = input.split(',').map(n => n.trim()).filter(Boolean);
 
-        // Auto-fill the first/last author filter with the first searched name
+        // Pre-fill the first/last author filter input (user still clicks Apply to activate)
         if (names.length === 1) {
-            this._authorFilterName = names[0];
             const flInput = document.getElementById('author-fl-name');
             if (flInput) flInput.value = names[0];
         }
@@ -1851,7 +1865,7 @@ class IMPACTApp {
         wireChart('cits', 'author-cits-chart', 'Citations by Publication Year');
         wireChart('journals', 'author-journals-chart', 'Top Journals');
 
-        this._refreshFLCharts(active);
+        this._refreshFLCharts();
         this._computeReceivedCitsByYear(active);
 
         // Close drill-down

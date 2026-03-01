@@ -974,22 +974,25 @@ class IMPACTApp {
 
     _isFirstOrLast(authorsStr, filterName) {
         if (!authorsStr || !filterName) return false;
-        const parts = authorsStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-        if (parts.length === 0) return false;
-        const target = filterName.toLowerCase().trim();
-        const checkAuthor = (entry) => {
-            if (entry === target || entry.includes(target) || target.includes(entry)) return true;
-            const eTokens = entry.split(/\s+/);
-            const tTokens = target.split(/\s+/);
-            // Last names must match
-            if (eTokens[0] !== tTokens[0]) return false;
-            // Match initials flexibly: "tyrrell dj" vs "tyrrell d" — one initials string is a prefix of the other
-            const eInit = eTokens.slice(1).join('');
-            const tInit = tTokens.slice(1).join('');
-            if (!eInit || !tInit) return true; // last name only — accept
-            return eInit.startsWith(tInit) || tInit.startsWith(eInit);
+        // Normalize: lowercase, strip periods, collapse initials into one token
+        // e.g. "Tyrrell D.J." → "tyrrell dj", "Tyrrell D J" → "tyrrell dj", "Tyrrell DJ" → "tyrrell dj"
+        const norm = s => {
+            const tokens = s.trim().toLowerCase().replace(/\./g, '').split(/\s+/).filter(Boolean);
+            if (!tokens.length) return '';
+            return tokens[0] + (tokens.length > 1 ? ' ' + tokens.slice(1).join('') : '');
         };
-        return checkAuthor(parts[0]) || checkAuthor(parts[parts.length - 1]);
+        const target = norm(filterName);
+        if (!target) return false;
+        const parts = authorsStr.split(',');
+        if (!parts.length) return false;
+        const check = e => {
+            const n = norm(e);
+            if (!n) return false;
+            // Match if one normalised string starts with the other
+            // handles "tyrrell d" matching "tyrrell dj" and vice versa
+            return n.startsWith(target) || target.startsWith(n);
+        };
+        return check(parts[0]) || check(parts[parts.length - 1]);
     }
 
     _refreshFLCharts() {
@@ -1011,6 +1014,8 @@ class IMPACTApp {
             { ph: 'author-fl-rcits-placeholder', canvasId: 'author-fl-rcits-chart' },
         ];
 
+        const countEl = document.getElementById('fl-match-count');
+
         if (!name || !active.length) {
             flEntries.forEach(({ ph, canvasId }) => {
                 const phEl = document.getElementById(ph);
@@ -1021,10 +1026,18 @@ class IMPACTApp {
                     if (container) container.style.display = 'none';
                 }
             });
+            if (countEl) countEl.style.display = 'none';
             return;
         }
 
-        // Show chart containers, hide placeholders first
+        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
+
+        if (countEl) {
+            countEl.textContent = `${flPapers.length} paper${flPapers.length !== 1 ? 's' : ''} where ${name} is first or last author`;
+            countEl.style.display = '';
+        }
+
+        // Show chart containers, hide placeholders
         flEntries.forEach(({ ph, canvasId }) => {
             const phEl = document.getElementById(ph);
             if (phEl) phEl.style.display = 'none';
@@ -1034,8 +1047,6 @@ class IMPACTApp {
                 if (container) container.style.display = '';
             }
         });
-
-        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
 
         const pubsByYear = {};
         flPapers.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });

@@ -992,6 +992,58 @@ class IMPACTApp {
         return checkAuthor(parts[0]) || checkAuthor(parts[parts.length - 1]);
     }
 
+    _refreshFLCharts(active) {
+        this._lastActiveForFL = active;
+        const name = this._authorFilterName;
+
+        const flEntries = [
+            { ph: 'author-fl-pubs-placeholder', canvasId: 'author-fl-pubs-chart' },
+            { ph: 'author-fl-cits-placeholder', canvasId: 'author-fl-cits-chart' },
+            { ph: 'author-fl-rcits-placeholder', canvasId: 'author-fl-rcits-chart' },
+        ];
+
+        if (!name || !active.length) {
+            flEntries.forEach(({ ph, canvasId }) => {
+                const phEl = document.getElementById(ph);
+                if (phEl) phEl.style.display = '';
+                const canvas = document.getElementById(canvasId);
+                if (canvas) canvas.closest('.chart-container').style.display = 'none';
+            });
+            return;
+        }
+
+        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
+
+        flEntries.forEach(({ ph, canvasId }) => {
+            const phEl = document.getElementById(ph);
+            if (phEl) phEl.style.display = 'none';
+            const canvas = document.getElementById(canvasId);
+            if (canvas) canvas.closest('.chart-container').style.display = '';
+        });
+
+        const pubsByYear = {};
+        flPapers.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
+        const sortedYears = Object.keys(pubsByYear).sort();
+        chartManager.createBarChart('author-fl-pubs-chart', sortedYears,
+            sortedYears.map(y => pubsByYear[y]), 'Papers', { horizontal: false });
+
+        const citsByYear = {};
+        flPapers.forEach(p => { if (p.year) citsByYear[p.year] = (citsByYear[p.year] || 0) + (p.citation_count || 0); });
+        chartManager.createBarChart('author-fl-cits-chart', sortedYears,
+            sortedYears.map(y => citsByYear[y] || 0), 'Citations', { horizontal: false });
+
+        this._computeReceivedCitsByYear(flPapers, 'author-fl-rcits-chart', 'author-fl-rcits-loading', 'fl-rcits');
+
+        const wireFL = (prefix, canvasId, title) => {
+            ['png', 'jpg', 'pdf'].forEach(fmt => {
+                const btn = document.getElementById(`dl-${prefix}-${fmt}`);
+                if (btn) btn.onclick = () => this._downloadAuthorChart(canvasId, title, fmt);
+            });
+        };
+        wireFL('fl-pubs', 'author-fl-pubs-chart', 'First/Last Author Publications per Year');
+        wireFL('fl-cits', 'author-fl-cits-chart', 'First/Last Author Citations by Publication Year');
+    }
+
     _refreshFLMetrics(active) {
         this._lastActiveForFL = active;
         const flRow = document.getElementById('author-fl-metrics');
@@ -1024,17 +1076,18 @@ class IMPACTApp {
         ).join('');
     }
 
-    async _computeReceivedCitsByYear(active) {
-        const version = ++this._rcitsVersion;
-        const loadingEl = document.getElementById('author-rcits-loading');
-        if (loadingEl) { loadingEl.style.display = ''; loadingEl.textContent = 'Loading…'; }
+    async _computeReceivedCitsByYear(active, canvasId = 'author-rcits-chart', loadingId = 'author-rcits-loading', dlPrefix = 'rcits') {
+        const vKey = `_rcitsV_${canvasId}`;
+        const version = (this[vKey] = (this[vKey] || 0) + 1);
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) { loadingEl.style.display = ''; loadingEl.textContent = 'Loading\u2026'; }
 
         const allCitedBy = [...new Set(active.flatMap(p => (p.cited_by || []).map(String)))];
 
         if (allCitedBy.length === 0) {
-            if (this._rcitsVersion !== version) return;
+            if (this[vKey] !== version) return;
             if (loadingEl) loadingEl.style.display = 'none';
-            chartManager.createBarChart('author-rcits-chart', [], [], 'Citations', { horizontal: false });
+            chartManager.createBarChart(canvasId, [], [], 'Citations', { horizontal: false });
             return;
         }
 
@@ -1044,7 +1097,7 @@ class IMPACTApp {
         const byYear = {};
 
         for (let i = 0; i < pmidsToFetch.length; i += BATCH * CONC) {
-            if (this._rcitsVersion !== version) return; // cancelled
+            if (this[vKey] !== version) return;
             const batches = [];
             for (let j = 0; j < CONC && (i + j * BATCH) < pmidsToFetch.length; j++) {
                 batches.push(pmidsToFetch.slice(i + j * BATCH, i + (j + 1) * BATCH));
@@ -1060,15 +1113,15 @@ class IMPACTApp {
             results.flat().forEach(p => { if (p.year) byYear[p.year] = (byYear[p.year] || 0) + 1; });
         }
 
-        if (this._rcitsVersion !== version) return;
+        if (this[vKey] !== version) return;
         if (loadingEl) loadingEl.style.display = 'none';
 
         const years = Object.keys(byYear).sort();
-        chartManager.createBarChart('author-rcits-chart', years, years.map(y => byYear[y]), 'Citations', { horizontal: false });
+        chartManager.createBarChart(canvasId, years, years.map(y => byYear[y]), 'Citations', { horizontal: false });
 
         ['png', 'jpg', 'pdf'].forEach(fmt => {
-            const btn = document.getElementById(`dl-rcits-${fmt}`);
-            if (btn) btn.onclick = () => this._downloadAuthorChart('author-rcits-chart', 'Citations per Year', fmt);
+            const btn = document.getElementById(`dl-${dlPrefix}-${fmt}`);
+            if (btn) btn.onclick = () => this._downloadAuthorChart(canvasId, 'Citations per Year', fmt);
         });
     }
 
@@ -1441,7 +1494,7 @@ class IMPACTApp {
 
         const applyFL = () => {
             this._authorFilterName = document.getElementById('author-fl-name').value.trim();
-            this._refreshFLMetrics(this._lastActiveForFL || []);
+            this._refreshFLCharts(this._lastActiveForFL || []);
         };
         document.getElementById('author-fl-apply').addEventListener('click', applyFL);
         document.getElementById('author-fl-name').addEventListener('keydown', (e) => {
@@ -1798,7 +1851,7 @@ class IMPACTApp {
         wireChart('cits', 'author-cits-chart', 'Citations by Publication Year');
         wireChart('journals', 'author-journals-chart', 'Top Journals');
 
-        this._refreshFLMetrics(active);
+        this._refreshFLCharts(active);
         this._computeReceivedCitsByYear(active);
 
         // Close drill-down

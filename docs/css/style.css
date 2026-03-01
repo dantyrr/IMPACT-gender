@@ -840,9 +840,33 @@ footer a:hover {
     cursor: pointer;
 }
 
-.metric-card-fl {
-    border-top: 2px solid var(--primary);
-    opacity: 0.92;
+.fl-section {
+    margin: 1.5rem 0 0.75rem;
+    border-top: 2px solid var(--border);
+    padding-top: 1rem;
+}
+
+.fl-section-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.fl-blurb {
+    font-size: 0.82rem;
+    color: var(--text-muted, #666);
+    margin: 0;
+}
+
+.fl-chart-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 240px;
+    font-size: 0.82rem;
+    color: #aaa;
+    text-align: center;
+    padding: 1rem;
 }
 
 /* ---- Authors breakdown charts ---- */

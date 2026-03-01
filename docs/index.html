@@ -310,16 +310,9 @@
         <div id="author-search-results" style="display:none">
             <div class="metrics-row" id="author-search-metrics"></div>
 
-            <div id="author-fl-filter-row" class="fl-filter-row">
-                <span class="fl-filter-label">First/last author:</span>
-                <input type="text" id="author-fl-name" class="fl-filter-input" placeholder="e.g. Tyrrell DJ">
-                <button id="author-fl-apply" class="fl-apply-btn">Apply</button>
-                <span class="metric-info" data-tooltip="Enter the author's name as it appears in PubMed (e.g. 'Tyrrell DJ'). Initials are matched flexibly so 'Tyrrell D' also matches 'Tyrrell DJ'. Papers where this name is the first or last listed author will be counted. Co-first/co-corresponding authorship cannot be detected automatically.">ⓘ</span>
-            </div>
-            <div class="metrics-row" id="author-fl-metrics"></div>
-
             <div id="author-type-filters" class="type-filter-pills" style="display:none"></div>
 
+            <!-- All-papers charts -->
             <div class="authors-charts-grid">
                 <div class="authors-chart-card">
                     <div class="card-header-row">
@@ -363,6 +356,67 @@
                 </div>
             </div>
 
+            <!-- First / Last Author section -->
+            <div class="fl-section">
+                <div class="fl-section-inner">
+                    <div class="fl-filter-row">
+                        <span class="fl-filter-label">First/last author:</span>
+                        <input type="text" id="author-fl-name" class="fl-filter-input" placeholder="e.g. Tyrrell DJ">
+                        <button id="author-fl-apply" class="fl-apply-btn">Apply</button>
+                        <span class="metric-info" data-tooltip="Enter the author's name as it appears in PubMed (e.g. 'Tyrrell DJ'). Initials are matched flexibly — 'Tyrrell D' also matches 'Tyrrell DJ'. Co-first/co-corresponding authorship cannot be automatically detected.">ⓘ</span>
+                    </div>
+                    <p class="fl-blurb">Shows only papers where you are listed as first or last author — capturing your primary contributions as lead researcher or senior/corresponding author.</p>
+                </div>
+            </div>
+
+            <!-- First/Last author charts -->
+            <div class="authors-charts-grid">
+                <div class="authors-chart-card">
+                    <div class="card-header-row">
+                        <h4>Publications per Year</h4>
+                        <div class="card-dl-bar">
+                            <button class="dl-btn-sm" id="dl-fl-pubs-png">PNG</button>
+                            <button class="dl-btn-sm" id="dl-fl-pubs-jpg">JPG</button>
+                            <button class="dl-btn-sm" id="dl-fl-pubs-pdf">PDF</button>
+                        </div>
+                    </div>
+                    <div id="author-fl-pubs-placeholder" class="fl-chart-placeholder">Enter a name above to see first/last author data</div>
+                    <div class="chart-container" style="height:240px; margin-bottom:0; display:none">
+                        <canvas id="author-fl-pubs-chart"></canvas>
+                    </div>
+                </div>
+                <div class="authors-chart-card">
+                    <div class="card-header-row">
+                        <h4>Citations by Publication Year</h4>
+                        <div class="card-dl-bar">
+                            <button class="dl-btn-sm" id="dl-fl-cits-png">PNG</button>
+                            <button class="dl-btn-sm" id="dl-fl-cits-jpg">JPG</button>
+                            <button class="dl-btn-sm" id="dl-fl-cits-pdf">PDF</button>
+                        </div>
+                    </div>
+                    <div id="author-fl-cits-placeholder" class="fl-chart-placeholder">Enter a name above to see first/last author data</div>
+                    <div class="chart-container" style="height:240px; margin-bottom:0; display:none">
+                        <canvas id="author-fl-cits-chart"></canvas>
+                    </div>
+                </div>
+                <div class="authors-chart-card">
+                    <div class="card-header-row">
+                        <h4>Citations per Year <span class="metric-info" data-tooltip="Total citations received in each calendar year — first/last author papers only.">ⓘ</span></h4>
+                        <div class="card-dl-bar">
+                            <button class="dl-btn-sm" id="dl-fl-rcits-png">PNG</button>
+                            <button class="dl-btn-sm" id="dl-fl-rcits-jpg">JPG</button>
+                            <button class="dl-btn-sm" id="dl-fl-rcits-pdf">PDF</button>
+                        </div>
+                    </div>
+                    <div id="author-fl-rcits-placeholder" class="fl-chart-placeholder">Enter a name above to see first/last author data</div>
+                    <div id="author-fl-rcits-loading" style="display:none;font-size:0.8rem;color:#888;padding:0.25rem 0 0.5rem">Loading…</div>
+                    <div class="chart-container" style="height:240px; margin-bottom:0; display:none">
+                        <canvas id="author-fl-rcits-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Journals -->
             <div class="authors-chart-card" style="margin-top:1rem">
                 <div class="card-header-row">
                     <h4>Top Journals <span id="author-journals-drill-hint" style="font-size:0.78rem;font-weight:400;color:#888;margin-left:0.4rem">(click a bar to see pubs per year)</span></h4>

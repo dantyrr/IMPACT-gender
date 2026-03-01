@@ -805,6 +805,36 @@ footer a:hover {
     font-weight: 600;
 }
 
+/* ---- First/last author filter row ---- */
+
+.fl-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0.25rem;
+}
+
+.fl-filter-label {
+    font-size: 0.82rem;
+    color: var(--text-muted, #666);
+    white-space: nowrap;
+}
+
+.fl-filter-input {
+    font-size: 0.85rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    width: 160px;
+}
+
+.metric-card-fl {
+    border-top: 2px solid var(--primary);
+    opacity: 0.92;
+}
+
 /* ---- Authors breakdown charts ---- */
 
 .authors-charts-grid {

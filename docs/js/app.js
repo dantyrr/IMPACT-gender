@@ -32,6 +32,7 @@ class IMPACTApp {
         this.papersDataCache = {};
         this._worldTopology = null;
         this._rcitsVersion = 0;
+        this._authorFilterName = '';
         this.init();
     }
 
@@ -971,6 +972,48 @@ class IMPACTApp {
         return h;
     }
 
+    _isFirstOrLast(authorsStr, filterName) {
+        if (!authorsStr || !filterName) return false;
+        const parts = authorsStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        if (parts.length === 0) return false;
+        const target = filterName.toLowerCase().trim();
+        const checkAuthor = (entry) => {
+            if (entry === target || entry.includes(target) || target.includes(entry)) return true;
+            // Match by last name: first token of the iCite author string vs last token of the filter name
+            const entryLast = entry.split(/\s+/)[0];
+            const targetTokens = target.split(/\s+/);
+            return targetTokens.some(t => t === entryLast);
+        };
+        return checkAuthor(parts[0]) || checkAuthor(parts[parts.length - 1]);
+    }
+
+    _refreshFLMetrics(active) {
+        this._lastActiveForFL = active;
+        const flRow = document.getElementById('author-fl-metrics');
+        const filterRow = document.getElementById('author-fl-filter-row');
+        if (filterRow) filterRow.style.display = '';
+
+        const name = this._authorFilterName;
+        if (!name || !active.length) {
+            if (flRow) flRow.style.display = 'none';
+            return;
+        }
+
+        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
+        const flCits = flPapers.reduce((s, p) => s + (p.citation_count || 0), 0);
+        const flH = this._computeHIndex(flPapers.map(p => p.citation_count || 0));
+
+        const tipText = 'Papers where the filter name is the first or last listed author in PubMed/iCite data. Co-first and co-corresponding authorship cannot be automatically detected.';
+        flRow.innerHTML = [
+            [flPapers.length, '1st/Last Author Papers'],
+            [flCits.toLocaleString(), '1st/Last Citations'],
+            [`${flH} <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`, '1st/Last h-index'],
+        ].map(([v, l]) =>
+            `<div class="metric-card metric-card-fl"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+        ).join('');
+        flRow.style.display = '';
+    }
+
     async _computeReceivedCitsByYear(active) {
         const version = ++this._rcitsVersion;
         const loadingEl = document.getElementById('author-rcits-loading');
@@ -1385,6 +1428,10 @@ class IMPACTApp {
             if (e.key === 'Enter') this.loadFromNCBIUrl();
         });
         document.getElementById('author-pmid-paste-btn').addEventListener('click', () => this.loadFromPastedPMIDs());
+        document.getElementById('author-fl-name').addEventListener('input', (e) => {
+            this._authorFilterName = e.target.value.trim();
+            if (this._authorAllPapers.length) this._refreshFLMetrics(this._lastActiveForFL || []);
+        });
     }
 
     async loadFromNCBIUrl() {
@@ -1538,6 +1585,13 @@ class IMPACTApp {
         if (!input) return;
 
         const names = input.split(',').map(n => n.trim()).filter(Boolean);
+
+        // Auto-fill the first/last author filter with the first searched name
+        if (names.length === 1) {
+            this._authorFilterName = names[0];
+            const flInput = document.getElementById('author-fl-name');
+            if (flInput) flInput.value = names[0];
+        }
 
         const hint = document.getElementById('author-search-hint');
         const results = document.getElementById('author-search-results');
@@ -1703,6 +1757,7 @@ class IMPACTApp {
         wireChart('cits', 'author-cits-chart', 'Citations by Publication Year');
         wireChart('journals', 'author-journals-chart', 'Top Journals');
 
+        this._refreshFLMetrics(active);
         this._computeReceivedCitsByYear(active);
 
         // Close drill-down

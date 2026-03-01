@@ -310,12 +310,13 @@
         <div id="author-search-results" style="display:none">
             <div class="metrics-row" id="author-search-metrics"></div>
 
-            <div id="author-fl-filter-row" class="fl-filter-row" style="display:none">
-                <span class="fl-filter-label">First/last author filter:</span>
-                <input type="text" id="author-fl-name" class="fl-filter-input" placeholder="e.g. Smith J">
-                <span class="metric-info" data-tooltip="Enter the author's name as it appears in PubMed (e.g. 'Smith J'). Papers where this name is the first or last listed author will be counted. Co-first/co-corresponding authorship cannot be detected automatically.">ⓘ</span>
+            <div id="author-fl-filter-row" class="fl-filter-row">
+                <span class="fl-filter-label">First/last author:</span>
+                <input type="text" id="author-fl-name" class="fl-filter-input" placeholder="e.g. Tyrrell DJ">
+                <button id="author-fl-apply" class="fl-apply-btn">Apply</button>
+                <span class="metric-info" data-tooltip="Enter the author's name as it appears in PubMed (e.g. 'Tyrrell DJ'). Initials are matched flexibly so 'Tyrrell D' also matches 'Tyrrell DJ'. Papers where this name is the first or last listed author will be counted. Co-first/co-corresponding authorship cannot be detected automatically.">ⓘ</span>
             </div>
-            <div class="metrics-row" id="author-fl-metrics" style="display:none"></div>
+            <div class="metrics-row" id="author-fl-metrics"></div>
 
             <div id="author-type-filters" class="type-filter-pills" style="display:none"></div>
 

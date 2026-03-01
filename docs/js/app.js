@@ -979,10 +979,15 @@ class IMPACTApp {
         const target = filterName.toLowerCase().trim();
         const checkAuthor = (entry) => {
             if (entry === target || entry.includes(target) || target.includes(entry)) return true;
-            // Match by last name: first token of the iCite author string vs last token of the filter name
-            const entryLast = entry.split(/\s+/)[0];
-            const targetTokens = target.split(/\s+/);
-            return targetTokens.some(t => t === entryLast);
+            const eTokens = entry.split(/\s+/);
+            const tTokens = target.split(/\s+/);
+            // Last names must match
+            if (eTokens[0] !== tTokens[0]) return false;
+            // Match initials flexibly: "tyrrell dj" vs "tyrrell d" — one initials string is a prefix of the other
+            const eInit = eTokens.slice(1).join('');
+            const tInit = tTokens.slice(1).join('');
+            if (!eInit || !tInit) return true; // last name only — accept
+            return eInit.startsWith(tInit) || tInit.startsWith(eInit);
         };
         return checkAuthor(parts[0]) || checkAuthor(parts[parts.length - 1]);
     }
@@ -990,12 +995,19 @@ class IMPACTApp {
     _refreshFLMetrics(active) {
         this._lastActiveForFL = active;
         const flRow = document.getElementById('author-fl-metrics');
-        const filterRow = document.getElementById('author-fl-filter-row');
-        if (filterRow) filterRow.style.display = '';
+        if (!flRow) return;
 
+        const tipText = 'Papers where the filter name is the first or last listed author in PubMed/iCite data. Co-first and co-corresponding authorship cannot be automatically detected.';
         const name = this._authorFilterName;
+
         if (!name || !active.length) {
-            if (flRow) flRow.style.display = 'none';
+            flRow.innerHTML = [
+                ['—', '1st/Last Author Papers'],
+                ['—', '1st/Last Citations'],
+                [`— <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`, '1st/Last h-index'],
+            ].map(([v, l]) =>
+                `<div class="metric-card metric-card-fl"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+            ).join('');
             return;
         }
 
@@ -1003,15 +1015,13 @@ class IMPACTApp {
         const flCits = flPapers.reduce((s, p) => s + (p.citation_count || 0), 0);
         const flH = this._computeHIndex(flPapers.map(p => p.citation_count || 0));
 
-        const tipText = 'Papers where the filter name is the first or last listed author in PubMed/iCite data. Co-first and co-corresponding authorship cannot be automatically detected.';
         flRow.innerHTML = [
-            [flPapers.length, '1st/Last Author Papers'],
+            [flPapers.length.toLocaleString(), '1st/Last Author Papers'],
             [flCits.toLocaleString(), '1st/Last Citations'],
             [`${flH} <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`, '1st/Last h-index'],
         ].map(([v, l]) =>
             `<div class="metric-card metric-card-fl"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
         ).join('');
-        flRow.style.display = '';
     }
 
     async _computeReceivedCitsByYear(active) {
@@ -1428,15 +1438,51 @@ class IMPACTApp {
             if (e.key === 'Enter') this.loadFromNCBIUrl();
         });
         document.getElementById('author-pmid-paste-btn').addEventListener('click', () => this.loadFromPastedPMIDs());
-        document.getElementById('author-fl-name').addEventListener('input', (e) => {
-            this._authorFilterName = e.target.value.trim();
-            if (this._authorAllPapers.length) this._refreshFLMetrics(this._lastActiveForFL || []);
+
+        const applyFL = () => {
+            this._authorFilterName = document.getElementById('author-fl-name').value.trim();
+            this._refreshFLMetrics(this._lastActiveForFL || []);
+        };
+        document.getElementById('author-fl-apply').addEventListener('click', applyFL);
+        document.getElementById('author-fl-name').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') applyFL();
         });
     }
 
     async loadFromNCBIUrl() {
         const val = document.getElementById('author-ncbi-input').value.trim();
         if (!val) return;
+
+        // Try to extract author name from URL and pre-fill the FL filter
+        try {
+            const urlObj = new URL(val);
+            let extracted = '';
+            // MyNCBI format: /myncbi/tyrrell.dj.1/bibliography/...
+            const myncbi = urlObj.pathname.match(/\/myncbi\/([^/]+)\//);
+            if (myncbi) {
+                const slug = myncbi[1].replace(/\.\d+$/, ''); // remove trailing .1 etc
+                const parts = slug.split('.');
+                if (parts.length >= 2) {
+                    extracted = parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
+                        + ' ' + parts.slice(1).join('').toUpperCase();
+                }
+            }
+            // PubMed search URL: ?term=tyrrell+dj[au]
+            if (!extracted) {
+                const term = urlObj.searchParams.get('term') || '';
+                const m = term.match(/^(.+?)\s*\[au\]/i);
+                if (m) {
+                    const raw = m[1].replace(/\+/g, ' ').trim().split(/\s+/);
+                    extracted = raw[0].charAt(0).toUpperCase() + raw[0].slice(1)
+                        + (raw[1] ? ' ' + raw[1].toUpperCase() : '');
+                }
+            }
+            if (extracted) {
+                this._authorFilterName = extracted;
+                const flInput = document.getElementById('author-fl-name');
+                if (flInput) flInput.value = extracted;
+            }
+        } catch (_) {}
 
         const hint = document.getElementById('author-search-hint');
         const results = document.getElementById('author-search-results');
@@ -1702,21 +1748,16 @@ class IMPACTApp {
 
         const excTag = excluded
             ? ` <span style="font-size:.7em;color:#c0392b;font-weight:normal">(−${excluded} excluded)</span>` : '';
+        const totalOnPubmed = this._authorTotalFound > this._authorAllPapers.length
+            ? ` <span style="font-size:.72em;color:#888;font-weight:normal">of ${this._authorTotalFound.toLocaleString()} on PubMed</span>` : '';
         const tipText = 'Based only on PubMed-indexed citing articles. Google Scholar casts a wider net (preprints, books, non-indexed journals), so its h-index is typically higher.';
         document.getElementById('author-search-metrics').innerHTML = [
-            [`${active.length.toLocaleString()}${excTag}`, 'Papers Included'],
-            [this._authorTotalFound > this._authorAllPapers.length
-                ? `${this._authorTotalFound.toLocaleString()} total` : this._authorTotalFound.toLocaleString(),
-             'Papers on PubMed'],
+            [`${active.length.toLocaleString()}${excTag}${totalOnPubmed}`, 'Papers Included'],
             [totalCitations.toLocaleString(), 'Total Citations'],
-            [hIndex, 'h-index (est.)'],
-        ].map(([v, l]) => {
-            const isHIndex = l === 'h-index (est.)';
-            const label = isHIndex
-                ? `${l} <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`
-                : l;
-            return `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${label}</span></div>`;
-        }).join('');
+            [hIndex, `h-index (est.) <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`],
+        ].map(([v, l]) =>
+            `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+        ).join('');
 
         const pubsByYear = {};
         active.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });

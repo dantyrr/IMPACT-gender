@@ -31,6 +31,7 @@ class IMPACTApp {
         this._influenceYZero = false;
         this.papersDataCache = {};
         this._worldTopology = null;
+        this._rcitsVersion = 0;
         this.init();
     }
 
@@ -970,6 +971,54 @@ class IMPACTApp {
         return h;
     }
 
+    async _computeReceivedCitsByYear(active) {
+        const version = ++this._rcitsVersion;
+        const loadingEl = document.getElementById('author-rcits-loading');
+        if (loadingEl) { loadingEl.style.display = ''; loadingEl.textContent = 'Loading…'; }
+
+        const allCitedBy = [...new Set(active.flatMap(p => (p.cited_by || []).map(String)))];
+
+        if (allCitedBy.length === 0) {
+            if (this._rcitsVersion !== version) return;
+            if (loadingEl) loadingEl.style.display = 'none';
+            chartManager.createBarChart('author-rcits-chart', [], [], 'Citations', { horizontal: false });
+            return;
+        }
+
+        const MAX = 10000;
+        const pmidsToFetch = allCitedBy.slice(0, MAX);
+        const BATCH = 100, CONC = 5;
+        const byYear = {};
+
+        for (let i = 0; i < pmidsToFetch.length; i += BATCH * CONC) {
+            if (this._rcitsVersion !== version) return; // cancelled
+            const batches = [];
+            for (let j = 0; j < CONC && (i + j * BATCH) < pmidsToFetch.length; j++) {
+                batches.push(pmidsToFetch.slice(i + j * BATCH, i + (j + 1) * BATCH));
+            }
+            const results = await Promise.all(batches.map(async batch => {
+                try {
+                    const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${batch.join(',')}`);
+                    if (!resp.ok) return [];
+                    const json = await resp.json();
+                    return Array.isArray(json) ? json : (json.data || []);
+                } catch { return []; }
+            }));
+            results.flat().forEach(p => { if (p.year) byYear[p.year] = (byYear[p.year] || 0) + 1; });
+        }
+
+        if (this._rcitsVersion !== version) return;
+        if (loadingEl) loadingEl.style.display = 'none';
+
+        const years = Object.keys(byYear).sort();
+        chartManager.createBarChart('author-rcits-chart', years, years.map(y => byYear[y]), 'Citations', { horizontal: false });
+
+        ['png', 'jpg', 'pdf'].forEach(fmt => {
+            const btn = document.getElementById(`dl-rcits-${fmt}`);
+            if (btn) btn.onclick = () => this._downloadAuthorChart('author-rcits-chart', 'Citations per Year', fmt);
+        });
+    }
+
     // ---- Influence Analysis ----
 
     setupInfluence() {
@@ -1653,6 +1702,8 @@ class IMPACTApp {
         wireChart('pubs', 'author-pubs-chart', 'Publications per Year');
         wireChart('cits', 'author-cits-chart', 'Citations by Publication Year');
         wireChart('journals', 'author-journals-chart', 'Top Journals');
+
+        this._computeReceivedCitsByYear(active);
 
         // Close drill-down
         const closeBtn = document.getElementById('author-journal-drill-close');

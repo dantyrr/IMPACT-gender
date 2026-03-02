@@ -32,7 +32,6 @@ class IMPACTApp {
         this.papersDataCache = {};
         this._worldTopology = null;
         this._rcitsVersion = 0;
-        this._authorFilterName = '';
         this.init();
     }
 
@@ -972,136 +971,6 @@ class IMPACTApp {
         return h;
     }
 
-    _isFirstOrLast(authorsStr, filterName) {
-        if (!authorsStr || !filterName) return false;
-        // Normalize: lowercase, strip periods, collapse initials into one token
-        // e.g. "Tyrrell D.J." → "tyrrell dj", "Tyrrell D J" → "tyrrell dj", "Tyrrell DJ" → "tyrrell dj"
-        const norm = s => {
-            const tokens = s.trim().toLowerCase().replace(/\./g, '').split(/\s+/).filter(Boolean);
-            if (!tokens.length) return '';
-            return tokens[0] + (tokens.length > 1 ? ' ' + tokens.slice(1).join('') : '');
-        };
-        const target = norm(filterName);
-        if (!target) return false;
-        const parts = authorsStr.split(',');
-        if (!parts.length) return false;
-        const check = e => {
-            const n = norm(e);
-            if (!n) return false;
-            // Match if one normalised string starts with the other
-            // handles "tyrrell d" matching "tyrrell dj" and vice versa
-            return n.startsWith(target) || target.startsWith(n);
-        };
-        return check(parts[0]) || check(parts[parts.length - 1]);
-    }
-
-    _refreshFLCharts() {
-        // Compute active papers using the same logic as _refreshAuthorMetrics
-        const active = this._authorAllPapers.filter(p => {
-            if (this._authorExcluded.has(String(p.pmid))) return false;
-            if (this._authorActiveTypes) {
-                const types = p.pub_types || [];
-                if (!types.some(t => this._authorActiveTypes.has(t))) return false;
-            }
-            return true;
-        });
-
-        const name = this._authorFilterName;
-
-        const flEntries = [
-            { ph: 'author-fl-pubs-placeholder', canvasId: 'author-fl-pubs-chart' },
-            { ph: 'author-fl-cits-placeholder', canvasId: 'author-fl-cits-chart' },
-            { ph: 'author-fl-rcits-placeholder', canvasId: 'author-fl-rcits-chart' },
-        ];
-
-        const countEl = document.getElementById('fl-match-count');
-
-        if (!name || !active.length) {
-            flEntries.forEach(({ ph, canvasId }) => {
-                const phEl = document.getElementById(ph);
-                if (phEl) phEl.style.display = '';
-                const canvas = document.getElementById(canvasId);
-                if (canvas) {
-                    const container = canvas.closest('.chart-container');
-                    if (container) container.style.display = 'none';
-                }
-            });
-            if (countEl) countEl.style.display = 'none';
-            return;
-        }
-
-        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
-
-        if (countEl) {
-            countEl.textContent = `${flPapers.length} paper${flPapers.length !== 1 ? 's' : ''} where ${name} is first or last author`;
-            countEl.style.display = '';
-        }
-
-        // Show chart containers, hide placeholders
-        flEntries.forEach(({ ph, canvasId }) => {
-            const phEl = document.getElementById(ph);
-            if (phEl) phEl.style.display = 'none';
-            const canvas = document.getElementById(canvasId);
-            if (canvas) {
-                const container = canvas.closest('.chart-container');
-                if (container) container.style.display = '';
-            }
-        });
-
-        const pubsByYear = {};
-        flPapers.forEach(p => { if (p.year) pubsByYear[p.year] = (pubsByYear[p.year] || 0) + 1; });
-        const sortedYears = Object.keys(pubsByYear).sort();
-        chartManager.createBarChart('author-fl-pubs-chart', sortedYears,
-            sortedYears.map(y => pubsByYear[y]), 'Papers', { horizontal: false });
-
-        const citsByYear = {};
-        flPapers.forEach(p => { if (p.year) citsByYear[p.year] = (citsByYear[p.year] || 0) + (p.citation_count || 0); });
-        chartManager.createBarChart('author-fl-cits-chart', sortedYears,
-            sortedYears.map(y => citsByYear[y] || 0), 'Citations', { horizontal: false });
-
-        this._computeReceivedCitsByYear(flPapers, 'author-fl-rcits-chart', 'author-fl-rcits-loading', 'fl-rcits');
-
-        const wireFL = (prefix, canvasId, title) => {
-            ['png', 'jpg', 'pdf'].forEach(fmt => {
-                const btn = document.getElementById(`dl-${prefix}-${fmt}`);
-                if (btn) btn.onclick = () => this._downloadAuthorChart(canvasId, title, fmt);
-            });
-        };
-        wireFL('fl-pubs', 'author-fl-pubs-chart', 'First/Last Author Publications per Year');
-        wireFL('fl-cits', 'author-fl-cits-chart', 'First/Last Author Citations by Publication Year');
-    }
-
-    _refreshFLMetrics(active) {
-        this._lastActiveForFL = active;
-        const flRow = document.getElementById('author-fl-metrics');
-        if (!flRow) return;
-
-        const tipText = 'Papers where the filter name is the first or last listed author in PubMed/iCite data. Co-first and co-corresponding authorship cannot be automatically detected.';
-        const name = this._authorFilterName;
-
-        if (!name || !active.length) {
-            flRow.innerHTML = [
-                ['—', '1st/Last Author Papers'],
-                ['—', '1st/Last Citations'],
-                [`— <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`, '1st/Last h-index'],
-            ].map(([v, l]) =>
-                `<div class="metric-card metric-card-fl"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
-            ).join('');
-            return;
-        }
-
-        const flPapers = active.filter(p => this._isFirstOrLast(p.authors, name));
-        const flCits = flPapers.reduce((s, p) => s + (p.citation_count || 0), 0);
-        const flH = this._computeHIndex(flPapers.map(p => p.citation_count || 0));
-
-        flRow.innerHTML = [
-            [flPapers.length.toLocaleString(), '1st/Last Author Papers'],
-            [flCits.toLocaleString(), '1st/Last Citations'],
-            [`${flH} <span class="metric-info" data-tooltip="${tipText}">ⓘ</span>`, '1st/Last h-index'],
-        ].map(([v, l]) =>
-            `<div class="metric-card metric-card-fl"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
-        ).join('');
-    }
 
     async _computeReceivedCitsByYear(active, canvasId = 'author-rcits-chart', loadingId = 'author-rcits-loading', dlPrefix = 'rcits') {
         const vKey = `_rcitsV_${canvasId}`;
@@ -1519,49 +1388,11 @@ class IMPACTApp {
         });
         document.getElementById('author-pmid-paste-btn').addEventListener('click', () => this.loadFromPastedPMIDs());
 
-        const applyFL = () => {
-            this._authorFilterName = document.getElementById('author-fl-name').value.trim();
-            this._refreshFLCharts();
-        };
-        document.getElementById('author-fl-apply').addEventListener('click', applyFL);
-        document.getElementById('author-fl-name').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') applyFL();
-        });
     }
 
     async loadFromNCBIUrl() {
         const val = document.getElementById('author-ncbi-input').value.trim();
         if (!val) return;
-
-        // Try to extract author name from URL and pre-fill the FL filter
-        try {
-            const urlObj = new URL(val);
-            let extracted = '';
-            // MyNCBI format: /myncbi/tyrrell.dj.1/bibliography/...
-            const myncbi = urlObj.pathname.match(/\/myncbi\/([^/]+)\//);
-            if (myncbi) {
-                const slug = myncbi[1].replace(/\.\d+$/, ''); // remove trailing .1 etc
-                const parts = slug.split('.');
-                if (parts.length >= 2) {
-                    extracted = parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
-                        + ' ' + parts.slice(1).join('').toUpperCase();
-                }
-            }
-            // PubMed search URL: ?term=tyrrell+dj[au]
-            if (!extracted) {
-                const term = urlObj.searchParams.get('term') || '';
-                const m = term.match(/^(.+?)\s*\[au\]/i);
-                if (m) {
-                    const raw = m[1].replace(/\+/g, ' ').trim().split(/\s+/);
-                    extracted = raw[0].charAt(0).toUpperCase() + raw[0].slice(1)
-                        + (raw[1] ? ' ' + raw[1].toUpperCase() : '');
-                }
-            }
-            if (extracted) {
-                const flInput = document.getElementById('author-fl-name');
-                if (flInput) flInput.value = extracted;
-            }
-        } catch (_) {}
 
         const hint = document.getElementById('author-search-hint');
         const results = document.getElementById('author-search-results');
@@ -1710,12 +1541,6 @@ class IMPACTApp {
         if (!input) return;
 
         const names = input.split(',').map(n => n.trim()).filter(Boolean);
-
-        // Pre-fill the first/last author filter input (user still clicks Apply to activate)
-        if (names.length === 1) {
-            const flInput = document.getElementById('author-fl-name');
-            if (flInput) flInput.value = names[0];
-        }
 
         const hint = document.getElementById('author-search-hint');
         const results = document.getElementById('author-search-results');
@@ -1876,7 +1701,6 @@ class IMPACTApp {
         wireChart('cits', 'author-cits-chart', 'Citations by Publication Year');
         wireChart('journals', 'author-journals-chart', 'Top Journals');
 
-        this._refreshFLCharts();
         this._computeReceivedCitsByYear(active);
 
         // Close drill-down

@@ -805,69 +805,6 @@ footer a:hover {
     font-weight: 600;
 }
 
-/* ---- First/last author filter row ---- */
-
-.fl-filter-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.5rem 0 0.25rem;
-}
-
-.fl-filter-label {
-    font-size: 0.82rem;
-    color: var(--text-muted, #666);
-    white-space: nowrap;
-}
-
-.fl-filter-input {
-    font-size: 0.85rem;
-    padding: 0.2rem 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--surface);
-    color: var(--text);
-    width: 160px;
-}
-
-.fl-apply-btn {
-    font-size: 0.82rem;
-    padding: 0.2rem 0.6rem;
-    border: 1px solid var(--primary);
-    border-radius: 4px;
-    background: var(--primary);
-    color: #fff;
-    cursor: pointer;
-}
-
-.fl-section {
-    margin: 1.5rem 0 0.75rem;
-    border-top: 2px solid var(--border);
-    padding-top: 1rem;
-}
-
-.fl-section-inner {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.fl-blurb {
-    font-size: 0.82rem;
-    color: var(--text-muted, #666);
-    margin: 0;
-}
-
-.fl-chart-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 240px;
-    font-size: 0.82rem;
-    color: #aaa;
-    text-align: center;
-    padding: 1rem;
-}
 
 /* ---- Authors breakdown charts ---- */
 

@@ -149,15 +149,23 @@ The website itself is static HTML/JS hosted on GitHub Pages. It fetches data fro
 
 ---
 
-## Weekly Updates (planned)
+## Weekly Updates
 
-Once the bulk data is loaded, keeping it current only requires adding each week's newly published papers and the citations they create. The plan:
+Once the bulk data is loaded, keeping it current only requires adding each week's newly published papers and the citations they create:
 
-**Phase 1 — New papers.** Query the PubMed API for papers published in the last 7 days across all journals. Add them to `impact.db`.
+```bash
+python scripts/run_weekly_update.py          # last 10 days (default)
+python scripts/run_weekly_update.py --days 7  # last 7 days
+python scripts/upload_to_r2.py                # sync changed JSONs to CDN
+```
 
-**Phase 2 — New citation events.** Fetch iCite records for those new papers. Each new paper has a `references` list — the older papers it cites. Cross-reference those against papers already in the database. For each match, record a new citation event dated to the current month. (iCite has a processing lag of days to weeks, so papers without iCite data yet are queued for the next run.)
+The script runs three phases:
 
-**Phase 3 — Update snapshots.** For each journal that received new papers or citations, recompute only the current month's data point and merge it into the existing JSON. Upload changed files to R2.
+**Phase 1 — New papers** (~2 min). Queries PubMed ESearch for papers added in the last N days (one query per day to stay under the 9,999-result limit). Fetches metadata via ESummary, matches each paper's ISSN to our tracked journals, and inserts into `impact.db`. A typical week adds ~30,000 papers.
+
+**Phase 2 — New citation events** (~2 min). Fetches iCite records for the new papers. Each record includes a `references` list — the older papers it cites. Cross-references those against papers already in the database. For each match, records a citation event dated to the citing paper's publication month. A typical week adds ~200,000+ citation events. (iCite has a processing lag of days to weeks, so very new papers without iCite data yet are automatically caught on the next run — overlapping 10-day windows handle this.)
+
+**Phase 3 — Update snapshots** (~25 min). For each journal that received new papers or citations, recomputes the current month's rolling IF (all three window variants) and merges it into the existing JSON. Updates `index.json` with new latest values.
 
 This avoids recomputing the full history for all 8,000+ journals. Only the current month changes, and only for journals that had new activity.
 
@@ -196,6 +204,7 @@ IMPACT/
 │   ├── run_pipeline_bulk.py       # Per-journal processing from bulk DBs
 │   ├── run_all_journals.py        # Parallel orchestrator for all journals
 │   ├── compute_snapshots.py       # Rolling IF calculation + JSON export
+│   ├── run_weekly_update.py        # Incremental weekly update (new papers + citations)
 │   ├── upload_to_r2.py            # Sync JSON files to Cloudflare R2
 │   ├── fix_citation_months.py     # Resolve citation months from yearly → monthly
 │   └── build_date_cache.py        # Seed PMID date cache from DB

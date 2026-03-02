@@ -613,7 +613,6 @@ class ChartManager {
             delete this.charts[canvasId];
         }
     }
-}
 
     /**
      * Citation-by-year chart for a single paper.
@@ -623,7 +622,7 @@ class ChartManager {
      * journalName: string for legend label
      * totalCitations: actual total (may exceed sampled data)
      */
-    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, totalCitations) {
+    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, jifPubYear) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         this._destroy(canvasId);
@@ -699,22 +698,35 @@ class ChartManager {
             };
         }
 
-        const sampled = values.reduce((s, v) => s + v, 0);
-        const subtitle = totalCitations && totalCitations > sampled
-            ? `Based on ${sampled.toLocaleString()} of ${totalCitations.toLocaleString()} total citations (load more citing papers for full data)`
-            : null;
+        // JIF window overlay: highlight pub_year and pub_year+1 bars
+        if (jifPubYear) {
+            const jifValues = labels.map(y => {
+                const yr = parseInt(y);
+                return (yr === jifPubYear || yr === jifPubYear + 1) ? (yearCounts[yr] || 0) : 0;
+            });
+            datasets.push({
+                type: 'bar',
+                label: `JIF Window (${jifPubYear}–${jifPubYear + 1})`,
+                data: jifValues,
+                backgroundColor: this.palette[4] + 'bb',  // amber
+                borderColor: this.palette[4],
+                borderWidth: 1,
+                yAxisID: 'y',
+                order: 0,
+            });
+        }
 
         this.charts[canvasId] = new Chart(ctx, {
             type: 'bar',
             data: { labels, datasets },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 2.2,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { display: datasets.length > 1, labels: { color: '#c8d8e8', boxWidth: 14 } },
                     tooltip: { callbacks: { label: c => ` ${c.parsed.y != null ? c.parsed.y.toLocaleString() : '—'} ${c.dataset.label}` } },
-                    subtitle: subtitle ? { display: true, text: subtitle, color: '#8ba0b4', font: { size: 10 }, position: 'bottom', padding: { top: 6 } } : { display: false },
                 },
                 scales,
             },

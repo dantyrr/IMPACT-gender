@@ -255,10 +255,14 @@
                         <button class="toggle-btn" data-win="2">2-Year Rolling</button>
                         <button class="toggle-btn" data-win="5">5-Year Rolling</button>
                     </div>
-                    <span class="chart-controls-label" style="margin-left:1.2rem;">Journal IF:</span>
-                    <div class="toggle-group" id="paper-overlay-toggle">
-                        <button class="toggle-btn active" data-overlay="off">Off</button>
-                        <button class="toggle-btn" id="paper-overlay-on-btn" data-overlay="on" disabled title="Journal not found in database">On</button>
+                    <span class="chart-controls-label" style="margin-left:1.2rem;">Overlays:</span>
+                    <div class="toggle-group" id="paper-jif-toggle">
+                        <button class="toggle-btn active" data-jif="off">JIF Window: Off</button>
+                        <button class="toggle-btn" data-jif="on">JIF Window: On</button>
+                    </div>
+                    <div class="toggle-group" id="paper-overlay-toggle" style="margin-left:0.5rem;">
+                        <button class="toggle-btn active" data-overlay="off">Journal IF: Off</button>
+                        <button class="toggle-btn" id="paper-overlay-on-btn" data-overlay="on" disabled title="Journal not found in database">Journal IF: On</button>
                     </div>
                 </div>
                 <div class="chart-container" style="margin-top:0.5rem;">

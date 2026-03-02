@@ -697,15 +697,36 @@ class IMPACTApp {
         const center = this._networkCenter;
         if (!center) return;
 
-        // Build year histogram from citing papers already in cache
+        // Fetch ALL citing papers for analytics (independent of network display limit)
+        const allCitingPmids = (this._networkCitedBy || []).map(String);
+        const CAP = 10000;
+        const pmidsToFetch = allCitingPmids.slice(0, CAP);
+
+        // Show panel early with loading state
+        const panel = document.getElementById('paper-analytics');
+        panel.style.display = '';
+        document.getElementById('paper-analytics-title').textContent = center.title || `PMID ${center.pmid}`;
+        const authStr = Array.isArray(center.authors) && center.authors.length
+            ? center.authors.slice(0, 2).join(', ') + (center.authors.length > 2 ? ' et al.' : '') : '';
+        document.getElementById('paper-analytics-meta').textContent =
+            [authStr, center.journal, center.year].filter(Boolean).join(' · ');
+        document.getElementById('paper-analytics-stats').innerHTML =
+            `<div class="metric-card"><span class="metric-value">Loading…</span><span class="metric-label">Fetching citation data</span></div>`;
+
+        // Fetch all citing papers (may already be partially cached from network)
+        const uncachedPmids = pmidsToFetch.filter(p => !this._networkPaperCache.has(p));
+        if (uncachedPmids.length) {
+            const fetched = await this._fetchICiteBatch(uncachedPmids);
+            fetched.forEach(p => this._networkPaperCache.set(String(p.pmid), p));
+        }
+
+        // Build year and journal histograms from all fetched citing papers
         const yearCounts = {};
         const journalCounts = {};
-        let sampledCitations = 0;
-        for (const [, p] of this._networkPaperCache) {
-            if (p.year) {
-                yearCounts[p.year] = (yearCounts[p.year] || 0) + 1;
-                sampledCitations++;
-            }
+        for (const pmid of pmidsToFetch) {
+            const p = this._networkPaperCache.get(pmid);
+            if (!p) continue;
+            if (p.year) yearCounts[p.year] = (yearCounts[p.year] || 0) + 1;
             if (p.journal) {
                 const j = p.journal.trim();
                 journalCounts[j] = (journalCounts[j] || 0) + 1;
@@ -722,7 +743,7 @@ class IMPACTApp {
 
         this._paperYearCounts = yearCounts;
         this._paperJournalCounts = journalCounts;
-        this._paperSampledCitations = sampledCitations;
+        const fetchedCount = pmidsToFetch.length;
 
         const totalCitations = center.citation_count || 0;
         const pubYear = center.year;
@@ -730,27 +751,16 @@ class IMPACTApp {
         const avgPerYear = (totalCitations / yearsActive).toFixed(1);
         const peakEntry = Object.entries(yearCounts).reduce((best, [y, n]) => n > best[1] ? [y, n] : best, ['—', 0]);
 
-        // Show panel and fill title/meta
-        const panel = document.getElementById('paper-analytics');
-        panel.style.display = '';
-
-        const titleEl = document.getElementById('paper-analytics-title');
-        titleEl.textContent = center.title || `PMID ${center.pmid}`;
-
-        const metaEl = document.getElementById('paper-analytics-meta');
-        const authStr = Array.isArray(center.authors) && center.authors.length
-            ? center.authors.slice(0, 2).join(', ') + (center.authors.length > 2 ? ' et al.' : '')
-            : '';
-        metaEl.textContent = [authStr, center.journal, center.year].filter(Boolean).join(' · ');
+        // JIF window: citations in pub_year + pub_year+1
+        const jifWindowCits = pubYear
+            ? (yearCounts[pubYear] || 0) + (yearCounts[pubYear + 1] || 0) : null;
 
         // Stats
         document.getElementById('paper-analytics-stats').innerHTML = [
             [totalCitations.toLocaleString(), 'Total Citations'],
             [avgPerYear, 'Citations / Year (avg)'],
             [peakEntry[0], 'Peak Citation Year'],
-            [sampledCitations < totalCitations
-                ? `${sampledCitations.toLocaleString()} / ${totalCitations.toLocaleString()} loaded`
-                : totalCitations.toLocaleString(), 'Citing Papers'],
+            [jifWindowCits != null ? jifWindowCits.toLocaleString() : '—', `JIF Window (${pubYear}–${pubYear + 1})`],
         ].map(([v, l]) =>
             `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
         ).join('');
@@ -782,12 +792,24 @@ class IMPACTApp {
         // Wire toggles
         this._paperWindow = 1;
         this._paperOverlay = false;
+        this._paperJifWindow = false;
+        this._paperPubYear = pubYear;
 
         document.querySelectorAll('#paper-window-toggle .toggle-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.win === '1');
             btn.onclick = () => {
                 this._paperWindow = parseInt(btn.dataset.win);
                 document.querySelectorAll('#paper-window-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this._updatePaperCitationChart();
+            };
+        });
+
+        document.querySelectorAll('#paper-jif-toggle .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.jif === 'off');
+            btn.onclick = () => {
+                this._paperJifWindow = btn.dataset.jif === 'on';
+                document.querySelectorAll('#paper-jif-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this._updatePaperCitationChart();
             };
@@ -825,13 +847,14 @@ class IMPACTApp {
     _updatePaperCitationChart() {
         const journalTs = this._paperOverlay && this._paperJournalData
             ? (this._paperJournalData.timeseries || null) : null;
+        const jifPubYear = this._paperJifWindow ? (this._paperPubYear || null) : null;
         chartManager.createPaperCitationChart(
             'paper-citations-chart',
             this._paperYearCounts || {},
             this._paperWindow || 1,
             journalTs,
             this._paperJournalName || '',
-            this._networkCenter?.citation_count,
+            jifPubYear,
         );
     }
 

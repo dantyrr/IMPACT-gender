@@ -617,6 +617,7 @@ class IMPACTApp {
         this._networkCenter = null;
         this._networkCitedBy = [];
         this._networkLayoutMode = 'force';
+        document.getElementById('paper-analytics').style.display = 'none';
 
         try {
             const resp = await fetch(`https://icite.od.nih.gov/api/pubs?pmids=${pmid}`);
@@ -653,6 +654,7 @@ class IMPACTApp {
             hint.style.display = 'none';
 
             this._setupNetworkControls();
+            this._renderPaperAnalytics();
 
         } catch (e) {
             hint.textContent = `Error: ${e.message}`;
@@ -687,6 +689,176 @@ class IMPACTApp {
             }
             resolve();
         }));
+    }
+
+    // ---- Paper Analytics (above network) ----
+
+    async _renderPaperAnalytics() {
+        const center = this._networkCenter;
+        if (!center) return;
+
+        // Build year histogram from citing papers already in cache
+        const yearCounts = {};
+        const journalCounts = {};
+        let sampledCitations = 0;
+        for (const [, p] of this._networkPaperCache) {
+            if (p.year) {
+                yearCounts[p.year] = (yearCounts[p.year] || 0) + 1;
+                sampledCitations++;
+            }
+            if (p.journal) {
+                const j = p.journal.trim();
+                journalCounts[j] = (journalCounts[j] || 0) + 1;
+            }
+        }
+
+        // Fill zeros from publication year to current year
+        const currentYear = new Date().getFullYear();
+        if (center.year) {
+            for (let y = center.year; y <= currentYear; y++) {
+                if (!(y in yearCounts)) yearCounts[y] = 0;
+            }
+        }
+
+        this._paperYearCounts = yearCounts;
+        this._paperJournalCounts = journalCounts;
+        this._paperSampledCitations = sampledCitations;
+
+        const totalCitations = center.citation_count || 0;
+        const pubYear = center.year;
+        const yearsActive = pubYear ? Math.max(1, currentYear - pubYear + 1) : 1;
+        const avgPerYear = (totalCitations / yearsActive).toFixed(1);
+        const peakEntry = Object.entries(yearCounts).reduce((best, [y, n]) => n > best[1] ? [y, n] : best, ['—', 0]);
+
+        // Show panel and fill title/meta
+        const panel = document.getElementById('paper-analytics');
+        panel.style.display = '';
+
+        const titleEl = document.getElementById('paper-analytics-title');
+        titleEl.textContent = center.title || `PMID ${center.pmid}`;
+
+        const metaEl = document.getElementById('paper-analytics-meta');
+        const authStr = Array.isArray(center.authors) && center.authors.length
+            ? center.authors.slice(0, 2).join(', ') + (center.authors.length > 2 ? ' et al.' : '')
+            : '';
+        metaEl.textContent = [authStr, center.journal, center.year].filter(Boolean).join(' · ');
+
+        // Stats
+        document.getElementById('paper-analytics-stats').innerHTML = [
+            [totalCitations.toLocaleString(), 'Total Citations'],
+            [avgPerYear, 'Citations / Year (avg)'],
+            [peakEntry[0], 'Peak Citation Year'],
+            [sampledCitations < totalCitations
+                ? `${sampledCitations.toLocaleString()} / ${totalCitations.toLocaleString()} loaded`
+                : totalCitations.toLocaleString(), 'Citing Papers'],
+        ].map(([v, l]) =>
+            `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+        ).join('');
+
+        // Try to find and load journal data for overlay
+        this._paperJournalData = null;
+        this._paperJournalName = center.journal || '';
+        if (center.journal && this.journals) {
+            const nameLower = center.journal.toLowerCase();
+            const match = this.journals.find(j => j.name.toLowerCase() === nameLower)
+                || this.journals.find(j => nameLower.includes(j.name.toLowerCase()) || j.name.toLowerCase().includes(nameLower));
+            if (match) {
+                try {
+                    if (!this.journalDataCache[match.slug]) {
+                        this.journalDataCache[match.slug] = await dataLoader.loadJournal(match.slug);
+                    }
+                    this._paperJournalData = this.journalDataCache[match.slug];
+                    this._paperJournalName = match.name;
+                } catch (e) { /* journal not available */ }
+            }
+        }
+
+        const overlayBtn = document.getElementById('paper-overlay-on-btn');
+        if (overlayBtn) {
+            overlayBtn.disabled = !this._paperJournalData;
+            overlayBtn.title = this._paperJournalData ? '' : 'Journal not found in database';
+        }
+
+        // Wire toggles
+        this._paperWindow = 1;
+        this._paperOverlay = false;
+
+        document.querySelectorAll('#paper-window-toggle .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.win === '1');
+            btn.onclick = () => {
+                this._paperWindow = parseInt(btn.dataset.win);
+                document.querySelectorAll('#paper-window-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this._updatePaperCitationChart();
+            };
+        });
+
+        document.querySelectorAll('#paper-overlay-toggle .toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.overlay === 'off');
+            btn.onclick = () => {
+                if (btn.disabled) return;
+                this._paperOverlay = btn.dataset.overlay === 'on';
+                document.querySelectorAll('#paper-overlay-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this._updatePaperCitationChart();
+            };
+        });
+
+        // Download buttons
+        document.getElementById('paper-cit-download-bar').style.display = '';
+        document.getElementById('paper-cit-dl-png').onclick = () => this._downloadPaperChart('png');
+        document.getElementById('paper-cit-dl-jpg').onclick = () => this._downloadPaperChart('jpg');
+        document.getElementById('paper-cit-dl-pdf').onclick = () => this._downloadPaperChart('pdf');
+
+        // Render charts
+        this._updatePaperCitationChart();
+
+        // Top citing journals bar chart
+        const topJournals = Object.entries(journalCounts)
+            .sort((a, b) => b[1] - a[1]).slice(0, 15);
+        if (topJournals.length) {
+            chartManager.createBarChart('paper-citing-journals-chart',
+                topJournals.map(x => x[0]), topJournals.map(x => x[1]), 'Papers');
+        }
+    }
+
+    _updatePaperCitationChart() {
+        const journalTs = this._paperOverlay && this._paperJournalData
+            ? (this._paperJournalData.timeseries || null) : null;
+        chartManager.createPaperCitationChart(
+            'paper-citations-chart',
+            this._paperYearCounts || {},
+            this._paperWindow || 1,
+            journalTs,
+            this._paperJournalName || '',
+            this._networkCenter?.citation_count,
+        );
+    }
+
+    _downloadPaperChart(format) {
+        const chart = chartManager.charts['paper-citations-chart'];
+        if (!chart) return;
+        const pmid = this._networkCenter?.pmid || 'unknown';
+        const filename = `citations-pmid-${pmid}`;
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+            const imgW = pw - 20;
+            const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+            doc.setFontSize(11);
+            doc.text(`IMPACT — Citations: PMID ${pmid}`, 10, 10);
+            doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+            doc.save(`${filename}.pdf`);
+            return;
+        }
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const a = document.createElement('a');
+        a.href = chart.toBase64Image(mime, 1);
+        a.download = `${filename}.${format}`;
+        a.click();
     }
 
     _setupNetworkControls() {

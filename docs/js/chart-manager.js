@@ -615,4 +615,111 @@ class ChartManager {
     }
 }
 
+    /**
+     * Citation-by-year chart for a single paper.
+     * yearCounts: {year: count, ...}
+     * windowSize: 1 (annual) | 2 (2-yr rolling) | 5 (5-yr rolling)
+     * journalTimeseries: array of {month: 'YYYY-MM', rolling_if: N} or null
+     * journalName: string for legend label
+     * totalCitations: actual total (may exceed sampled data)
+     */
+    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, totalCitations) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        this._destroy(canvasId);
+
+        const years = Object.keys(yearCounts).map(Number).sort((a, b) => a - b);
+
+        // Compute windowed values
+        const values = years.map(y => {
+            if (windowSize === 1) return yearCounts[y] || 0;
+            if (windowSize === 2) return (yearCounts[y] || 0) + (yearCounts[y - 1] || 0);
+            // 5-year
+            return [y, y-1, y-2, y-3, y-4].reduce((s, yr) => s + (yearCounts[yr] || 0), 0);
+        });
+
+        const labels = years.map(String);
+        const windowLabel = windowSize === 1 ? 'Citations per Year'
+            : windowSize === 2 ? '2-Year Rolling Citations'
+            : '5-Year Rolling Citations';
+
+        const datasets = [{
+            type: windowSize === 1 ? 'bar' : 'line',
+            label: windowLabel,
+            data: values,
+            backgroundColor: this.palette[0] + (windowSize === 1 ? 'aa' : '33'),
+            borderColor: this.palette[0],
+            borderWidth: windowSize === 1 ? 1 : 2,
+            fill: windowSize !== 1,
+            tension: 0.3,
+            pointRadius: windowSize === 1 ? 0 : 3,
+            yAxisID: 'y',
+            order: 1,
+        }];
+
+        const scales = {
+            x: { grid: { color: '#1e2e40' }, ticks: { color: '#8ba0b4', maxRotation: 45 } },
+            y: {
+                beginAtZero: true,
+                grid: { color: '#1e2e40' },
+                ticks: { color: '#8ba0b4' },
+                title: { display: true, text: windowLabel, color: '#8ba0b4', font: { size: 11 } },
+            },
+        };
+
+        if (journalTimeseries && journalTimeseries.length) {
+            // Downsample to yearly: take last available month per year
+            const jifByYear = {};
+            journalTimeseries.forEach(pt => {
+                const yr = parseInt((pt.month || '').split('-')[0]);
+                if (yr) jifByYear[yr] = pt.rolling_if;
+            });
+            const jifValues = labels.map(y => jifByYear[parseInt(y)] ?? null);
+
+            datasets.push({
+                type: 'line',
+                label: `${journalName || 'Journal'} IF (24-mo)`,
+                data: jifValues,
+                borderColor: this.palette[1],
+                backgroundColor: 'transparent',
+                borderDash: [5, 4],
+                borderWidth: 2,
+                tension: 0.3,
+                pointRadius: 2,
+                yAxisID: 'y2',
+                order: 0,
+                spanGaps: true,
+            });
+            scales.y2 = {
+                position: 'right',
+                beginAtZero: true,
+                grid: { drawOnChartArea: false },
+                ticks: { color: this.palette[1] },
+                title: { display: true, text: 'Journal IF', color: this.palette[1], font: { size: 11 } },
+            };
+        }
+
+        const sampled = values.reduce((s, v) => s + v, 0);
+        const subtitle = totalCitations && totalCitations > sampled
+            ? `Based on ${sampled.toLocaleString()} of ${totalCitations.toLocaleString()} total citations (load more citing papers for full data)`
+            : null;
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: datasets.length > 1, labels: { color: '#c8d8e8', boxWidth: 14 } },
+                    tooltip: { callbacks: { label: c => ` ${c.parsed.y != null ? c.parsed.y.toLocaleString() : '—'} ${c.dataset.label}` } },
+                    subtitle: subtitle ? { display: true, text: subtitle, color: '#8ba0b4', font: { size: 10 }, position: 'bottom', padding: { top: 6 } } : { display: false },
+                },
+                scales,
+            },
+        });
+    }
+}
+
 const chartManager = new ChartManager();

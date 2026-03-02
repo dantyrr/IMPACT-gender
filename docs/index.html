@@ -242,6 +242,45 @@
 
         <div id="network-results" style="display:none">
             <div class="metrics-row" id="network-metrics"></div>
+
+            <!-- Paper Analytics (citation trend + citing journals) -->
+            <div id="paper-analytics" style="display:none;">
+                <h4 id="paper-analytics-title" style="margin:1.2rem 0 0.2rem; font-size:1rem; color:#c8d8e8; font-weight:600;"></h4>
+                <p id="paper-analytics-meta" class="data-note" style="margin:0 0 1rem;"></p>
+                <div class="metrics-row" id="paper-analytics-stats"></div>
+                <div class="chart-controls" style="margin-top:1rem;">
+                    <span class="chart-controls-label">Window:</span>
+                    <div class="toggle-group" id="paper-window-toggle">
+                        <button class="toggle-btn active" data-win="1">Annual</button>
+                        <button class="toggle-btn" data-win="2">2-Year Rolling</button>
+                        <button class="toggle-btn" data-win="5">5-Year Rolling</button>
+                    </div>
+                    <span class="chart-controls-label" style="margin-left:1.2rem;">Journal IF:</span>
+                    <div class="toggle-group" id="paper-overlay-toggle">
+                        <button class="toggle-btn active" data-overlay="off">Off</button>
+                        <button class="toggle-btn" id="paper-overlay-on-btn" data-overlay="on" disabled title="Journal not found in database">On</button>
+                    </div>
+                </div>
+                <div class="chart-container" style="margin-top:0.5rem;">
+                    <canvas id="paper-citations-chart"></canvas>
+                </div>
+                <div class="download-bar" id="paper-cit-download-bar" style="display:none;">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="paper-cit-dl-png">PNG</button>
+                    <button class="download-btn" id="paper-cit-dl-jpg">JPG</button>
+                    <button class="download-btn" id="paper-cit-dl-pdf">PDF</button>
+                </div>
+                <div class="authors-charts-grid" style="margin-top:1.5rem;">
+                    <div class="authors-chart-card">
+                        <h4>Top Citing Journals</h4>
+                        <div class="chart-container" style="margin-bottom:0;">
+                            <canvas id="paper-citing-journals-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <hr style="border:none; border-top:1px solid #2a3a4a; margin:1.5rem 0;">
+            </div>
+
             <div id="network-controls" class="network-controls" style="display:none">
                 <div class="net-ctrl-group">
                     <span class="net-ctrl-label">Layout</span>

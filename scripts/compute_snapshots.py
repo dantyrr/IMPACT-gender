@@ -29,53 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("compute")
 
-# Official 2024 JIFs for comparison
-OFFICIAL_JIFS = {
-    # Original 5
-    "1474-9718": 8.0,    # Aging Cell
-    "0021-9738": 13.3,   # JCI
-    "2662-8465": 17.0,   # Nature Aging
-    "2050-084X": 6.4,    # eLife
-    "2047-9980": 5.0,    # JAHA
-    # New journals (2023 JIF; 2024 values pending release)
-    "0028-4793": 96.2,   # NEJM
-    "0140-6736": 168.9,  # The Lancet
-    "0098-7484": 63.1,   # JAMA
-    "0003-4819": 39.2,   # Annals of Internal Medicine
-    "1078-8956": 82.9,   # Nature Medicine
-    "0092-8674": 64.5,   # Cell
-    "1946-6234": 17.1,   # Science Translational Medicine
-    "0009-7322": 37.8,   # Circulation
-    "0006-4971": 20.3,   # Blood
-    "1074-7613": 32.4,   # Immunity
-    "1529-2908": 27.7,   # Nature Immunology
-    "0016-5085": 29.4,   # Gastroenterology
-    "0017-5749": 24.5,   # Gut
-    "1554-8627": 14.9,   # Autophagy
-    "2213-2317": 11.4,   # Redox Biology
-    "2470-9468": 17.6,   # Science Immunology
-    "0036-8075": 44.7,   # Science
-    "0028-0836": 50.5,   # Nature
-    "2041-1723": 14.7,   # Nature Communications
-    # Nature specialty journals
-    "1061-4036": 41.1,   # Nature Genetics
-    "1548-7091": 48.0,   # Nature Methods
-    "1087-0156": 33.1,   # Nature Biotechnology
-    "1465-7392": 21.3,   # Nature Cell Biology
-    "1545-9993": 12.5,   # Nature Structural and Molecular Biology
-    # Clinical
-    "0959-8138": 105.7,  # The BMJ
-    "0923-7534": 51.8,   # Annals of Oncology
-    "2374-2437": 33.0,   # JAMA Oncology
-    "2168-6106": 22.5,   # JAMA Internal Medicine
-    # Cell biology / molecular
-    "1097-2765": 14.9,   # Molecular Cell
-    "1534-5807": 11.1,   # Developmental Cell
-    "0261-4189": 9.4,    # EMBO Journal
-    # Experimental medicine / open access
-    "0022-1007": 14.6,   # Journal of Experimental Medicine
-    "1544-9173": 9.8,    # PLOS Biology
-}
+OFFICIAL_JIFS = {}
 
 
 def process_journals(journal_chunk, db_path, official_jifs, worker_id):

@@ -354,6 +354,18 @@ class IMPACTApp {
             chartManager.createCompositionChart('composition-chart', ts);
             chartManager.createPapersChart('papers-chart', ts);
 
+            // Show download bars and wire up buttons
+            const detailCharts = ['jd-chart', 'citation-chart', 'composition-chart', 'papers-chart'];
+            const chartCanvasIds = ['journal-chart', 'citation-chart', 'composition-chart', 'papers-chart'];
+            detailCharts.forEach((id, idx) => {
+                const bar = document.getElementById(`${id}-download-bar`);
+                if (bar) bar.style.display = '';
+                ['png', 'jpg', 'pdf'].forEach(fmt => {
+                    const btn = document.getElementById(`${id}-dl-${fmt}`);
+                    if (btn) btn.onclick = () => this._downloadDetailChart(chartCanvasIds[idx], slug, fmt);
+                });
+            });
+
             // Back button
             document.getElementById('back-to-list').onclick = () => {
                 container.style.display = 'none';
@@ -364,6 +376,36 @@ class IMPACTApp {
         } catch (error) {
             console.error('Error loading journal detail:', error);
         }
+    }
+
+    // ---- Journal Detail Downloads ----
+
+    _downloadDetailChart(canvasId, slug, format) {
+        const chart = chartManager.charts[canvasId];
+        if (!chart) return;
+        const filename = `${canvasId}-${slug}`;
+
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+            const imgW = pw - 20;
+            const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+            const journalName = (this.journals.find(j => j.slug === slug) || {}).name || slug;
+            doc.setFontSize(11);
+            doc.text(`IMPACT — ${journalName}`, 10, 10);
+            doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+            doc.save(`${filename}.pdf`);
+            return;
+        }
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const url = chart.toBase64Image(mime, 1);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.${format}`;
+        a.click();
     }
 
     // ---- Display timeseries helper ----
@@ -1972,6 +2014,19 @@ class IMPACTApp {
             chartManager.createBarChart('geo-recent-chart',
                 topRecent.map(x => x[0]), topRecent.map(x => x[1]), 'Papers');
 
+            // Show download bars and wire up buttons
+            this._geoSlug = slug;
+            const journalName = (this.journals.find(j => j.slug === slug) || {}).name || slug;
+            this._geoJournalName = journalName;
+            ['geo-map', 'geo-trend', 'geo-top', 'geo-recent'].forEach(id => {
+                const bar = document.getElementById(`${id}-download-bar`);
+                if (bar) bar.style.display = '';
+                ['png', 'jpg', 'pdf'].forEach(fmt => {
+                    const btn = document.getElementById(`${id}-dl-${fmt}`);
+                    if (btn) btn.onclick = () => this._downloadGeo(id, fmt);
+                });
+            });
+
         } catch (e) {
             hint.textContent = 'Geographic data not yet available for this journal.';
             hint.style.display = '';
@@ -2113,6 +2168,91 @@ class IMPACTApp {
                 d3.select(this).attr('fill-opacity', 0.55);
                 tip.style('opacity', 0);
             });
+    }
+
+    // ---- Geography Downloads ----
+
+    _downloadGeo(chartId, format) {
+        const slug = this._geoSlug || 'journal';
+        const filename = `geo-${chartId.replace('geo-', '')}-${slug}`;
+
+        if (chartId === 'geo-map') {
+            this._downloadGeoMapImage(filename, format);
+            return;
+        }
+
+        const chart = chartManager.charts[chartId];
+        if (!chart) return;
+
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+            const imgW = pw - 20;
+            const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+            doc.setFontSize(11);
+            doc.text(`IMPACT — Geography: ${this._geoJournalName || slug}`, 10, 10);
+            doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+            doc.save(`${filename}.pdf`);
+            return;
+        }
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const url = chart.toBase64Image(mime, 1);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.${format}`;
+        a.click();
+    }
+
+    _downloadGeoMapImage(filename, format) {
+        const container = document.getElementById('geo-map');
+        const svgEl = container && container.querySelector('svg');
+        if (!svgEl) return;
+
+        const svgClone = svgEl.cloneNode(true);
+        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        const serializer = new XMLSerializer();
+        const svgStr = serializer.serializeToString(svgClone);
+        const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        const img = new Image();
+        const W = 1920, H = 1000;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = W;
+            canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            if (format === 'jpg') {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, W, H);
+            }
+            ctx.drawImage(img, 0, 0, W, H);
+            URL.revokeObjectURL(url);
+
+            if (format === 'pdf') {
+                if (!window.jspdf) return;
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const pw = doc.internal.pageSize.getWidth();
+                const ph = doc.internal.pageSize.getHeight();
+                const imgW = pw - 20;
+                const imgH = Math.min(imgW * (H / W), ph - 28);
+                doc.setFontSize(11);
+                doc.text(`IMPACT — Geography: ${this._geoJournalName || 'journal'}`, 10, 10);
+                doc.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 16, imgW, imgH);
+                doc.save(`${filename}.pdf`);
+                return;
+            }
+            const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL(mime, 0.95);
+            a.download = `${filename}.${format}`;
+            a.click();
+        };
+        img.src = url;
     }
 
     // ---- Author Metrics ----

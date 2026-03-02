@@ -150,6 +150,12 @@
             <div class="chart-container">
                 <canvas id="journal-chart"></canvas>
             </div>
+            <div class="download-bar" id="jd-chart-download-bar" style="display:none;">
+                <span class="download-label">Download:</span>
+                <button class="download-btn" id="jd-chart-dl-png">PNG</button>
+                <button class="download-btn" id="jd-chart-dl-jpg">JPG</button>
+                <button class="download-btn" id="jd-chart-dl-pdf">PDF</button>
+            </div>
 
             <div class="chart-controls">
                 <span class="chart-controls-label">Citation Trends:</span>
@@ -162,13 +168,31 @@
             <div class="chart-container">
                 <canvas id="citation-chart"></canvas>
             </div>
+            <div class="download-bar" id="citation-chart-download-bar" style="display:none;">
+                <span class="download-label">Download:</span>
+                <button class="download-btn" id="citation-chart-dl-png">PNG</button>
+                <button class="download-btn" id="citation-chart-dl-jpg">JPG</button>
+                <button class="download-btn" id="citation-chart-dl-pdf">PDF</button>
+            </div>
 
             <div class="chart-container">
                 <canvas id="composition-chart"></canvas>
             </div>
+            <div class="download-bar" id="composition-chart-download-bar" style="display:none;">
+                <span class="download-label">Download:</span>
+                <button class="download-btn" id="composition-chart-dl-png">PNG</button>
+                <button class="download-btn" id="composition-chart-dl-jpg">JPG</button>
+                <button class="download-btn" id="composition-chart-dl-pdf">PDF</button>
+            </div>
 
             <div class="chart-container">
                 <canvas id="papers-chart"></canvas>
+            </div>
+            <div class="download-bar" id="papers-chart-download-bar" style="display:none;">
+                <span class="download-label">Download:</span>
+                <button class="download-btn" id="papers-chart-dl-png">PNG</button>
+                <button class="download-btn" id="papers-chart-dl-jpg">JPG</button>
+                <button class="download-btn" id="papers-chart-dl-pdf">PDF</button>
             </div>
         </div>
     </section>
@@ -403,12 +427,24 @@
             <div class="authors-chart-card" style="margin-bottom:1rem;">
                 <h4>Papers by Country — World Map (First Author, All Years)</h4>
                 <div id="geo-map" style="position:relative; width:100%; border-radius:6px; overflow:hidden;"></div>
+                <div class="download-bar" id="geo-map-download-bar" style="display:none;">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="geo-map-dl-png">PNG</button>
+                    <button class="download-btn" id="geo-map-dl-jpg">JPG</button>
+                    <button class="download-btn" id="geo-map-dl-pdf">PDF</button>
+                </div>
             </div>
 
             <div class="authors-chart-card" style="margin-bottom:1rem;">
                 <h4>Papers by Country — Over Time (First Author)</h4>
                 <div class="chart-container" style="height:420px;">
                     <canvas id="geo-trend-chart"></canvas>
+                </div>
+                <div class="download-bar" id="geo-trend-download-bar" style="display:none;">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="geo-trend-dl-png">PNG</button>
+                    <button class="download-btn" id="geo-trend-dl-jpg">JPG</button>
+                    <button class="download-btn" id="geo-trend-dl-pdf">PDF</button>
                 </div>
             </div>
 
@@ -418,11 +454,23 @@
                     <div class="chart-container" style="margin-bottom:0;">
                         <canvas id="geo-top-chart"></canvas>
                     </div>
+                    <div class="download-bar" id="geo-top-download-bar" style="display:none;">
+                        <span class="download-label">Download:</span>
+                        <button class="download-btn" id="geo-top-dl-png">PNG</button>
+                        <button class="download-btn" id="geo-top-dl-jpg">JPG</button>
+                        <button class="download-btn" id="geo-top-dl-pdf">PDF</button>
+                    </div>
                 </div>
                 <div class="authors-chart-card">
                     <h4>Country Share — Most Recent 3 Years</h4>
                     <div class="chart-container" style="margin-bottom:0;">
                         <canvas id="geo-recent-chart"></canvas>
+                    </div>
+                    <div class="download-bar" id="geo-recent-download-bar" style="display:none;">
+                        <span class="download-label">Download:</span>
+                        <button class="download-btn" id="geo-recent-dl-png">PNG</button>
+                        <button class="download-btn" id="geo-recent-dl-jpg">JPG</button>
+                        <button class="download-btn" id="geo-recent-dl-pdf">PDF</button>
                     </div>
                 </div>
             </div>

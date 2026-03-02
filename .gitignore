@@ -30,3 +30,8 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Data files served from Cloudflare R2 (not committed to git)
+docs/data/journals/
+docs/data/authors/
+docs/data/papers/

@@ -2402,9 +2402,7 @@ class IMPACTApp {
             return this.authorDataCache[slug];
         }
         try {
-            const resp = await fetch(`data/authors/${slug}.json`);
-            if (!resp.ok) { this.authorDataCache[slug] = null; return null; }
-            const d = await resp.json();
+            const d = await dataLoader.loadAuthor(slug);
             this.authorDataCache[slug] = d.authors || null;
             return this.authorDataCache[slug];
         } catch (e) {

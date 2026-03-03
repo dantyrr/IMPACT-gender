@@ -904,26 +904,43 @@ class IMPACTApp {
     _updatePaperCitationChart() {
         const journalTs = this._paperOverlay && this._paperJournalData
             ? (this._paperJournalData.timeseries || null) : null;
-        const jifPubYear  = this._paperJifWindow ? (this._paperPubYear  || null) : null;
-        const jifPubMonth = this._paperJifWindow ? (this._paperPubMonth || null) : null;
         chartManager.createPaperCitationChart(
             'paper-citations-chart',
             this._paperYearCounts || {},
             this._paperWindow || 1,
             journalTs,
             this._paperJournalName || '',
-            jifPubYear,
-            jifPubMonth,
+            this._paperPubYear || null,
+            this._paperPubMonth || null,
+            this._paperJifWindow || false,
         );
 
         // Color legend note below chart
         const note = document.getElementById('paper-chart-note');
         if (note) {
-            if (jifPubYear && (this._paperWindow || 1) === 1) {
-                const m = this._paperPubMonth;
-                const ext = m && m > 1 ? ` &nbsp;|&nbsp; <span style="display:inline-block;width:10px;height:10px;background:#009E73;border-radius:2px;vertical-align:middle;"></span> partial ${jifPubYear + 2} — extra ${m - 1} month${m - 1 > 1 ? 's' : ''} in the IMPACT 24-mo window beyond the JIF window` : '';
-                note.innerHTML =
-                    `<span style="display:inline-block;width:10px;height:10px;background:#E69F00;border-radius:2px;vertical-align:middle;"></span> JIF window (${jifPubYear}–${jifPubYear + 1})${ext} &nbsp;|&nbsp; <span style="display:inline-block;width:10px;height:10px;background:#0072B2;border-radius:2px;vertical-align:middle;"></span> other years`;
+            const win = this._paperWindow || 1;
+            const py  = this._paperPubYear;
+            const pm  = this._paperPubMonth;
+            if (win === 1 && py && pm) {
+                const sq = (color) =>
+                    `<span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:2px;vertical-align:middle;margin-right:3px;"></span>`;
+                const sep = ' &nbsp;|&nbsp; ';
+                if (this._paperJifWindow) {
+                    const extNote = pm > 1
+                        ? `${sep}${sq('#009E73')} 24-mo extension into ${py + 2} (${pm - 1} month${pm - 1 > 1 ? 's' : ''})`
+                        : '';
+                    note.innerHTML =
+                        `${sq('#E69F00')} JIF window (${py}–${py + 1})` +
+                        extNote +
+                        `${sep}${sq('#0072B2')} outside 24-mo window`;
+                } else {
+                    const extNote = pm > 1
+                        ? ` (includes ${pm - 1} month${pm - 1 > 1 ? 's' : ''} into ${py + 2})`
+                        : '';
+                    note.innerHTML =
+                        `${sq('#009E73')} in 24-mo window${extNote}` +
+                        `${sep}${sq('#0072B2')} outside 24-mo window`;
+                }
                 note.style.display = '';
             } else {
                 note.style.display = 'none';

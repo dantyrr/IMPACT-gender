@@ -620,64 +620,110 @@ class ChartManager {
      * windowSize: 1 (annual) | 2 (2-yr rolling) | 5 (5-yr rolling)
      * journalTimeseries: array of {month: 'YYYY-MM', rolling_if: N} or null
      * journalName: string for legend label
-     * totalCitations: actual total (may exceed sampled data)
+     * pubYear: publication year (int) or null
+     * pubMonth: publication month 1–12 or null
+     * showJifWindow: bool — highlight JIF window (pub_year + pub_year+1) in amber
      */
-    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, jifPubYear, jifPubMonth) {
+    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, pubYear, pubMonth, showJifWindow) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         this._destroy(canvasId);
 
         const years = Object.keys(yearCounts).map(Number).sort((a, b) => a - b);
-
-        // Compute windowed values
-        const values = years.map(y => {
-            if (windowSize === 1) return yearCounts[y] || 0;
-            if (windowSize === 2) return (yearCounts[y] || 0) + (yearCounts[y - 1] || 0);
-            return [y, y-1, y-2, y-3, y-4].reduce((s, yr) => s + (yearCounts[yr] || 0), 0);
-        });
-
         const labels = years.map(String);
         const windowLabel = windowSize === 1 ? 'Citations per Year'
             : windowSize === 2 ? '2-Year Rolling Citations'
             : '5-Year Rolling Citations';
 
-        // Per-bar colors in Annual mode when JIF window highlight is active
-        let barBg, barBorder;
-        if (jifPubYear && windowSize === 1) {
-            barBg = labels.map(y => {
-                const yr = parseInt(y);
-                if (yr === jifPubYear || yr === jifPubYear + 1) return this.palette[4] + 'bb'; // amber
-                if (yr === jifPubYear + 2 && jifPubMonth && jifPubMonth > 1) return this.palette[2] + 'bb'; // teal
-                return this.palette[0] + 'aa'; // blue
-            });
-            barBorder = labels.map(y => {
-                const yr = parseInt(y);
-                if (yr === jifPubYear || yr === jifPubYear + 1) return this.palette[4];
-                if (yr === jifPubYear + 2 && jifPubMonth && jifPubMonth > 1) return this.palette[2];
-                return this.palette[0];
-            });
+        const stacked = windowSize === 1 && pubYear && pubMonth;
+        let datasets;
+
+        if (stacked) {
+            // Fraction of pub_year+2 inside the 24-month window
+            const fracIn  = (pubMonth - 1) / 12;
+            const fracOut = 1 - fracIn;
+
+            if (showJifWindow) {
+                // Three stacks: JIF window (amber) | 24-mo extension (teal) | outside (blue)
+                datasets = [
+                    {
+                        type: 'bar', label: `JIF window (${pubYear}–${pubYear + 1})`,
+                        data: years.map(y => (y === pubYear || y === pubYear + 1) ? (yearCounts[y] || 0) : 0),
+                        backgroundColor: this.palette[4] + 'bb', borderColor: this.palette[4],
+                        borderWidth: 1, stack: 'cit', yAxisID: 'y', order: 1,
+                    },
+                    {
+                        type: 'bar', label: `24-mo extension (into ${pubYear + 2})`,
+                        data: years.map(y => y === pubYear + 2 ? Math.round((yearCounts[y] || 0) * fracIn * 10) / 10 : 0),
+                        backgroundColor: this.palette[2] + 'bb', borderColor: this.palette[2],
+                        borderWidth: 1, stack: 'cit', yAxisID: 'y', order: 1,
+                    },
+                    {
+                        type: 'bar', label: 'Outside 24-mo window',
+                        data: years.map(y => {
+                            if (y === pubYear || y === pubYear + 1) return 0;
+                            if (y === pubYear + 2) return Math.round((yearCounts[y] || 0) * fracOut * 10) / 10;
+                            return yearCounts[y] || 0;
+                        }),
+                        backgroundColor: this.palette[0] + 'aa', borderColor: this.palette[0],
+                        borderWidth: 1, stack: 'cit', yAxisID: 'y', order: 1,
+                    },
+                ];
+            } else {
+                // Two stacks: in 24-mo window (green) | outside (blue)
+                datasets = [
+                    {
+                        type: 'bar', label: 'In 24-mo window',
+                        data: years.map(y => {
+                            if (y === pubYear || y === pubYear + 1) return yearCounts[y] || 0;
+                            if (y === pubYear + 2) return Math.round((yearCounts[y] || 0) * fracIn * 10) / 10;
+                            return 0;
+                        }),
+                        backgroundColor: this.palette[2] + 'bb', borderColor: this.palette[2],
+                        borderWidth: 1, stack: 'cit', yAxisID: 'y', order: 1,
+                    },
+                    {
+                        type: 'bar', label: 'Outside 24-mo window',
+                        data: years.map(y => {
+                            if (y === pubYear || y === pubYear + 1) return 0;
+                            if (y === pubYear + 2) return Math.round((yearCounts[y] || 0) * fracOut * 10) / 10;
+                            return yearCounts[y] || 0;
+                        }),
+                        backgroundColor: this.palette[0] + 'aa', borderColor: this.palette[0],
+                        borderWidth: 1, stack: 'cit', yAxisID: 'y', order: 1,
+                    },
+                ];
+            }
         } else {
-            barBg = this.palette[0] + 'aa';
-            barBorder = this.palette[0];
+            // Non-annual or no pub date: single bar/line
+            const values = years.map(y => {
+                if (windowSize === 1) return yearCounts[y] || 0;
+                if (windowSize === 2) return (yearCounts[y] || 0) + (yearCounts[y - 1] || 0);
+                return [y, y-1, y-2, y-3, y-4].reduce((s, yr) => s + (yearCounts[yr] || 0), 0);
+            });
+            datasets = [{
+                type: windowSize === 1 ? 'bar' : 'line',
+                label: windowLabel,
+                data: values,
+                backgroundColor: this.palette[0] + 'aa',
+                borderColor: this.palette[0],
+                borderWidth: windowSize === 1 ? 1 : 2,
+                fill: windowSize !== 1,
+                tension: 0.3,
+                pointRadius: windowSize === 1 ? 0 : 3,
+                yAxisID: 'y',
+                order: 1,
+            }];
         }
 
-        const datasets = [{
-            type: windowSize === 1 ? 'bar' : 'line',
-            label: windowLabel,
-            data: values,
-            backgroundColor: barBg,
-            borderColor: barBorder,
-            borderWidth: windowSize === 1 ? 1 : 2,
-            fill: windowSize !== 1,
-            tension: 0.3,
-            pointRadius: windowSize === 1 ? 0 : 3,
-            yAxisID: 'y',
-            order: 1,
-        }];
-
         const scales = {
-            x: { grid: { color: '#1e2e40' }, ticks: { color: '#8ba0b4', maxRotation: 45 } },
+            x: {
+                stacked,
+                grid: { color: '#1e2e40' },
+                ticks: { color: '#8ba0b4', maxRotation: 45 },
+            },
             y: {
+                stacked,
                 beginAtZero: true,
                 grid: { color: '#1e2e40' },
                 ticks: { color: '#8ba0b4' },
@@ -691,12 +737,10 @@ class ChartManager {
                 const yr = parseInt((pt.month || '').split('-')[0]);
                 if (yr) jifByYear[yr] = pt.rolling_if;
             });
-            const jifValues = labels.map(y => jifByYear[parseInt(y)] ?? null);
-
             datasets.push({
                 type: 'line',
                 label: `${journalName || 'Journal'} IF (24-mo)`,
-                data: jifValues,
+                data: labels.map(y => jifByYear[parseInt(y)] ?? null),
                 borderColor: this.palette[1],
                 backgroundColor: 'transparent',
                 borderDash: [5, 4],
@@ -725,8 +769,20 @@ class ChartManager {
                 aspectRatio: 2.2,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { display: datasets.length > 1, labels: { color: '#c8d8e8', boxWidth: 14 } },
-                    tooltip: { callbacks: { label: c => ` ${c.parsed.y != null ? c.parsed.y.toLocaleString() : '—'} ${c.dataset.label}` } },
+                    legend: {
+                        display: stacked || datasets.length > 1,
+                        labels: { color: '#c8d8e8', boxWidth: 14 },
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: c => {
+                                const v = c.parsed.y;
+                                if (v == null || v === 0) return null;
+                                const disp = Number.isInteger(v) ? v.toLocaleString() : v.toFixed(1);
+                                return ` ${disp} — ${c.dataset.label}`;
+                            },
+                        },
+                    },
                 },
                 scales,
             },

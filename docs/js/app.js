@@ -810,10 +810,15 @@ class IMPACTApp {
                 : 'Every paper gets an equal 24-month window regardless of publication month.')
             : 'IMPACT 24-month rolling citation rate.';
 
+        const pubmedCoverageTip = 'iCite counts only citations from PubMed-indexed papers. ' +
+            'Google Scholar and Web of Science count more sources (preprints, conference papers, ' +
+            'books, non-biomedical journals), so their totals will be higher — sometimes by ' +
+            'a large factor for interdisciplinary papers.';
+
         // Stats
         document.getElementById('paper-analytics-stats').innerHTML = [
-            [totalCitations.toLocaleString(), 'Total Citations', '', ''],
-            [lifetimeAvg.toFixed(1), 'Lifetime Avg (cit/yr)', '', ''],
+            [totalCitations.toLocaleString(), 'PubMed Citations ⓘ', '', pubmedCoverageTip],
+            [lifetimeAvg.toFixed(1), 'Avg per Year (PubMed) ⓘ', '', pubmedCoverageTip],
             [jifAvg != null ? jifAvg.toFixed(1) : '—',
                 pubMonth ? `JIF 2-Yr Avg (${jifWindowMonths}-mo window) ⓘ` : 'JIF 2-Yr Avg ⓘ',
                 '#E69F00', jifTip],

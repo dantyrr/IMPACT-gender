@@ -766,8 +766,11 @@ class IMPACTApp {
 
         const totalCitations = center.citation_count || 0;
         const pubYear = center.year;
-        const yearsActive = pubYear ? Math.max(1, currentYear - pubYear + 1) : 1;
-        const lifetimeAvg = totalCitations / yearsActive;
+        // Use completed years only (exclude current partial year); base avg on
+        // yearCounts so it stays consistent with the bar chart.
+        const yearsActive = pubYear ? Math.max(1, currentYear - pubYear) : 1;
+        const sampledTotal = Object.values(yearCounts).reduce((s, v) => s + v, 0);
+        const lifetimeAvg = sampledTotal / yearsActive;
 
         // JIF 2-yr avg: (pub_year citations + pub_year+1 citations) / 2
         const jifAvg = pubYear

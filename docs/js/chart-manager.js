@@ -719,15 +719,12 @@ class ChartManager {
         const scales = {
             x: {
                 stacked,
-                grid: { color: '#1e2e40' },
-                ticks: { color: '#8ba0b4', maxRotation: 45 },
+                ticks: { maxRotation: 45 },
             },
             y: {
                 stacked,
                 beginAtZero: true,
-                grid: { color: '#1e2e40' },
-                ticks: { color: '#8ba0b4' },
-                title: { display: true, text: windowLabel, color: '#8ba0b4', font: { size: 11 } },
+                title: { display: true, text: windowLabel, font: { size: 11 } },
             },
         };
 

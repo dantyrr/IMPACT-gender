@@ -693,6 +693,21 @@ class IMPACTApp {
 
     // ---- Paper Analytics (above network) ----
 
+    async _fetchPubMonth(pmid) {
+        try {
+            const resp = await fetch(
+                `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${pmid}&retmode=json`,
+                { signal: AbortSignal.timeout(6000) }
+            );
+            if (!resp.ok) return null;
+            const json = await resp.json();
+            const pubDate = (json?.result?.[String(pmid)]?.pubdate) || '';
+            const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+            const m = pubDate.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/);
+            return m ? (MONTHS[m[1]] || null) : null;
+        } catch (e) { return null; }
+    }
+
     async _renderPaperAnalytics() {
         const center = this._networkCenter;
         if (!center) return;
@@ -713,12 +728,17 @@ class IMPACTApp {
         document.getElementById('paper-analytics-stats').innerHTML =
             `<div class="metric-card"><span class="metric-value">Loading…</span><span class="metric-label">Fetching citation data</span></div>`;
 
-        // Fetch all citing papers (may already be partially cached from network)
+        // Fetch pub month + all citing papers in parallel
         const uncachedPmids = pmidsToFetch.filter(p => !this._networkPaperCache.has(p));
-        if (uncachedPmids.length) {
-            const fetched = await this._fetchICiteBatch(uncachedPmids);
-            fetched.forEach(p => this._networkPaperCache.set(String(p.pmid), p));
-        }
+        const [pubMonth] = await Promise.all([
+            this._fetchPubMonth(center.pmid),
+            (async () => {
+                if (uncachedPmids.length) {
+                    const fetched = await this._fetchICiteBatch(uncachedPmids);
+                    fetched.forEach(p => this._networkPaperCache.set(String(p.pmid), p));
+                }
+            })(),
+        ]);
 
         // Build year and journal histograms from all fetched citing papers
         const yearCounts = {};
@@ -733,7 +753,6 @@ class IMPACTApp {
             }
         }
 
-        // Fill zeros from publication year to current year
         const currentYear = new Date().getFullYear();
         if (center.year) {
             for (let y = center.year; y <= currentYear; y++) {
@@ -743,26 +762,64 @@ class IMPACTApp {
 
         this._paperYearCounts = yearCounts;
         this._paperJournalCounts = journalCounts;
-        const fetchedCount = pmidsToFetch.length;
+        this._paperPubMonth = pubMonth;
 
         const totalCitations = center.citation_count || 0;
         const pubYear = center.year;
         const yearsActive = pubYear ? Math.max(1, currentYear - pubYear + 1) : 1;
-        const avgPerYear = (totalCitations / yearsActive).toFixed(1);
-        const peakEntry = Object.entries(yearCounts).reduce((best, [y, n]) => n > best[1] ? [y, n] : best, ['—', 0]);
+        const lifetimeAvg = totalCitations / yearsActive;
 
-        // JIF window: citations in pub_year + pub_year+1
-        const jifWindowCits = pubYear
-            ? (yearCounts[pubYear] || 0) + (yearCounts[pubYear + 1] || 0) : null;
+        // JIF 2-yr avg: (pub_year citations + pub_year+1 citations) / 2
+        const jifAvg = pubYear
+            ? ((yearCounts[pubYear] || 0) + (yearCounts[pubYear + 1] || 0)) / 2
+            : null;
+
+        // IMPACT 24-month avg: weighted by fraction of each calendar year in the 24-month window
+        let twentyFourMonthAvg = null;
+        let jifWindowMonths = null;
+        const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        if (pubYear && pubMonth) {
+            jifWindowMonths = 25 - pubMonth; // months of actual citation opportunity in JIF window
+            const fracY  = (13 - pubMonth) / 12;  // fraction of pub year in 24-mo window
+            const fracY2 = (pubMonth - 1) / 12;   // fraction of pub_year+2 in 24-mo window
+            twentyFourMonthAvg = (
+                (yearCounts[pubYear]     || 0) * fracY +
+                (yearCounts[pubYear + 1] || 0) +
+                (yearCounts[pubYear + 2] || 0) * fracY2
+            ) / 2;
+        } else if (pubYear) {
+            twentyFourMonthAvg = jifAvg; // approximate (no pub month)
+        }
+
+        const jifTip = pubYear
+            ? `Citations in ${pubYear} and ${pubYear+1} ÷ 2. ` +
+              (pubMonth ? `Published in ${MONTH_NAMES[pubMonth-1]}, so the JIF window covers only ${jifWindowMonths} months — ` +
+              `papers published earlier in the year get more citation time.` :
+              'This is the citation contribution used in the traditional Journal Impact Factor.')
+            : 'Traditional JIF calculation: first 2 calendar years ÷ 2.';
+        const impactTip = pubYear
+            ? `Citations in the 24 months from publication ÷ 2. ` +
+              (pubMonth
+                ? `For this paper (${MONTH_NAMES[pubMonth-1]} ${pubYear}), the window runs ` +
+                  `${MONTH_NAMES[pubMonth-1]} ${pubYear} → ${MONTH_NAMES[(pubMonth+10)%12]} ${pubYear+2}. ` +
+                  `Every paper gets an equal 24-month window regardless of publication month — ` +
+                  `this eliminates the calendar bias that affects the traditional JIF.`
+                : 'Every paper gets an equal 24-month window regardless of publication month.')
+            : 'IMPACT 24-month rolling citation rate.';
 
         // Stats
         document.getElementById('paper-analytics-stats').innerHTML = [
-            [totalCitations.toLocaleString(), 'Total Citations'],
-            [avgPerYear, 'Citations / Year (avg)'],
-            [peakEntry[0], 'Peak Citation Year'],
-            [jifWindowCits != null ? jifWindowCits.toLocaleString() : '—', `JIF Window (${pubYear}–${pubYear + 1})`],
-        ].map(([v, l]) =>
-            `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+            [totalCitations.toLocaleString(), 'Total Citations', '', ''],
+            [lifetimeAvg.toFixed(1), 'Lifetime Avg (cit/yr)', '', ''],
+            [jifAvg != null ? jifAvg.toFixed(1) : '—',
+                pubMonth ? `JIF 2-Yr Avg (${jifWindowMonths}-mo window) ⓘ` : 'JIF 2-Yr Avg ⓘ',
+                '#E69F00', jifTip],
+            [twentyFourMonthAvg != null ? twentyFourMonthAvg.toFixed(1) : '—',
+                'IMPACT 24-Mo Avg ⓘ',
+                '#009E73', impactTip],
+        ].map(([v, l, color, tip]) =>
+            `<div class="metric-card"${tip ? ` title="${tip}"` : ''}${color ? ` style="border-left:3px solid ${color}; padding-left:0.75rem;"` : ''}>` +
+            `<span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
         ).join('');
 
         // Try to find and load journal data for overlay
@@ -847,7 +904,8 @@ class IMPACTApp {
     _updatePaperCitationChart() {
         const journalTs = this._paperOverlay && this._paperJournalData
             ? (this._paperJournalData.timeseries || null) : null;
-        const jifPubYear = this._paperJifWindow ? (this._paperPubYear || null) : null;
+        const jifPubYear  = this._paperJifWindow ? (this._paperPubYear  || null) : null;
+        const jifPubMonth = this._paperJifWindow ? (this._paperPubMonth || null) : null;
         chartManager.createPaperCitationChart(
             'paper-citations-chart',
             this._paperYearCounts || {},
@@ -855,7 +913,22 @@ class IMPACTApp {
             journalTs,
             this._paperJournalName || '',
             jifPubYear,
+            jifPubMonth,
         );
+
+        // Color legend note below chart
+        const note = document.getElementById('paper-chart-note');
+        if (note) {
+            if (jifPubYear && (this._paperWindow || 1) === 1) {
+                const m = this._paperPubMonth;
+                const ext = m && m > 1 ? ` &nbsp;|&nbsp; <span style="display:inline-block;width:10px;height:10px;background:#009E73;border-radius:2px;vertical-align:middle;"></span> partial ${jifPubYear + 2} — extra ${m - 1} month${m - 1 > 1 ? 's' : ''} in the IMPACT 24-mo window beyond the JIF window` : '';
+                note.innerHTML =
+                    `<span style="display:inline-block;width:10px;height:10px;background:#E69F00;border-radius:2px;vertical-align:middle;"></span> JIF window (${jifPubYear}–${jifPubYear + 1})${ext} &nbsp;|&nbsp; <span style="display:inline-block;width:10px;height:10px;background:#0072B2;border-radius:2px;vertical-align:middle;"></span> other years`;
+                note.style.display = '';
+            } else {
+                note.style.display = 'none';
+            }
+        }
     }
 
     _downloadPaperChart(format) {

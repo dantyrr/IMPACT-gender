@@ -622,7 +622,7 @@ class ChartManager {
      * journalName: string for legend label
      * totalCitations: actual total (may exceed sampled data)
      */
-    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, jifPubYear) {
+    createPaperCitationChart(canvasId, yearCounts, windowSize, journalTimeseries, journalName, jifPubYear, jifPubMonth) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         this._destroy(canvasId);
@@ -633,7 +633,6 @@ class ChartManager {
         const values = years.map(y => {
             if (windowSize === 1) return yearCounts[y] || 0;
             if (windowSize === 2) return (yearCounts[y] || 0) + (yearCounts[y - 1] || 0);
-            // 5-year
             return [y, y-1, y-2, y-3, y-4].reduce((s, yr) => s + (yearCounts[yr] || 0), 0);
         });
 
@@ -642,12 +641,32 @@ class ChartManager {
             : windowSize === 2 ? '2-Year Rolling Citations'
             : '5-Year Rolling Citations';
 
+        // Per-bar colors in Annual mode when JIF window highlight is active
+        let barBg, barBorder;
+        if (jifPubYear && windowSize === 1) {
+            barBg = labels.map(y => {
+                const yr = parseInt(y);
+                if (yr === jifPubYear || yr === jifPubYear + 1) return this.palette[4] + 'bb'; // amber
+                if (yr === jifPubYear + 2 && jifPubMonth && jifPubMonth > 1) return this.palette[2] + 'bb'; // teal
+                return this.palette[0] + 'aa'; // blue
+            });
+            barBorder = labels.map(y => {
+                const yr = parseInt(y);
+                if (yr === jifPubYear || yr === jifPubYear + 1) return this.palette[4];
+                if (yr === jifPubYear + 2 && jifPubMonth && jifPubMonth > 1) return this.palette[2];
+                return this.palette[0];
+            });
+        } else {
+            barBg = this.palette[0] + 'aa';
+            barBorder = this.palette[0];
+        }
+
         const datasets = [{
             type: windowSize === 1 ? 'bar' : 'line',
             label: windowLabel,
             data: values,
-            backgroundColor: this.palette[0] + (windowSize === 1 ? 'aa' : '33'),
-            borderColor: this.palette[0],
+            backgroundColor: barBg,
+            borderColor: barBorder,
             borderWidth: windowSize === 1 ? 1 : 2,
             fill: windowSize !== 1,
             tension: 0.3,
@@ -667,7 +686,6 @@ class ChartManager {
         };
 
         if (journalTimeseries && journalTimeseries.length) {
-            // Downsample to yearly: take last available month per year
             const jifByYear = {};
             journalTimeseries.forEach(pt => {
                 const yr = parseInt((pt.month || '').split('-')[0]);
@@ -696,24 +714,6 @@ class ChartManager {
                 ticks: { color: this.palette[1] },
                 title: { display: true, text: 'Journal IF', color: this.palette[1], font: { size: 11 } },
             };
-        }
-
-        // JIF window overlay: highlight pub_year and pub_year+1 bars
-        if (jifPubYear) {
-            const jifValues = labels.map(y => {
-                const yr = parseInt(y);
-                return (yr === jifPubYear || yr === jifPubYear + 1) ? (yearCounts[yr] || 0) : 0;
-            });
-            datasets.push({
-                type: 'bar',
-                label: `JIF Window (${jifPubYear}–${jifPubYear + 1})`,
-                data: jifValues,
-                backgroundColor: this.palette[4] + 'bb',  // amber
-                borderColor: this.palette[4],
-                borderWidth: 1,
-                yAxisID: 'y',
-                order: 0,
-            });
         }
 
         this.charts[canvasId] = new Chart(ctx, {

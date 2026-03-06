@@ -151,7 +151,9 @@ The website itself is static HTML/JS hosted on GitHub Pages. It fetches data fro
 
 ## Weekly Updates
 
-Once the bulk data is loaded, keeping it current only requires adding each week's newly published papers and the citations they create:
+Once the bulk data is loaded, keeping it current only requires adding each week's newly published papers and the citations they create.
+
+> **Note:** Weekly updates are currently triggered manually on a weekly schedule. There is no automated CI/CD workflow for this yet.
 
 ```bash
 python scripts/run_weekly_update.py          # last 10 days (default)

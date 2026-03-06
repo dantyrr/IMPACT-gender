@@ -595,12 +595,12 @@ class IMPACTApp {
             byYear[yr].push(m);
         });
 
-        const buildOptions = (sel, addBlank) => {
+        const buildOptions = (sel, addBlank, blankText = '(start)') => {
             sel.innerHTML = '';
             if (addBlank) {
                 const blank = document.createElement('option');
                 blank.value = '';
-                blank.textContent = '(start)';
+                blank.textContent = blankText;
                 sel.appendChild(blank);
             }
             Object.keys(byYear).sort().forEach(yr => {
@@ -616,14 +616,8 @@ class IMPACTApp {
             });
         };
 
-        buildOptions(xMinSel, true);
-        buildOptions(xMaxSel, true);
-
-        // Add trailing blank for end select
-        const blankEnd = document.createElement('option');
-        blankEnd.value = '';
-        blankEnd.textContent = '(end)';
-        xMaxSel.appendChild(blankEnd);
+        buildOptions(xMinSel, true, '(start)');
+        buildOptions(xMaxSel, true, '(end)');
 
         // Restore previous selections if still valid
         if (prevMin && months.includes(prevMin)) xMinSel.value = prevMin;

@@ -73,6 +73,21 @@
                 <div class="chart-container" id="jc-chart-container" style="display:none;">
                     <canvas id="jc-chart"></canvas>
                 </div>
+                <div id="jc-range-controls" class="chart-range-controls" style="display:none">
+                    <div class="range-control-group">
+                        <span class="range-label">Date:</span>
+                        <select id="jc-x-min" class="range-select"></select>
+                        <span class="range-separator">–</span>
+                        <select id="jc-x-max" class="range-select"></select>
+                    </div>
+                    <div class="range-control-group">
+                        <span class="range-label">Y axis:</span>
+                        <input id="jc-y-min" type="number" class="range-input" placeholder="min" step="0.1">
+                        <span class="range-separator">–</span>
+                        <input id="jc-y-max" type="number" class="range-input" placeholder="max" step="0.1">
+                    </div>
+                    <button id="jc-range-reset" class="range-reset-btn">Reset</button>
+                </div>
                 <div id="jc-download-bar" class="download-bar" style="display:none">
                     <span class="download-label">Download:</span>
                     <button class="download-btn" id="dl-png">PNG</button>
@@ -225,6 +240,21 @@
 
         <div class="chart-container">
             <canvas id="compare-chart"></canvas>
+        </div>
+        <div id="compare-range-controls" class="chart-range-controls" style="display:none">
+            <div class="range-control-group">
+                <span class="range-label">Date:</span>
+                <select id="compare-x-min" class="range-select"></select>
+                <span class="range-separator">–</span>
+                <select id="compare-x-max" class="range-select"></select>
+            </div>
+            <div class="range-control-group">
+                <span class="range-label">Y axis:</span>
+                <input id="compare-y-min" type="number" class="range-input" placeholder="min" step="0.1">
+                <span class="range-separator">–</span>
+                <input id="compare-y-max" type="number" class="range-input" placeholder="max" step="0.1">
+            </div>
+            <button id="compare-range-reset" class="range-reset-btn">Reset</button>
         </div>
 
         <div id="compare-table-container"></div>
@@ -574,6 +604,21 @@
 
             <div class="chart-container">
                 <canvas id="influence-chart"></canvas>
+            </div>
+            <div id="influence-range-controls" class="chart-range-controls" style="display:none">
+                <div class="range-control-group">
+                    <span class="range-label">Date:</span>
+                    <select id="influence-x-min" class="range-select"></select>
+                    <span class="range-separator">–</span>
+                    <select id="influence-x-max" class="range-select"></select>
+                </div>
+                <div class="range-control-group">
+                    <span class="range-label">Y axis:</span>
+                    <input id="influence-y-min" type="number" class="range-input" placeholder="min" step="0.1">
+                    <span class="range-separator">–</span>
+                    <input id="influence-y-max" type="number" class="range-input" placeholder="max" step="0.1">
+                </div>
+                <button id="influence-range-reset" class="range-reset-btn">Reset</button>
             </div>
 
             <div class="download-bar" id="influence-download-bar">

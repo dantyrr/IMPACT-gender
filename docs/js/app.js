@@ -32,6 +32,13 @@ class IMPACTApp {
         this.papersDataCache = {};
         this._worldTopology = null;
         this._rcitsVersion = 0;
+        // Range control state (null = auto)
+        this.jcXMin = null; this.jcXMax = null;
+        this.jcYMin = null; this.jcYMax = null;
+        this.compareXMin = null; this.compareXMax = null;
+        this.compareYMin = null; this.compareYMax = null;
+        this._influenceXMin = null; this._influenceXMax = null;
+        this._influenceYMin = null; this._influenceYMax = null;
         this.init();
     }
 
@@ -138,6 +145,11 @@ class IMPACTApp {
             this.updateJournalsTrendsChart();
         }, 'data-y');
 
+        this._setupRangeControls('jc',
+            { xMin: 'jcXMin', xMax: 'jcXMax', yMin: 'jcYMin', yMax: 'jcYMax' },
+            () => this.updateJournalsTrendsChart()
+        );
+
         document.getElementById('dl-png').addEventListener('click', () => this._downloadChart('png'));
         document.getElementById('dl-jpg').addEventListener('click', () => this._downloadChart('jpg'));
         document.getElementById('dl-pdf').addEventListener('click', () => this._downloadPDF());
@@ -159,6 +171,7 @@ class IMPACTApp {
             chartContainer.style.display = 'none';
             hint.style.display = '';
             document.getElementById('jc-download-bar').style.display = 'none';
+            document.getElementById('jc-range-controls').style.display = 'none';
             this._jcSeriesData = null;
             this._renderFilteredCards();
             return;
@@ -233,7 +246,12 @@ class IMPACTApp {
         });
 
         this._jcSeriesData = series;
-        chartManager.createMultiSeriesChart('jc-chart', series, this.jcYZero);
+        // Populate X selects from unified month axis
+        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        this._populateXRangeSelects('jc', allMonths);
+        const scaleOverrides = this._buildScaleOverrides(this.jcXMin, this.jcXMax, this.jcYMin, this.jcYMax);
+        chartManager.createMultiSeriesChart('jc-chart', series, this.jcYZero, scaleOverrides);
+        document.getElementById('jc-range-controls').style.display = '';
         document.getElementById('jc-download-bar').style.display = '';
         this._renderFilteredCards();
     }
@@ -507,6 +525,129 @@ class IMPACTApp {
         });
     }
 
+    // ---- Range Controls ----
+
+    /**
+     * Wire up range controls for a chart.
+     * prefix: 'jc' | 'compare' | 'influence'
+     * stateKeys: {xMin, xMax, yMin, yMax} — property names on `this`
+     * redrawFn: () => void
+     */
+    _setupRangeControls(prefix, stateKeys, redrawFn) {
+        const xMinSel = document.getElementById(`${prefix}-x-min`);
+        const xMaxSel = document.getElementById(`${prefix}-x-max`);
+        const yMinInp = document.getElementById(`${prefix}-y-min`);
+        const yMaxInp = document.getElementById(`${prefix}-y-max`);
+        const resetBtn = document.getElementById(`${prefix}-range-reset`);
+
+        if (!xMinSel || !xMaxSel || !yMinInp || !yMaxInp || !resetBtn) return;
+
+        let yDebounce = null;
+
+        xMinSel.addEventListener('change', () => {
+            this[stateKeys.xMin] = xMinSel.value || null;
+            redrawFn();
+        });
+        xMaxSel.addEventListener('change', () => {
+            this[stateKeys.xMax] = xMaxSel.value || null;
+            redrawFn();
+        });
+
+        const onYInput = () => {
+            clearTimeout(yDebounce);
+            yDebounce = setTimeout(() => {
+                this[stateKeys.yMin] = yMinInp.value !== '' ? parseFloat(yMinInp.value) : null;
+                this[stateKeys.yMax] = yMaxInp.value !== '' ? parseFloat(yMaxInp.value) : null;
+                redrawFn();
+            }, 400);
+        };
+        yMinInp.addEventListener('input', onYInput);
+        yMaxInp.addEventListener('input', onYInput);
+
+        resetBtn.addEventListener('click', () => {
+            this[stateKeys.xMin] = null; this[stateKeys.xMax] = null;
+            this[stateKeys.yMin] = null; this[stateKeys.yMax] = null;
+            xMinSel.value = '';
+            xMaxSel.value = '';
+            yMinInp.value = '';
+            yMaxInp.value = '';
+            redrawFn();
+        });
+    }
+
+    /**
+     * Populate X-range selects from a months array.
+     * Preserves current selection if still valid.
+     */
+    _populateXRangeSelects(prefix, months) {
+        const xMinSel = document.getElementById(`${prefix}-x-min`);
+        const xMaxSel = document.getElementById(`${prefix}-x-max`);
+        if (!xMinSel || !xMaxSel || !months.length) return;
+
+        const prevMin = xMinSel.value;
+        const prevMax = xMaxSel.value;
+
+        // Group by year
+        const byYear = {};
+        months.forEach(m => {
+            const yr = m.slice(0, 4);
+            if (!byYear[yr]) byYear[yr] = [];
+            byYear[yr].push(m);
+        });
+
+        const buildOptions = (sel, addBlank) => {
+            sel.innerHTML = '';
+            if (addBlank) {
+                const blank = document.createElement('option');
+                blank.value = '';
+                blank.textContent = '(start)';
+                sel.appendChild(blank);
+            }
+            Object.keys(byYear).sort().forEach(yr => {
+                const grp = document.createElement('optgroup');
+                grp.label = yr;
+                byYear[yr].forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    grp.appendChild(opt);
+                });
+                sel.appendChild(grp);
+            });
+        };
+
+        buildOptions(xMinSel, true);
+        buildOptions(xMaxSel, true);
+
+        // Add trailing blank for end select
+        const blankEnd = document.createElement('option');
+        blankEnd.value = '';
+        blankEnd.textContent = '(end)';
+        xMaxSel.appendChild(blankEnd);
+
+        // Restore previous selections if still valid
+        if (prevMin && months.includes(prevMin)) xMinSel.value = prevMin;
+        if (prevMax && months.includes(prevMax)) xMaxSel.value = prevMax;
+    }
+
+    /**
+     * Build a scaleOverrides object from range state.
+     */
+    _buildScaleOverrides(xMin, xMax, yMin, yMax) {
+        const overrides = {};
+        if (xMin != null || xMax != null) {
+            overrides.x = {};
+            if (xMin != null) overrides.x.min = xMin;
+            if (xMax != null) overrides.x.max = xMax;
+        }
+        if (yMin != null || yMax != null) {
+            overrides.y = {};
+            if (yMin != null) overrides.y.min = yMin;
+            if (yMax != null) overrides.y.max = yMax;
+        }
+        return overrides;
+    }
+
     // ---- Compare ----
 
     setupCompare() {
@@ -524,6 +665,11 @@ class IMPACTApp {
             this.compareMetric = mode;
             this.updateComparison();
         });
+
+        this._setupRangeControls('compare',
+            { xMin: 'compareXMin', xMax: 'compareXMax', yMin: 'compareYMin', yMax: 'compareYMax' },
+            () => this.updateComparison()
+        );
     }
 
     async updateComparison() {
@@ -533,6 +679,7 @@ class IMPACTApp {
 
         if (checked.length === 0) {
             chartManager._destroy('compare-chart');
+            document.getElementById('compare-range-controls').style.display = 'none';
             if (tableContainer) tableContainer.innerHTML = '';
             return;
         }
@@ -551,7 +698,26 @@ class IMPACTApp {
             }
         }
 
-        chartManager.createComparisonChart('compare-chart', journalsData, this.compareMetric, this.compareWindow);
+        // Populate X selects from longest timeseries labels
+        let longestMonths = [];
+        journalsData.forEach(j => {
+            const ts = j[this.compareWindow] || j.timeseries;
+            const startIdx = ts.findIndex(d => d.papers > 0);
+            const data = startIdx >= 0 ? ts.slice(startIdx) : ts;
+            if (data.length > longestMonths.length) longestMonths = data.map(d => d.month);
+        });
+        this._populateXRangeSelects('compare', longestMonths);
+
+        // Set Y step based on metric
+        const isInteger = this.compareMetric === 'citations' || this.compareMetric === 'papers';
+        ['compare-y-min', 'compare-y-max'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.step = isInteger ? '1' : '0.1';
+        });
+
+        const scaleOverrides = this._buildScaleOverrides(this.compareXMin, this.compareXMax, this.compareYMin, this.compareYMax);
+        chartManager.createComparisonChart('compare-chart', journalsData, this.compareMetric, this.compareWindow, scaleOverrides);
+        document.getElementById('compare-range-controls').style.display = '';
 
         // Build comparison summary table
         if (tableContainer) {
@@ -1384,6 +1550,11 @@ class IMPACTApp {
         document.getElementById('inf-dl-png').onclick = () => this._downloadInfluence('png');
         document.getElementById('inf-dl-jpg').onclick = () => this._downloadInfluence('jpg');
         document.getElementById('inf-dl-pdf').onclick = () => this._downloadInfluence('pdf');
+
+        this._setupRangeControls('influence',
+            { xMin: '_influenceXMin', xMax: '_influenceXMax', yMin: '_influenceYMin', yMax: '_influenceYMax' },
+            () => { if (this._lastInfluenceRenderArgs) this._renderInfluenceChart(...this._lastInfluenceRenderArgs); }
+        );
     }
 
     async loadInfluenceData() {
@@ -1631,6 +1802,12 @@ class IMPACTApp {
             ];
         }
 
+        // Populate X selects and build scale overrides
+        this._populateXRangeSelects('influence', labels);
+        const infScaleOverrides = this._buildScaleOverrides(
+            this._influenceXMin, this._influenceXMax, this._influenceYMin, this._influenceYMax
+        );
+
         chartManager._destroy('influence-chart');
         const ctx = document.getElementById('influence-chart');
         chartManager.charts['influence-chart'] = new Chart(ctx, {
@@ -1665,14 +1842,17 @@ class IMPACTApp {
                     x: {
                         title: { display: true, text: 'Month' },
                         ticks: { maxTicksLimit: 12 },
+                        ...(infScaleOverrides.x || {}),
                     },
                     y: {
                         title: { display: true, text: 'Citation Rate (24-mo)' },
                         beginAtZero: this._influenceYZero,
+                        ...(infScaleOverrides.y || {}),
                     },
                 },
             },
         });
+        document.getElementById('influence-range-controls').style.display = '';
     }
 
     _toggleCensoredLine(show) {

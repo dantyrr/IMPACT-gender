@@ -1359,3 +1359,94 @@ tr.row-excluded td {
     outline: none;
     border-color: var(--primary);
 }
+
+/* ---- Chart range controls (zoom) ---- */
+
+.chart-range-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.2rem;
+    margin: 0.5rem 0 0.75rem;
+    padding: 0.55rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.83rem;
+    color: var(--text);
+}
+
+.range-control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+}
+
+.range-label {
+    font-weight: 500;
+    color: #555;
+    white-space: nowrap;
+}
+
+.range-separator {
+    color: #888;
+    padding: 0 0.1rem;
+}
+
+.range-select {
+    max-width: 120px;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: white;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.range-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.range-input {
+    width: 72px;
+    padding: 0.2rem 0.35rem;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: center;
+    color: var(--text);
+    background: white;
+}
+
+.range-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.range-reset-btn {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.78rem;
+    border: 1px solid #c8d6e5;
+    border-radius: 4px;
+    background: #f0f4f8;
+    color: #2e4a6d;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.range-reset-btn:hover {
+    background: #dce8f3;
+    border-color: #2e86c1;
+}
+
+@media (max-width: 768px) {
+    .chart-range-controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

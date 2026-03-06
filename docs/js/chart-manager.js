@@ -316,7 +316,7 @@ class ChartManager {
      * metric:    'rolling_if' | 'rolling_if_no_reviews' | 'citations' | 'papers'
      * windowKey: 'timeseries' | 'timeseries_12mo' | 'timeseries_5yr'
      */
-    createComparisonChart(canvasId, journalsData, metric = 'rolling_if', windowKey = 'timeseries') {
+    createComparisonChart(canvasId, journalsData, metric = 'rolling_if', windowKey = 'timeseries', scaleOverrides = {}) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -382,10 +382,12 @@ class ChartManager {
                     x: {
                         title: { display: true, text: 'Month' },
                         ticks: { maxTicksLimit: 12 },
+                        ...(scaleOverrides.x || {}),
                     },
                     y: {
                         title: { display: true, text: yLabel },
                         beginAtZero: metric === 'citations' || metric === 'papers',
+                        ...(scaleOverrides.y || {}),
                     }
                 }
             }
@@ -457,7 +459,7 @@ class ChartManager {
      * Create a multi-series chart with per-journal colors and per-type dash patterns.
      * series: [{label, color, dash, months, values}]
      */
-    createMultiSeriesChart(canvasId, series, beginAtZero = false) {
+    createMultiSeriesChart(canvasId, series, beginAtZero = false, scaleOverrides = {}) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -508,10 +510,12 @@ class ChartManager {
                     x: {
                         title: { display: true, text: 'Month' },
                         ticks: { maxTicksLimit: 12 },
+                        ...(scaleOverrides.x || {}),
                     },
                     y: {
                         title: { display: true, text: 'Citation Rate' },
                         beginAtZero,
+                        ...(scaleOverrides.y || {}),
                     }
                 }
             }

@@ -421,7 +421,7 @@ class DatabaseManager:
             """SELECT pub_year, first_author_country, COUNT(*) as n
                FROM papers
                WHERE journal_id = ?
-                 AND pub_year BETWEEN 2010 AND 2026
+                 AND pub_year BETWEEN 2003 AND 2026
                  AND first_author_country IS NOT NULL
                  AND first_author_country != ''
                GROUP BY pub_year, first_author_country

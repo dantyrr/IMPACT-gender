@@ -130,8 +130,8 @@ def main():
                         help="Parallel workers (default: 4)")
     parser.add_argument("--min-papers", type=int, default=100,
                         help="Skip journals with fewer papers (default: 100)")
-    parser.add_argument("--years", type=str, default="2010-2026",
-                        help="Year range (default: 2010-2026)")
+    parser.add_argument("--years", type=str, default="2003-2026",
+                        help="Year range (default: 2003-2026)")
     parser.add_argument("--resume", action="store_true",
                         help="Skip journals already in progress file")
     parser.add_argument("--dry-run", action="store_true",

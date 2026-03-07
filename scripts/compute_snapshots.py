@@ -57,7 +57,7 @@ def process_journals(journal_chunk, db_path, official_jifs, worker_id):
 
         window_data = calc.compute_all_window_timeseries(
             journal_id=jid,
-            start_year=2012, start_month=1,
+            start_year=2005, start_month=1,
             end_year=now.year, end_month=now.month,
         )
 

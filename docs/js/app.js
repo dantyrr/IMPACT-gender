@@ -369,8 +369,21 @@ class IMPACTApp {
             const ts = this._getDisplayTimeseries(data);
             chartManager.createJournalChart('journal-chart', ts, officialIf, 'Citation Rate — All Articles (24-month)');
             chartManager.createCitationChart('citation-chart', ts, 'total');
-            chartManager.createCompositionChart('composition-chart', ts);
+            chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', ts);
+
+            // Show composition type checkboxes
+            const compCheckboxes = document.getElementById('composition-type-checkboxes');
+            if (compCheckboxes) {
+                compCheckboxes.style.display = '';
+                compCheckboxes.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                    cb.onchange = () => {
+                        const ts2 = this._getDisplayTimeseries(data);
+                        chartManager.createCompositionChart('composition-chart', ts2, this._getCompositionVisibleTypes());
+                    };
+                });
+            }
 
             // Show download bars and wire up buttons
             const detailCharts = ['jd-chart', 'citation-chart', 'composition-chart', 'papers-chart'];
@@ -474,7 +487,7 @@ class IMPACTApp {
             const rateLabel = `Citation Rate — ${this._typeLabel(this.currentType)} (${this._windowLabel(this.currentWindow)})`;
             chartManager.createJournalChart('journal-chart', ts, data.official_jif_2024, rateLabel, this._journalYZero);
             chartManager.createCitationChart('citation-chart', ts, this._citationChartMode());
-            chartManager.createCompositionChart('composition-chart', ts);
+            chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', ts);
         };
 
@@ -505,6 +518,12 @@ class IMPACTApp {
 
     _citationChartMode() {
         return this._citationMode || 'total';
+    }
+
+    _getCompositionVisibleTypes() {
+        const container = document.getElementById('composition-type-checkboxes');
+        if (!container) return ['research', 'review', 'editorial', 'letter', 'other'];
+        return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
     }
 
     _setupToggleGroup(containerId, callback, dataAttr = 'data-mode') {

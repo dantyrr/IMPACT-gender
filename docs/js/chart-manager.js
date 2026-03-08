@@ -181,8 +181,11 @@ class ChartManager {
 
     /**
      * Create a stacked area chart showing paper composition over time.
+     * @param {string} canvasId
+     * @param {Array} timeseries
+     * @param {string[]} visibleTypes - which types to show (default all 5)
      */
-    createCompositionChart(canvasId, timeseries) {
+    createCompositionChart(canvasId, timeseries, visibleTypes) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -192,35 +195,48 @@ class ChartManager {
         const data = startIdx >= 0 ? timeseries.slice(startIdx) : timeseries;
         const labels = data.map(d => d.month);
 
+        const allTypes = ['research', 'review', 'editorial', 'letter', 'other'];
+        const shown = visibleTypes || allTypes;
+
+        const typeConfig = {
+            research:  { label: 'Research Articles', color: this.palette[0], bg: 'rgba(0, 114, 178, 0.4)' },
+            review:    { label: 'Reviews',           color: this.palette[6], bg: 'rgba(123, 45, 139, 0.4)' },
+            editorial: { label: 'Editorials',        color: this.palette[4], bg: 'rgba(230, 159, 0, 0.4)' },
+            letter:    { label: 'Letters',            color: this.palette[2], bg: 'rgba(0, 158, 115, 0.4)' },
+            other:     { label: 'Other',              color: this.palette[7], bg: 'rgba(127, 127, 127, 0.4)' },
+        };
+
+        const getData = (type) => data.map(d => {
+            const bt = d.by_type;
+            if (!bt) {
+                // Fallback for data without by_type
+                if (type === 'research') return d.research || 0;
+                if (type === 'review') return d.reviews || 0;
+                return 0;
+            }
+            if (type === 'other') {
+                return (bt.other?.papers || 0) + (bt.guideline?.papers || 0) + (bt.case_report?.papers || 0);
+            }
+            return bt[type]?.papers || 0;
+        });
+
+        const datasets = allTypes
+            .filter(t => shown.includes(t))
+            .map(type => ({
+                label: typeConfig[type].label,
+                data: getData(type),
+                borderColor: typeConfig[type].color,
+                backgroundColor: typeConfig[type].bg,
+                borderWidth: 1.5,
+                tension: 0.3,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+            }));
+
         this.charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Research Articles',
-                        data: data.map(d => d.research),
-                        borderColor: this.palette[0],
-                        backgroundColor: 'rgba(26, 82, 118, 0.4)',
-                        borderWidth: 1.5,
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                    },
-                    {
-                        label: 'Reviews',
-                        data: data.map(d => d.reviews),
-                        borderColor: this.palette[4],
-                        backgroundColor: 'rgba(142, 68, 173, 0.4)',
-                        borderWidth: 1.5,
-                        tension: 0.3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 4,
-                    }
-                ]
-            },
+            data: { labels, datasets },
             options: {
                 responsive: true,
                 interaction: { intersect: false, mode: 'index' },
@@ -230,10 +246,9 @@ class ChartManager {
                     tooltip: {
                         callbacks: {
                             afterBody: (items) => {
-                                if (items.length >= 2) {
+                                if (items.length >= 1) {
                                     const total = items.reduce((sum, i) => sum + i.parsed.y, 0);
-                                    const reviewPct = total > 0 ? (items[1].parsed.y / total * 100).toFixed(1) : 0;
-                                    return `\nTotal: ${total}  |  Review %: ${reviewPct}%`;
+                                    return `\nTotal: ${total}`;
                                 }
                                 return '';
                             }

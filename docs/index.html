@@ -115,20 +115,24 @@
 
             <div class="metrics-row">
                 <div class="metric-card">
-                    <span class="metric-value" id="metric-if">—</span>
-                    <span class="metric-label" id="metric-if-label">Research + Letters</span>
+                    <span class="metric-value" id="metric-research-rate">—</span>
+                    <span class="metric-label" id="metric-research-rate-label">Research Rate</span>
                 </div>
                 <div class="metric-card">
-                    <span class="metric-value" id="metric-incl-reviews">—</span>
-                    <span class="metric-label" id="metric-incl-reviews-label">Incl. Reviews</span>
+                    <span class="metric-value" id="metric-review-rate">—</span>
+                    <span class="metric-label" id="metric-review-rate-label">Review Rate</span>
                 </div>
                 <div class="metric-card">
-                    <span class="metric-value" id="metric-papers">—</span>
-                    <span class="metric-label" id="metric-papers-label">Papers (24-mo)</span>
+                    <span class="metric-value" id="metric-research-papers">—</span>
+                    <span class="metric-label" id="metric-research-papers-label">Research Papers</span>
                 </div>
                 <div class="metric-card">
-                    <span class="metric-value" id="metric-reviews">—</span>
-                    <span class="metric-label">Review %</span>
+                    <span class="metric-value" id="metric-review-papers">—</span>
+                    <span class="metric-label" id="metric-review-papers-label">Review Papers</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value" id="metric-review-pct">—</span>
+                    <span class="metric-label" id="metric-review-pct-label">Review %</span>
                 </div>
             </div>
 
@@ -144,17 +148,16 @@
             <div class="chart-controls">
                 <span class="chart-controls-label">Article type:</span>
                 <div id="type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
-                    <label><input type="checkbox" value="all" checked> All Articles</label>
-                    <label><input type="checkbox" value="research"> Research</label>
+                    <label><input type="checkbox" value="research" checked> Research</label>
                     <label><input type="checkbox" value="review"> Reviews</label>
                     <label><input type="checkbox" value="editorial"> Editorials</label>
                     <label><input type="checkbox" value="letter"> Letters</label>
                     <label><input type="checkbox" value="other"> Other</label>
                 </div>
-                <span class="chart-controls-label" style="margin-left:1.2rem;">Mode:</span>
-                <div class="toggle-group" id="type-mode-toggle">
-                    <button class="toggle-btn active" data-mode="separate">Separate</button>
-                    <button class="toggle-btn" data-mode="combined">Combined</button>
+                <span class="chart-controls-label" style="margin-left:1.2rem;">Show:</span>
+                <div class="toggle-group" id="type-visibility-toggle">
+                    <button class="toggle-btn active" id="show-combined-btn">Combined</button>
+                    <button class="toggle-btn active" id="show-individual-btn">Individual</button>
                 </div>
                 <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
                 <div class="toggle-group" id="journal-y-toggle">
@@ -735,7 +738,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=3"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=28"></script>
+<script src="js/app.js?v=29"></script>
 
 </body>
 </html>

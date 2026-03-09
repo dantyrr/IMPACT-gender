@@ -258,7 +258,7 @@ h2 {
 
 .metric-card {
     flex: 1;
-    min-width: 120px;
+    min-width: 100px;
     background: var(--bg);
     border-radius: var(--radius);
     padding: 1rem;

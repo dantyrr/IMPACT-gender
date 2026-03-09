@@ -22,7 +22,8 @@ class IMPACTApp {
         this._authorActiveTypes = null;  // null = all; Set<string> = specific types
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
-        this._typeMode = 'separate';
+        this._showCombined = true;
+        this._showIndividual = true;
         this.compareMetric = 'rolling_if';
         this.compareWindow = 'timeseries';
         this.jcWindow = 'timeseries';
@@ -341,52 +342,74 @@ class IMPACTApp {
             // Title
             document.getElementById('detail-title').textContent = data.journal;
 
-            // Metrics from latest timeseries entry's by_type data
+            // Metrics: 24-mo averaged rates from by_type data
             const latest = data.latest || {};
             const ts24 = data.timeseries || [];
+            const last24 = ts24.slice(-24);
             const lastEntry = ts24.length > 0 ? ts24[ts24.length - 1] : null;
             const bt = lastEntry && lastEntry.by_type ? lastEntry.by_type : {};
 
-            const resPapers = (bt.research ? bt.research.papers : 0) + (bt.letter ? bt.letter.papers : 0);
-            const resCitations = (bt.research ? bt.research.citations : 0) + (bt.letter ? bt.letter.citations : 0);
-            const rateResLetters = resPapers > 0 ? resCitations / resPapers : null;
+            // Average research rate over last 24 snapshots
+            let resRateSum = 0, resRateN = 0;
+            let revRateSum = 0, revRateN = 0;
+            for (const entry of last24) {
+                const ebt = entry.by_type || {};
+                if (ebt.research && ebt.research.papers > 0) {
+                    resRateSum += ebt.research.citations / ebt.research.papers;
+                    resRateN++;
+                }
+                if (ebt.review && ebt.review.papers > 0) {
+                    revRateSum += ebt.review.citations / ebt.review.papers;
+                    revRateN++;
+                }
+            }
+            const avgResRate = resRateN > 0 ? resRateSum / resRateN : null;
+            const avgRevRate = revRateN > 0 ? revRateSum / revRateN : null;
 
-            const inclPapers = resPapers + (bt.review ? bt.review.papers : 0);
-            const inclCitations = resCitations + (bt.review ? bt.review.citations : 0);
-            const rateInclReviews = inclPapers > 0 ? inclCitations / inclPapers : null;
+            // Paper counts from latest snapshot's by_type
+            const researchPapers = bt.research ? bt.research.papers : 0;
+            const reviewPapers = bt.review ? bt.review.papers : 0;
+            const totalPapers = researchPapers + reviewPapers
+                + (bt.editorial ? bt.editorial.papers : 0)
+                + (bt.letter ? bt.letter.papers : 0)
+                + (bt.other ? bt.other.papers : 0);
+            const reviewPct = totalPapers > 0 ? (reviewPapers / totalPapers * 100) : null;
 
-            const reviewPct = (latest.paper_count > 0 && latest.review_count != null)
-                ? (latest.review_count / latest.paper_count * 100) : null;
-
-            // Compute date range from snapshot month
+            // Date range label
             const snapshotMonth = lastEntry ? lastEntry.month : latest.month;
             const dateRange = this._computeDateRange(snapshotMonth);
+            const avgLabel = dateRange ? `24-mo avg · ${dateRange}` : '24-mo avg';
 
-            document.getElementById('metric-if').textContent = UIHelpers.formatIF(rateResLetters);
-            document.getElementById('metric-if-label').textContent = dateRange ? `Research + Letters · ${dateRange}` : 'Research + Letters';
-            document.getElementById('metric-incl-reviews').textContent = UIHelpers.formatIF(rateInclReviews);
-            document.getElementById('metric-incl-reviews-label').textContent = dateRange ? `Incl. Reviews · ${dateRange}` : 'Incl. Reviews';
-            document.getElementById('metric-papers').textContent = UIHelpers.formatInt(latest.paper_count);
-            document.getElementById('metric-papers-label').textContent = dateRange ? `Papers (24-mo) · ${dateRange}` : 'Papers (24-mo)';
-            document.getElementById('metric-reviews').textContent = UIHelpers.formatPct(reviewPct);
+            document.getElementById('metric-research-rate').textContent = UIHelpers.formatIF(avgResRate);
+            document.getElementById('metric-research-rate-label').textContent = `Research Rate (${avgLabel})`;
+            document.getElementById('metric-review-rate').textContent = UIHelpers.formatIF(avgRevRate);
+            document.getElementById('metric-review-rate-label').textContent = `Review Rate (${avgLabel})`;
+            document.getElementById('metric-research-papers').textContent = UIHelpers.formatInt(researchPapers);
+            document.getElementById('metric-research-papers-label').textContent = dateRange ? `Research Papers · ${dateRange}` : 'Research Papers';
+            document.getElementById('metric-review-papers').textContent = UIHelpers.formatInt(reviewPapers);
+            document.getElementById('metric-review-papers-label').textContent = dateRange ? `Review Papers · ${dateRange}` : 'Review Papers';
+            document.getElementById('metric-review-pct').textContent = UIHelpers.formatPct(reviewPct);
+            document.getElementById('metric-review-pct-label').textContent = 'Review %';
 
             // Reset window/type state for new journal
             this.currentWindow = 'timeseries';
-            this._typeMode = 'separate';
+            this._showCombined = true;
+            this._showIndividual = true;
             this._citationMode = 'total';
 
             // Sync toggle button active states
             document.querySelectorAll('#window-toggle .toggle-btn').forEach(b =>
                 b.classList.toggle('active', b.getAttribute('data-window') === 'timeseries')
             );
-            // Reset type checkboxes: only "all" checked
+            // Reset type checkboxes: only "research" checked
             document.querySelectorAll('#type-checkboxes input').forEach(cb => {
-                cb.checked = cb.value === 'all';
+                cb.checked = cb.value === 'research';
             });
-            // Reset mode toggle
-            document.querySelectorAll('#type-mode-toggle .toggle-btn').forEach(b =>
-                b.classList.toggle('active', b.getAttribute('data-mode') === 'separate')
-            );
+            // Reset visibility toggles: both active
+            const combBtn = document.getElementById('show-combined-btn');
+            const indBtn = document.getElementById('show-individual-btn');
+            if (combBtn) combBtn.classList.add('active');
+            if (indBtn) indBtn.classList.add('active');
 
             // Setup toggle controls
             this.setupDetailToggles(data);
@@ -469,7 +492,9 @@ class IMPACTApp {
     // ---- Detail series builder ----
 
     /**
-     * Build series array for the journal detail chart based on checked types and mode.
+     * Build series array for the journal detail chart based on checked types
+     * and combined/individual visibility toggles.
+     * All data comes exclusively from by_type — never uses rolling_if or rolling_if_no_reviews.
      */
     _buildDetailSeries(data) {
         const raw = data[this.currentWindow] || data.timeseries;
@@ -484,15 +509,14 @@ class IMPACTApp {
         if (checkedTypes.length === 0) return [];
 
         const typeLabels = {
-            all: 'All Articles', research: 'Research', review: 'Reviews',
+            research: 'Research', review: 'Reviews',
             editorial: 'Editorials', letter: 'Letters', other: 'Other',
         };
         const typeDashes = {
-            all: [], research: [8, 4], review: [4, 4],
+            research: [8, 4], review: [4, 4],
             editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
         };
         const typeColors = {
-            all: chartManager.palette[0],
             research: chartManager.palette[1],
             review: chartManager.palette[2],
             editorial: chartManager.palette[3],
@@ -500,51 +524,56 @@ class IMPACTApp {
             other: chartManager.palette[5],
         };
 
-        const mode = this._typeMode || 'separate';
+        // Helper: compute rate for a single type from by_type
+        const typeRate = (entry, typeKey) => {
+            const bt = entry.by_type && entry.by_type[typeKey];
+            return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
+        };
 
-        if (mode === 'combined') {
-            // Sum citations and papers across checked types into one line
+        const series = [];
+
+        // Single type checked: just one solid line, no combined/individual distinction
+        if (checkedTypes.length === 1) {
+            const typeKey = checkedTypes[0];
+            const values = ts.map(entry => typeRate(entry, typeKey));
+            series.push({
+                label: typeLabels[typeKey],
+                color: typeColors[typeKey] || chartManager.palette[0],
+                dash: [],
+                months,
+                values,
+            });
+            return series;
+        }
+
+        // Multiple types checked: combined and/or individual lines
+        if (this._showCombined) {
             const values = ts.map(entry => {
                 let totalCit = 0, totalPap = 0;
                 checkedTypes.forEach(typeKey => {
-                    if (typeKey === 'all') {
-                        totalCit += entry.citations || 0;
-                        totalPap += entry.papers || 0;
-                    } else if (typeKey === 'research') {
-                        const bt = entry.by_type || {};
-                        // Research = all minus reviews
-                        const resBt = bt.research;
-                        if (resBt) { totalCit += resBt.citations || 0; totalPap += resBt.papers || 0; }
-                    } else {
-                        const bt = entry.by_type && entry.by_type[typeKey];
-                        if (bt) { totalCit += bt.citations || 0; totalPap += bt.papers || 0; }
-                    }
+                    const bt = entry.by_type && entry.by_type[typeKey];
+                    if (bt) { totalCit += bt.citations || 0; totalPap += bt.papers || 0; }
                 });
                 return totalPap > 0 ? +(totalCit / totalPap).toFixed(3) : null;
             });
-            const label = checkedTypes.length === 1
-                ? typeLabels[checkedTypes[0]]
-                : checkedTypes.map(t => typeLabels[t]).join(' + ');
-            return [{ label, color: chartManager.palette[0], dash: [], months, values }];
+            const label = checkedTypes.map(t => typeLabels[t]).join(' + ');
+            series.push({ label, color: chartManager.palette[0], dash: [], months, values });
         }
 
-        // Separate mode: one line per checked type
-        const multiType = checkedTypes.length > 1;
-        return checkedTypes.map(typeKey => {
-            const values = ts.map(entry => {
-                if (typeKey === 'all') return entry.rolling_if;
-                if (typeKey === 'research') return entry.rolling_if_no_reviews;
-                const bt = entry.by_type && entry.by_type[typeKey];
-                return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
+        if (this._showIndividual) {
+            checkedTypes.forEach(typeKey => {
+                const values = ts.map(entry => typeRate(entry, typeKey));
+                series.push({
+                    label: typeLabels[typeKey],
+                    color: typeColors[typeKey] || chartManager.palette[0],
+                    dash: typeDashes[typeKey] || [],
+                    months,
+                    values,
+                });
             });
-            return {
-                label: typeLabels[typeKey] || typeKey,
-                color: typeColors[typeKey] || chartManager.palette[0],
-                dash: multiType ? (typeDashes[typeKey] || []) : [],
-                months,
-                values,
-            };
-        });
+        }
+
+        return series;
     }
 
     _computeDateRange(snapshotMonth) {
@@ -584,11 +613,37 @@ class IMPACTApp {
             newCb.addEventListener('change', () => redrawRate());
         });
 
-        // Mode toggle (separate/combined) — only affects rate chart
-        this._setupToggleGroup('type-mode-toggle', (mode) => {
-            this._typeMode = mode;
-            redrawRate();
-        });
+        // Visibility toggles (Combined / Individual) — independent, not mutually exclusive
+        const combBtn = document.getElementById('show-combined-btn');
+        const indBtn = document.getElementById('show-individual-btn');
+        if (combBtn && indBtn) {
+            // Clone to remove old listeners
+            const newComb = combBtn.cloneNode(true);
+            combBtn.parentNode.replaceChild(newComb, combBtn);
+            const newInd = indBtn.cloneNode(true);
+            indBtn.parentNode.replaceChild(newInd, indBtn);
+
+            newComb.addEventListener('click', () => {
+                this._showCombined = !this._showCombined;
+                // Guard: don't allow both off
+                if (!this._showCombined && !this._showIndividual) {
+                    this._showIndividual = true;
+                    newInd.classList.add('active');
+                }
+                newComb.classList.toggle('active', this._showCombined);
+                redrawRate();
+            });
+            newInd.addEventListener('click', () => {
+                this._showIndividual = !this._showIndividual;
+                // Guard: don't allow both off
+                if (!this._showIndividual && !this._showCombined) {
+                    this._showCombined = true;
+                    newComb.classList.add('active');
+                }
+                newInd.classList.toggle('active', this._showIndividual);
+                redrawRate();
+            });
+        }
 
         // Y-axis zero toggle
         this._setupToggleGroup('journal-y-toggle', (val) => {

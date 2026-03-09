@@ -22,7 +22,7 @@ class IMPACTApp {
         this._authorActiveTypes = null;  // null = all; Set<string> = specific types
         this.currentJournalSlug = null;
         this.currentWindow = 'timeseries';
-        this.currentType = 'all';
+        this._typeMode = 'separate';
         this.compareMetric = 'rolling_if';
         this.compareWindow = 'timeseries';
         this.jcWindow = 'timeseries';
@@ -47,7 +47,7 @@ class IMPACTApp {
             const index = await dataLoader.loadIndex();
             this.journals = index.journals || [];
             this.setupNavigation();
-            this.renderJournalCards(this.journals);
+            this.renderJournalList(this.journals);
             this.setupSearch();
             this.setupJournalTrendsPanel();
             this.setupCompare();
@@ -59,7 +59,7 @@ class IMPACTApp {
             this.updateTimestamp(index.generated);
         } catch (error) {
             console.error('Failed to initialize IMPACT:', error);
-            document.getElementById('journal-cards').innerHTML =
+            document.getElementById('journal-list').innerHTML =
                 `<p style="color:#e74c3c;">Failed to initialize: ${error.message}</p>`;
         }
     }
@@ -93,33 +93,45 @@ class IMPACTApp {
 
     // ---- Journal List ----
 
-    renderJournalCards(journals) {
-        const container = document.getElementById('journal-cards');
+    renderJournalList(journals) {
+        const container = document.getElementById('journal-list');
+        if (!container) return;
         container.innerHTML = '';
 
+        const table = document.createElement('table');
+        table.className = 'journal-list-table';
+        const thead = document.createElement('thead');
+        thead.innerHTML = '<tr><th>Journal</th><th>Citation Rate</th><th>Papers (24-mo)</th></tr>';
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
         journals.forEach(journal => {
-            const card = UIHelpers.createJournalCard(journal);
-            card.dataset.slug = journal.slug;
-            card.addEventListener('click', () => this.showJournalDetail(journal.slug));
-            container.appendChild(card);
+            const tr = document.createElement('tr');
+            tr.dataset.slug = journal.slug;
+            tr.className = 'journal-list-row';
+            const rate = journal.latest_if != null ? Number(journal.latest_if).toFixed(2) : '—';
+            const papers = journal.paper_count != null ? journal.paper_count.toLocaleString() : '—';
+            tr.innerHTML = `<td class="jl-name">${UIHelpers.escapeHtml(journal.name)}</td><td class="jl-rate">${rate}</td><td class="jl-papers">${papers}</td>`;
+            tr.addEventListener('click', () => this.showJournalDetail(journal.slug));
+            tbody.appendChild(tr);
         });
+        table.appendChild(tbody);
+        container.appendChild(table);
     }
 
     setupSearch() {
-        document.getElementById('journal-search').addEventListener('input', () => this._renderFilteredCards());
+        document.getElementById('journal-search').addEventListener('input', () => this._renderFilteredList());
     }
 
-    _renderFilteredCards() {
+    _renderFilteredList() {
         const term = (document.getElementById('journal-search').value || '').toLowerCase().trim();
-        const selected = this.jcPicker ? this.jcPicker.getSelected() : [];
-        document.querySelectorAll('#journal-cards [data-slug]').forEach(card => {
-            const slug = card.dataset.slug;
+        document.querySelectorAll('#journal-list [data-slug]').forEach(row => {
+            const slug = row.dataset.slug;
             const j = this.journals.find(j => j.slug === slug);
-            if (!j) { card.style.display = 'none'; return; }
-            const matchesSel = selected.length === 0 || selected.includes(slug);
-            const matchesSearch = !term || j.name.toLowerCase().includes(term) ||
+            if (!j) { row.style.display = 'none'; return; }
+            const matches = !term || j.name.toLowerCase().includes(term) ||
                 (j.abbreviation || '').toLowerCase().includes(term) || j.slug.includes(term);
-            card.style.display = matchesSel && matchesSearch ? '' : 'none';
+            row.style.display = matches ? '' : 'none';
         });
     }
 
@@ -173,7 +185,7 @@ class IMPACTApp {
             document.getElementById('jc-download-bar').style.display = 'none';
             document.getElementById('jc-range-controls').style.display = 'none';
             this._jcSeriesData = null;
-            this._renderFilteredCards();
+            this._renderFilteredList();
             return;
         }
 
@@ -253,7 +265,7 @@ class IMPACTApp {
         chartManager.createMultiSeriesChart('jc-chart', series, this.jcYZero, scaleOverrides);
         document.getElementById('jc-range-controls').style.display = '';
         document.getElementById('jc-download-bar').style.display = '';
-        this._renderFilteredCards();
+        this._renderFilteredList();
     }
 
     // ---- Chart Downloads ----
@@ -358,23 +370,29 @@ class IMPACTApp {
 
             // Reset window/type state for new journal
             this.currentWindow = 'timeseries';
-            this.currentType = 'all';
+            this._typeMode = 'separate';
             this._citationMode = 'total';
 
             // Sync toggle button active states
             document.querySelectorAll('#window-toggle .toggle-btn').forEach(b =>
                 b.classList.toggle('active', b.getAttribute('data-window') === 'timeseries')
             );
-            document.querySelectorAll('#type-toggle .toggle-btn').forEach(b =>
-                b.classList.toggle('active', b.getAttribute('data-type') === 'all')
+            // Reset type checkboxes: only "all" checked
+            document.querySelectorAll('#type-checkboxes input').forEach(cb => {
+                cb.checked = cb.value === 'all';
+            });
+            // Reset mode toggle
+            document.querySelectorAll('#type-mode-toggle .toggle-btn').forEach(b =>
+                b.classList.toggle('active', b.getAttribute('data-mode') === 'separate')
             );
 
             // Setup toggle controls
             this.setupDetailToggles(data);
 
             // Initial charts
-            const ts = this._getDisplayTimeseries(data);
-            chartManager.createJournalChart('journal-chart', ts, null, 'Citation Rate — All Articles (24-month)');
+            const ts = data[this.currentWindow] || data.timeseries;
+            const series = this._buildDetailSeries(data);
+            chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero);
             chartManager.createCitationChart('citation-chart', ts, 'total');
             chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', ts);
@@ -386,8 +404,8 @@ class IMPACTApp {
                 compCheckboxes.querySelectorAll('input[type="checkbox"]').forEach(cb => {
                     cb.checked = true;
                     cb.onchange = () => {
-                        const ts2 = this._getDisplayTimeseries(data);
-                        chartManager.createCompositionChart('composition-chart', ts2, this._getCompositionVisibleTypes());
+                        const rawTs = data[this.currentWindow] || data.timeseries;
+                        chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes());
                     };
                 });
             }
@@ -446,29 +464,84 @@ class IMPACTApp {
         a.click();
     }
 
-    // ---- Display timeseries helper ----
+    // ---- Detail series builder ----
 
     /**
-     * Return the timeseries array for the currently selected window, with
-     * rolling_if values recomputed for the selected article type.
+     * Build series array for the journal detail chart based on checked types and mode.
      */
-    _getDisplayTimeseries(data) {
+    _buildDetailSeries(data) {
         const raw = data[this.currentWindow] || data.timeseries;
-        const typeKey = this.currentType;
+        const startIdx = raw.findIndex(d => d.papers > 0);
+        const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
+        const months = ts.map(d => d.month);
 
-        if (typeKey === 'all') {
-            return raw;
+        const checkedTypes = Array.from(
+            document.querySelectorAll('#type-checkboxes input:checked')
+        ).map(cb => cb.value);
+
+        if (checkedTypes.length === 0) return [];
+
+        const typeLabels = {
+            all: 'All Articles', research: 'Research', review: 'Reviews',
+            editorial: 'Editorials', letter: 'Letters', other: 'Other',
+        };
+        const typeDashes = {
+            all: [], research: [8, 4], review: [4, 4],
+            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
+        };
+        const typeColors = {
+            all: chartManager.palette[0],
+            research: chartManager.palette[1],
+            review: chartManager.palette[2],
+            editorial: chartManager.palette[3],
+            letter: chartManager.palette[4],
+            other: chartManager.palette[5],
+        };
+
+        const mode = this._typeMode || 'separate';
+
+        if (mode === 'combined') {
+            // Sum citations and papers across checked types into one line
+            const values = ts.map(entry => {
+                let totalCit = 0, totalPap = 0;
+                checkedTypes.forEach(typeKey => {
+                    if (typeKey === 'all') {
+                        totalCit += entry.citations || 0;
+                        totalPap += entry.papers || 0;
+                    } else if (typeKey === 'research') {
+                        const bt = entry.by_type || {};
+                        // Research = all minus reviews
+                        const resBt = bt.research;
+                        if (resBt) { totalCit += resBt.citations || 0; totalPap += resBt.papers || 0; }
+                    } else {
+                        const bt = entry.by_type && entry.by_type[typeKey];
+                        if (bt) { totalCit += bt.citations || 0; totalPap += bt.papers || 0; }
+                    }
+                });
+                return totalPap > 0 ? +(totalCit / totalPap).toFixed(3) : null;
+            });
+            const label = checkedTypes.length === 1
+                ? typeLabels[checkedTypes[0]]
+                : checkedTypes.map(t => typeLabels[t]).join(' + ');
+            return [{ label, color: chartManager.palette[0], dash: [], months, values }];
         }
 
-        return raw.map(entry => {
-            let rate;
-            if (typeKey === 'research') {
-                rate = entry.rolling_if_no_reviews;
-            } else {
+        // Separate mode: one line per checked type
+        const multiType = checkedTypes.length > 1;
+        return checkedTypes.map(typeKey => {
+            const values = ts.map(entry => {
+                if (typeKey === 'all') return entry.rolling_if;
+                if (typeKey === 'research') return entry.rolling_if_no_reviews;
                 const bt = entry.by_type && entry.by_type[typeKey];
-                rate = (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : 0;
-            }
-            return Object.assign({}, entry, { rolling_if: rate, rolling_if_no_reviews: rate });
+                return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
+            });
+            return {
+                label: typeLabels[typeKey] || typeKey,
+                color: typeColors[typeKey] || chartManager.palette[0],
+                dash: multiType ? (typeDashes[typeKey] || []) : [],
+                months,
+                values,
+            };
         });
     }
 
@@ -482,54 +555,50 @@ class IMPACTApp {
         return `${MONTH_NAMES[startDate.getMonth()]} ${startDate.getFullYear()} – ${MONTH_NAMES[endDate.getMonth()]} ${endDate.getFullYear()}`;
     }
 
-    _typeLabel(typeKey) {
-        const labels = {
-            all: 'All Articles', research: 'Research',
-            review: 'Reviews', editorial: 'Editorials',
-            letter: 'Letters', other: 'Other',
-        };
-        return labels[typeKey] || typeKey;
-    }
-
-    _windowLabel(windowKey) {
-        const labels = {
-            timeseries: '24-month', timeseries_12mo: '12-month', timeseries_5yr: '5-yr (yr 2–6)',
-        };
-        return labels[windowKey] || windowKey;
-    }
-
     setupDetailToggles(data) {
-        const redraw = () => {
-            const ts = this._getDisplayTimeseries(data);
-            const rateLabel = `Citation Rate — ${this._typeLabel(this.currentType)} (${this._windowLabel(this.currentWindow)})`;
-            chartManager.createJournalChart('journal-chart', ts, null, rateLabel, this._journalYZero);
-            chartManager.createCitationChart('citation-chart', ts, this._citationChartMode());
-            chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
-            chartManager.createPapersChart('papers-chart', ts);
+        const redrawRate = () => {
+            const series = this._buildDetailSeries(data);
+            chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero);
         };
 
-        // Window toggle
+        const redrawSecondary = () => {
+            const rawTs = data[this.currentWindow] || data.timeseries;
+            chartManager.createCitationChart('citation-chart', rawTs, this._citationChartMode());
+            chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes());
+            chartManager.createPapersChart('papers-chart', rawTs);
+        };
+
+        // Window toggle — affects all charts
         this._setupToggleGroup('window-toggle', (windowKey) => {
             this.currentWindow = windowKey;
-            redraw();
+            redrawRate();
+            redrawSecondary();
         }, 'data-window');
 
-        // Article type toggle
-        this._setupToggleGroup('type-toggle', (typeKey) => {
-            this.currentType = typeKey;
-            redraw();
-        }, 'data-type');
+        // Article type checkboxes — only affects rate chart
+        document.querySelectorAll('#type-checkboxes input').forEach(cb => {
+            const newCb = cb.cloneNode(true);
+            cb.parentNode.replaceChild(newCb, cb);
+            newCb.addEventListener('change', () => redrawRate());
+        });
+
+        // Mode toggle (separate/combined) — only affects rate chart
+        this._setupToggleGroup('type-mode-toggle', (mode) => {
+            this._typeMode = mode;
+            redrawRate();
+        });
 
         // Y-axis zero toggle
         this._setupToggleGroup('journal-y-toggle', (val) => {
             this._journalYZero = val === 'zero';
-            redraw();
+            redrawRate();
         }, 'data-y');
 
         // Citation chart mode toggle (independent)
         this._setupToggleGroup('citation-chart-toggle', (mode) => {
             this._citationMode = mode;
-            chartManager.createCitationChart('citation-chart', this._getDisplayTimeseries(data), mode);
+            const rawTs = data[this.currentWindow] || data.timeseries;
+            chartManager.createCitationChart('citation-chart', rawTs, mode);
         });
     }
 

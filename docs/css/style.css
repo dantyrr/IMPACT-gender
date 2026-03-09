@@ -157,54 +157,61 @@ h2 {
     background: var(--primary-light);
 }
 
-/* ---- Card Grid ---- */
+/* ---- Journal List ---- */
 
-.card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
+.journal-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
     margin-bottom: 2rem;
 }
 
-.journal-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    cursor: pointer;
-    transition: box-shadow 0.2s, transform 0.1s;
-    box-shadow: var(--shadow);
-}
-
-.journal-card:hover {
-    box-shadow: var(--shadow-hover);
-    transform: translateY(-2px);
-}
-
-.journal-card h4 {
-    color: var(--primary);
-    font-size: 1.05rem;
-    margin-bottom: 0.5rem;
-}
-
-.journal-card .card-stats {
-    display: flex;
-    justify-content: space-between;
+.journal-list-table {
+    width: 100%;
+    border-collapse: collapse;
     font-size: 0.9rem;
-    color: var(--text-light);
 }
 
-.journal-card .card-if {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary-dark);
-    margin: 0.5rem 0;
+.journal-list-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--primary);
+    color: white;
+    z-index: 1;
 }
 
-.journal-card .card-if small {
-    font-size: 0.75rem;
-    font-weight: 400;
-    color: var(--text-light);
+.journal-list-table th {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.journal-list-row {
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.journal-list-row:hover {
+    background: #f0f6fc;
+}
+
+.journal-list-row td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.jl-name {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.jl-rate, .jl-papers {
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text);
 }
 
 /* ---- Detail Panel ---- */
@@ -892,8 +899,8 @@ footer a:hover {
         flex-direction: column;
     }
 
-    .card-grid {
-        grid-template-columns: 1fr;
+    .journal-list {
+        max-height: 50vh;
     }
 
     .authors-charts-grid {

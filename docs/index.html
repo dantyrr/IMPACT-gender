@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IMPACT — Studying Publication Bias, Impact Factor Inflation &amp; H-Index Gaming</title>
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -104,7 +104,7 @@
                 <div class="search-bar">
                     <input type="text" id="journal-search" placeholder="Search journals..." autocomplete="off">
                 </div>
-                <div id="journal-cards" class="card-grid"></div>
+                <div id="journal-list" class="journal-list"></div>
             </div>
 
         </div><!-- /#journals-main -->
@@ -143,13 +143,18 @@
 
             <div class="chart-controls">
                 <span class="chart-controls-label">Article type:</span>
-                <div class="toggle-group" id="type-toggle">
-                    <button class="toggle-btn active" data-type="all">All Articles</button>
-                    <button class="toggle-btn" data-type="research">Research</button>
-                    <button class="toggle-btn" data-type="review">Reviews</button>
-                    <button class="toggle-btn" data-type="editorial">Editorials</button>
-                    <button class="toggle-btn" data-type="letter">Letters</button>
-                    <button class="toggle-btn" data-type="other">Other</button>
+                <div id="type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
+                    <label><input type="checkbox" value="all" checked> All Articles</label>
+                    <label><input type="checkbox" value="research"> Research</label>
+                    <label><input type="checkbox" value="review"> Reviews</label>
+                    <label><input type="checkbox" value="editorial"> Editorials</label>
+                    <label><input type="checkbox" value="letter"> Letters</label>
+                    <label><input type="checkbox" value="other"> Other</label>
+                </div>
+                <span class="chart-controls-label" style="margin-left:1.2rem;">Mode:</span>
+                <div class="toggle-group" id="type-mode-toggle">
+                    <button class="toggle-btn active" data-mode="separate">Separate</button>
+                    <button class="toggle-btn" data-mode="combined">Combined</button>
                 </div>
                 <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
                 <div class="toggle-group" id="journal-y-toggle">
@@ -728,9 +733,9 @@
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script src="js/data-loader.js?v=6"></script>
 <script src="js/chart-manager.js?v=5"></script>
-<script src="js/ui-helpers.js?v=2"></script>
+<script src="js/ui-helpers.js?v=3"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=27"></script>
+<script src="js/app.js?v=28"></script>
 
 </body>
 </html>

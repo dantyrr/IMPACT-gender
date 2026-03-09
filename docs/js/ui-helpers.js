@@ -4,6 +4,12 @@
  */
 
 const UIHelpers = {
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    },
+
     formatIF(value) {
         if (value == null || isNaN(value)) return '—';
         return Number(value).toFixed(2);

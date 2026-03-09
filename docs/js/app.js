@@ -890,6 +890,8 @@ class IMPACTApp {
             document.getElementById('compare-range-controls').style.display = 'none';
             if (downloadBar) downloadBar.style.display = 'none';
             if (tableContainer) tableContainer.innerHTML = '';
+            const metricsContainer = document.getElementById('compare-metrics-container');
+            if (metricsContainer) metricsContainer.innerHTML = '';
             this._compareSeriesData = null;
             return;
         }
@@ -996,9 +998,68 @@ class IMPACTApp {
         document.getElementById('compare-range-controls').style.display = '';
         if (downloadBar) downloadBar.style.display = '';
 
+        this._renderCompareMetrics(journalsData);
+
         if (tableContainer) {
             this.renderComparisonTable(tableContainer, journalsData);
         }
+    }
+
+    _renderCompareMetrics(journalsData) {
+        const container = document.getElementById('compare-metrics-container');
+        if (!container) return;
+        if (!journalsData.length) { container.innerHTML = ''; return; }
+
+        const colorMap = this.comparePicker.getColorMap();
+
+        container.innerHTML = journalsData.map((j, jIdx) => {
+            const ts24 = j.timeseries || [];
+            const last24 = ts24.slice(-24);
+            const lastEntry = ts24.length > 0 ? ts24[ts24.length - 1] : null;
+            const bt = lastEntry && lastEntry.by_type ? lastEntry.by_type : {};
+
+            let resRateSum = 0, resRateN = 0;
+            let revRateSum = 0, revRateN = 0;
+            for (const entry of last24) {
+                const ebt = entry.by_type || {};
+                if (ebt.research && ebt.research.papers > 0) {
+                    resRateSum += ebt.research.citations / ebt.research.papers;
+                    resRateN++;
+                }
+                if (ebt.review && ebt.review.papers > 0) {
+                    revRateSum += ebt.review.citations / ebt.review.papers;
+                    revRateN++;
+                }
+            }
+
+            const researchPapers = bt.research ? bt.research.papers : 0;
+            const reviewPapers = bt.review ? bt.review.papers : 0;
+            const totalPapers = researchPapers + reviewPapers
+                + (bt.editorial ? bt.editorial.papers : 0)
+                + (bt.letter ? bt.letter.papers : 0)
+                + (bt.other ? bt.other.papers : 0);
+            const reviewPct = totalPapers > 0 ? (reviewPapers / totalPapers * 100) : null;
+
+            const snapshotMonth = lastEntry ? lastEntry.month : null;
+            const dateRange = this._computeDateRange(snapshotMonth);
+            const avgLabel = dateRange ? `24-mo avg · ${dateRange}` : '24-mo avg';
+            const color = colorMap[j.slug] || chartManager.palette[jIdx % chartManager.palette.length];
+
+            const cards = [
+                [UIHelpers.formatIF(resRateN > 0 ? resRateSum / resRateN : null), `Research Rate (${avgLabel})`],
+                [UIHelpers.formatIF(revRateN > 0 ? revRateSum / revRateN : null), `Review Rate (${avgLabel})`],
+                [UIHelpers.formatInt(researchPapers), dateRange ? `Research Papers · ${dateRange}` : 'Research Papers'],
+                [UIHelpers.formatInt(reviewPapers), dateRange ? `Review Papers · ${dateRange}` : 'Review Papers'],
+                [UIHelpers.formatPct(reviewPct), 'Review %'],
+            ].map(([v, l]) =>
+                `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+            ).join('');
+
+            return `<div class="compare-metrics-journal">
+                <div class="compare-metrics-header" style="border-left: 4px solid ${color}; padding-left: 0.5rem;">${j.journal}</div>
+                <div class="metrics-row">${cards}</div>
+            </div>`;
+        }).join('');
     }
 
     renderComparisonTable(container, journalsData) {
@@ -1897,6 +1958,7 @@ class IMPACTApp {
         document.getElementById('inf-dl-png').onclick = () => this._downloadInfluence('png');
         document.getElementById('inf-dl-jpg').onclick = () => this._downloadInfluence('jpg');
         document.getElementById('inf-dl-pdf').onclick = () => this._downloadInfluence('pdf');
+        document.getElementById('inf-dl-csv').onclick = () => this._downloadInfluenceCSV();
 
         this._setupRangeControls('influence',
             { xMin: '_influenceXMin', xMax: '_influenceXMax', yMin: '_influenceYMin', yMax: '_influenceYMax' },
@@ -2080,10 +2142,26 @@ class IMPACTApp {
             ? ` (${localSeeds.length} exact${iciteSeeds.length > 0 ? `, ${iciteSeeds.length} via iCite` : ''})`
             : iciteSeeds.length > 0 ? ' (via iCite — rerun compute_snapshots for exact data)' : '';
 
+        // Format rolling window date range for a snapshot month (e.g. "2024-10")
+        // Papers: 24-mo window ending at month, Citations: 12-mo window ending at month
+        const fmtWindow = (monthStr) => {
+            const [y, m] = monthStr.split('-').map(Number);
+            const papStart = new Date(y, m - 25, 1); // 24 months before
+            const citStart = new Date(y, m - 13, 1); // 12 months before
+            const end = new Date(y, m - 1, 1);
+            const fmt = d => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            return { papers: `${fmt(papStart)}–${fmt(end)}`, citations: `${fmt(citStart)}–${fmt(end)}` };
+        };
+        const peakWin = peakMonth !== '—' ? fmtWindow(peakMonth) : null;
+        const firstMonth = ts[0]?.month || '—';
+        const lastMonth = ts[ts.length - 1]?.month || '—';
+
         document.getElementById('influence-metrics').innerHTML = [
-            [totalCitations.toLocaleString() + dataNote, 'Citations (in-journal papers only)'],
-            [maxContrib.toFixed(3), `Peak IF Boost (${peakMonth})`],
-            [meanContrib.toFixed(3), 'Mean Monthly IF Contribution'],
+            [totalCitations.toLocaleString() + dataNote, 'Total citations (all years, in-journal only)'],
+            [maxContrib.toFixed(3), `Peak citation rate boost` +
+                (peakWin ? `<br><span class="metric-sublabel">Papers: ${peakWin.papers}<br>Citations: ${peakWin.citations}</span>` : '')],
+            [meanContrib.toFixed(3), `Avg. citation rate contribution` +
+                `<br><span class="metric-sublabel">${firstMonth} to ${lastMonth}</span>`],
         ].map(([v, l]) =>
             `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
         ).join('');
@@ -2107,26 +2185,59 @@ class IMPACTApp {
 
         let datasets;
         if (viewMode === 'individual' && seedsInJournal.length >= 1) {
-            // One dashed line per in-journal seed showing its standalone contribution
-            const seedDatasets = seedsInJournal.map((seed, idx) => {
+            // Stacked bands: each PMID's contribution layered from censored IF up toward original IF
+            // Compute each seed's standalone contribution
+            const contribs = seedsInJournal.map(seed => {
                 const sl = localCyMap[String(seed.pmid)] ? [seed] : [];
                 const si = localCyMap[String(seed.pmid)] ? [] : [seed];
                 const singleAdjIf = this._computeAdjIf(ts, sl, si, citingPapers, localCyMap);
+                return ts.map((pt, i) => Math.max(0, (pt.rolling_if || 0) - singleAdjIf[i]));
+            });
+
+            // Build cumulative layers starting from the combined censored baseline
+            const cumLayers = [];
+            for (let s = 0; s < seedsInJournal.length; s++) {
+                const prev = s === 0 ? adjIf : cumLayers[s - 1];
+                cumLayers.push(prev.map((v, i) => v + contribs[s][i]));
+            }
+
+            // Dataset 0: Original IF (top reference line)
+            // Dataset 1: Combined censored IF baseline (bottom)
+            // Datasets 2+: cumulative layers, each filled down to the previous
+            const censoredDataset = {
+                label: 'Censored IF (all removed)',
+                data: adjIf,
+                borderColor: chartManager.palette[7],
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                borderDash: [4, 3],
+                tension: 0.3,
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                hidden: !isCensored,
+            };
+
+            const layerDatasets = seedsInJournal.map((seed, idx) => {
+                const palIdx = (idx + 1) % chartManager.palette.length;
+                const color = chartManager.palette[palIdx];
+                // fill down to previous layer: dataset index 1 (censored) for first, or idx+1 for subsequent
+                const fillTarget = idx === 0 ? 1 : idx + 1;
                 return {
-                    label: `Without PMID ${seed.pmid}`,
-                    data: singleAdjIf,
-                    borderColor: chartManager.palette[(idx + 1) % chartManager.palette.length],
-                    backgroundColor: 'transparent',
-                    borderWidth: 1.8,
-                    borderDash: [6, 3],
+                    label: `PMID ${seed.pmid}`,
+                    data: cumLayers[idx],
+                    borderColor: color,
+                    backgroundColor: color + '30',
+                    borderWidth: 1.5,
                     tension: 0.3,
-                    fill: false,
+                    fill: fillTarget,
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     hidden: !isCensored,
                 };
             });
-            datasets = [originalDataset, ...seedDatasets];
+
+            datasets = [originalDataset, censoredDataset, ...layerDatasets];
         } else {
             // Combined: one censored line = IF with all seeds removed together
             const censorLabel = seedsInJournal.length === 1
@@ -2172,7 +2283,16 @@ class IMPACTApp {
                     legend: { position: 'bottom' },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)}`,
+                            label: (ctx) => {
+                                if (viewMode === 'individual' && ctx.datasetIndex >= 2) {
+                                    // Show per-PMID contribution (layer value minus previous layer)
+                                    const prevDs = ctx.chart.data.datasets[ctx.datasetIndex - 1];
+                                    const prevVal = prevDs ? prevDs.data[ctx.dataIndex] : 0;
+                                    const contrib = ctx.parsed.y - prevVal;
+                                    return `${ctx.dataset.label}: +${contrib.toFixed(3)}`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(3)}`;
+                            },
                             afterBody: (items) => {
                                 if (viewMode !== 'combined') return '';
                                 const orig = items.find(i => i.datasetIndex === 0);
@@ -2235,6 +2355,29 @@ class IMPACTApp {
         a.href = url;
         a.download = `${filename}.${format}`;
         a.click();
+    }
+
+    _downloadInfluenceCSV() {
+        const chart = chartManager.charts['influence-chart'];
+        if (!chart) return;
+        const slug = this._influenceJournalSlug || 'journal';
+        const labels = chart.data.labels;
+        const datasets = chart.data.datasets;
+        const header = ['Month', ...datasets.map(ds => `"${ds.label.replace(/"/g, '""')}"`)].join(',');
+        const rows = labels.map((m, i) => {
+            const vals = datasets.map(ds => {
+                const v = ds.data[i];
+                return v != null ? v : '';
+            });
+            return [m, ...vals].join(',');
+        });
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `influence-${slug}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // ---- Author Name Search ----

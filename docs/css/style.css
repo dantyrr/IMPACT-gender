@@ -278,6 +278,27 @@ h2 {
     margin-top: 0.25rem;
 }
 
+.metric-sublabel {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    opacity: 0.75;
+}
+
+.compare-metrics-journal {
+    margin-bottom: 1rem;
+}
+
+.compare-metrics-journal .metrics-row {
+    margin-bottom: 0.5rem;
+}
+
+.compare-metrics-header {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--primary);
+    margin-bottom: 0.4rem;
+}
+
 .metric-info {
     cursor: help;
     color: var(--primary-light);

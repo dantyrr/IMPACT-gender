@@ -418,7 +418,6 @@ class IMPACTApp {
             const series = this._buildDetailSeries(data);
             chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero);
             chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
-            chartManager.createPapersChart('papers-chart', ts);
 
             // Show composition type checkboxes
             const compCheckboxes = document.getElementById('composition-type-checkboxes');
@@ -434,8 +433,8 @@ class IMPACTApp {
             }
 
             // Show download bars and wire up buttons
-            const detailCharts = ['jd-chart', 'composition-chart', 'papers-chart'];
-            const chartCanvasIds = ['journal-chart', 'composition-chart', 'papers-chart'];
+            const detailCharts = ['jd-chart', 'composition-chart'];
+            const chartCanvasIds = ['journal-chart', 'composition-chart'];
             detailCharts.forEach((id, idx) => {
                 const bar = document.getElementById(`${id}-download-bar`);
                 if (bar) bar.style.display = '';
@@ -593,7 +592,6 @@ class IMPACTApp {
         const redrawSecondary = () => {
             const rawTs = data[this.currentWindow] || data.timeseries;
             chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes());
-            chartManager.createPapersChart('papers-chart', rawTs);
         };
 
         // Window toggle — affects all charts

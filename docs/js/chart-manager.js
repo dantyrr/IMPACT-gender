@@ -271,6 +271,165 @@ class ChartManager {
     }
 
     /**
+     * Create a multi-journal paper composition chart.
+     * Single journal: stacked area (same as detail). Multiple journals: line chart with journal colors + type dashes.
+     * @param {string} canvasId
+     * @param {Array} journalsData - array of {journal, slug, timeseries, ...}
+     * @param {Object} colorMap - {slug: color}
+     * @param {string[]} visibleTypes
+     * @param {string} windowKey - timeseries key
+     */
+    createCompareCompositionChart(canvasId, journalsData, colorMap, visibleTypes, windowKey) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        this._destroy(canvasId);
+
+        const allTypes = ['research', 'review', 'editorial', 'letter', 'other'];
+        const shown = visibleTypes || allTypes;
+
+        const typeLabels = {
+            research: 'Research', review: 'Reviews',
+            editorial: 'Editorials', letter: 'Letters', other: 'Other',
+        };
+        const typeDashes = {
+            research: [8, 4], review: [4, 4],
+            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
+        };
+
+        const getData = (ts, type) => ts.map(d => {
+            const bt = d.by_type;
+            if (!bt) return type === 'research' ? (d.research || 0) : type === 'review' ? (d.reviews || 0) : 0;
+            if (type === 'other') return (bt.other?.papers || 0) + (bt.guideline?.papers || 0) + (bt.case_report?.papers || 0);
+            return bt[type]?.papers || 0;
+        });
+
+        if (journalsData.length === 1) {
+            // Single journal: use stacked area like the detail tab
+            const jData = journalsData[0];
+            const raw = jData[windowKey] || jData.timeseries;
+            const startIdx = raw.findIndex(d => d.papers > 0);
+            const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
+            const labels = ts.map(d => d.month);
+
+            const typeConfig = {
+                research:  { label: 'Research Articles', color: this.palette[0], bg: 'rgba(0, 114, 178, 0.4)' },
+                review:    { label: 'Reviews',           color: this.palette[6], bg: 'rgba(123, 45, 139, 0.4)' },
+                editorial: { label: 'Editorials',        color: this.palette[4], bg: 'rgba(230, 159, 0, 0.4)' },
+                letter:    { label: 'Letters',            color: this.palette[2], bg: 'rgba(0, 158, 115, 0.4)' },
+                other:     { label: 'Other',              color: this.palette[7], bg: 'rgba(127, 127, 127, 0.4)' },
+            };
+
+            const datasets = allTypes.filter(t => shown.includes(t)).map(type => ({
+                label: typeConfig[type].label,
+                data: getData(ts, type),
+                borderColor: typeConfig[type].color,
+                backgroundColor: typeConfig[type].bg,
+                borderWidth: 1.5,
+                tension: 0.3,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+            }));
+
+            this.charts[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        title: { display: true, text: `Paper Composition — ${jData.journal}`, font: { size: 14 } },
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: (items) => items.length >= 1 ? `\nTotal: ${items.reduce((s, i) => s + i.parsed.y, 0)}` : '',
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Month' }, ticks: { maxTicksLimit: 12 } },
+                        y: { title: { display: true, text: 'Papers' }, stacked: true, beginAtZero: true },
+                    }
+                }
+            });
+            return;
+        }
+
+        // Multiple journals: line chart with journal colors + type dashes
+        const allMonths = [...new Set(journalsData.flatMap(j => {
+            const raw = j[windowKey] || j.timeseries;
+            const si = raw.findIndex(d => d.papers > 0);
+            return (si >= 0 ? raw.slice(si) : raw).map(d => d.month);
+        }))].sort();
+
+        const datasets = [];
+        const multiType = shown.length > 1;
+
+        journalsData.forEach((jData, jIdx) => {
+            const color = colorMap[jData.slug] || this.palette[jIdx % this.palette.length];
+            const raw = jData[windowKey] || jData.timeseries;
+            const startIdx = raw.findIndex(d => d.papers > 0);
+            const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
+            const monthMap = new Map(ts.map((d, i) => [d.month, i]));
+
+            if (!multiType) {
+                // Single type selected
+                const typeKey = shown[0];
+                const typeData = getData(ts, typeKey);
+                const data = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? typeData[i] : null; });
+                datasets.push({
+                    label: jData.journal,
+                    data, borderColor: color, backgroundColor: 'transparent',
+                    borderWidth: 2.5, tension: 0.3, fill: false,
+                    pointRadius: 0, pointHoverRadius: 5, spanGaps: true,
+                });
+            } else {
+                // Total papers line (solid)
+                // Pre-compute per-type arrays, then sum by index
+                const typeArrays = shown.map(t => getData(ts, t));
+                const totalData = ts.map((_, idx) => typeArrays.reduce((sum, arr) => sum + (arr[idx] || 0), 0));
+                const totalMapped = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? totalData[i] : null; });
+                datasets.push({
+                    label: `${jData.journal} — Total`,
+                    data: totalMapped, borderColor: color, backgroundColor: 'transparent',
+                    borderWidth: 2.5, tension: 0.3, fill: false,
+                    pointRadius: 0, pointHoverRadius: 5, spanGaps: true,
+                });
+
+                // Per-type lines (dashed)
+                shown.forEach(typeKey => {
+                    const typeData = getData(ts, typeKey);
+                    const data = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? typeData[i] : null; });
+                    datasets.push({
+                        label: `${jData.journal} — ${typeLabels[typeKey]}`,
+                        data, borderColor: color, backgroundColor: 'transparent',
+                        borderWidth: 1.5, borderDash: typeDashes[typeKey] || [],
+                        tension: 0.3, fill: false,
+                        pointRadius: 0, pointHoverRadius: 4, spanGaps: true,
+                    });
+                });
+            }
+        });
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: allMonths, datasets },
+            options: {
+                responsive: true,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    title: { display: true, text: 'Paper Composition Comparison', font: { size: 14 } },
+                    legend: { position: 'bottom' },
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Month' }, ticks: { maxTicksLimit: 12 } },
+                    y: { title: { display: true, text: 'Papers' }, beginAtZero: true },
+                }
+            }
+        });
+    }
+
+    /**
      * Create a papers/citations bar chart.
      */
     createPapersChart(canvasId, timeseries) {

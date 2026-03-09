@@ -266,6 +266,20 @@
             <button id="compare-range-reset" class="range-reset-btn">Reset</button>
         </div>
 
+        <div id="compare-composition-container" style="display:none">
+            <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary);">Paper Composition</h3>
+            <div class="chart-container">
+                <canvas id="compare-composition-chart"></canvas>
+                <div class="download-bar" id="compare-composition-download-bar" style="display:none; margin-top:0.5rem;">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="compare-comp-dl-png">PNG</button>
+                    <button class="download-btn" id="compare-comp-dl-jpg">JPG</button>
+                    <button class="download-btn" id="compare-comp-dl-pdf">PDF</button>
+                    <button class="download-btn" id="compare-comp-dl-csv">CSV</button>
+                </div>
+            </div>
+        </div>
+
         <div id="compare-table-container"></div>
     </section>
 

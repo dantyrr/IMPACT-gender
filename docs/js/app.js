@@ -878,6 +878,14 @@ class IMPACTApp {
         });
         const csvBtn = document.getElementById('compare-dl-csv');
         if (csvBtn) csvBtn.addEventListener('click', () => this._downloadCompareCSV());
+
+        // Composition chart download buttons
+        ['png', 'jpg', 'pdf'].forEach(fmt => {
+            const btn = document.getElementById(`compare-comp-dl-${fmt}`);
+            if (btn) btn.addEventListener('click', () => this._downloadCompareChart(fmt, 'compare-composition-chart', 'compare-composition'));
+        });
+        const compCsvBtn = document.getElementById('compare-comp-dl-csv');
+        if (compCsvBtn) compCsvBtn.addEventListener('click', () => this._downloadCompareCompositionCSV());
     }
 
     async updateComparison() {
@@ -887,11 +895,14 @@ class IMPACTApp {
 
         if (checked.length === 0) {
             chartManager._destroy('compare-chart');
+            chartManager._destroy('compare-composition-chart');
             document.getElementById('compare-range-controls').style.display = 'none';
             if (downloadBar) downloadBar.style.display = 'none';
             if (tableContainer) tableContainer.innerHTML = '';
             const metricsContainer = document.getElementById('compare-metrics-container');
             if (metricsContainer) metricsContainer.innerHTML = '';
+            const compContainer = document.getElementById('compare-composition-container');
+            if (compContainer) compContainer.style.display = 'none';
             this._compareSeriesData = null;
             return;
         }
@@ -917,7 +928,10 @@ class IMPACTApp {
 
         if (checkedTypes.length === 0) {
             chartManager._destroy('compare-chart');
+            chartManager._destroy('compare-composition-chart');
             if (downloadBar) downloadBar.style.display = 'none';
+            const compContainer = document.getElementById('compare-composition-container');
+            if (compContainer) compContainer.style.display = 'none';
             this._compareSeriesData = null;
             return;
         }
@@ -999,6 +1013,17 @@ class IMPACTApp {
         if (downloadBar) downloadBar.style.display = '';
 
         this._renderCompareMetrics(journalsData);
+
+        // Paper Composition chart
+        const compContainer = document.getElementById('compare-composition-container');
+        if (compContainer) {
+            compContainer.style.display = '';
+            chartManager.createCompareCompositionChart(
+                'compare-composition-chart', journalsData, colorMap, checkedTypes, this.compareWindow
+            );
+            const compBar = document.getElementById('compare-composition-download-bar');
+            if (compBar) compBar.style.display = '';
+        }
 
         if (tableContainer) {
             this.renderComparisonTable(tableContainer, journalsData);
@@ -1115,10 +1140,9 @@ class IMPACTApp {
 
     // ---- Compare Downloads ----
 
-    _downloadCompareChart(format) {
-        const chart = chartManager.charts['compare-chart'];
+    _downloadCompareChart(format, chartId = 'compare-chart', filename = 'compare-journals') {
+        const chart = chartManager.charts[chartId];
         if (!chart) return;
-        const filename = 'compare-journals';
 
         if (format === 'pdf') {
             if (!window.jspdf) return;
@@ -1160,6 +1184,28 @@ class IMPACTApp {
         const a = document.createElement('a');
         a.href = url;
         a.download = 'compare-journals.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    _downloadCompareCompositionCSV() {
+        const chart = chartManager.charts['compare-composition-chart'];
+        if (!chart) return;
+        const labels = chart.data.labels;
+        const datasets = chart.data.datasets;
+        const header = ['Month', ...datasets.map(ds => `"${ds.label.replace(/"/g, '""')}"`)].join(',');
+        const rows = labels.map((m, i) => {
+            const vals = datasets.map(ds => {
+                const v = ds.data[i];
+                return v != null ? v : '';
+            });
+            return [m, ...vals].join(',');
+        });
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'compare-composition.csv';
         a.click();
         URL.revokeObjectURL(url);
     }

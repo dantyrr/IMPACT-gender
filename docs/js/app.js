@@ -24,7 +24,10 @@ class IMPACTApp {
         this.currentWindow = 'timeseries';
         this._showCombined = true;
         this._showIndividual = true;
-        this.compareMetric = 'rolling_if';
+        this._compareShowCombined = true;
+        this._compareShowIndividual = true;
+        this._compareYZero = false;
+        this._compareSeriesData = null;
         this.compareWindow = 'timeseries';
         this.jcWindow = 'timeseries';
         this.jcYZero = false;
@@ -443,6 +446,9 @@ class IMPACTApp {
                     if (btn) btn.onclick = () => this._downloadDetailChart(chartCanvasIds[idx], slug, fmt);
                 });
             });
+            // CSV download for the rate chart
+            const csvBtn = document.getElementById('jd-chart-dl-csv');
+            if (csvBtn) csvBtn.onclick = () => this._downloadDetailCSV(data, slug);
 
             // Back button
             document.getElementById('back-to-list').onclick = () => {
@@ -484,6 +490,28 @@ class IMPACTApp {
         a.href = url;
         a.download = `${filename}.${format}`;
         a.click();
+    }
+
+    _downloadDetailCSV(data, slug) {
+        const series = this._buildDetailSeries(data);
+        if (!series.length) return;
+        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        const header = ['Month', ...series.map(s => `"${s.label.replace(/"/g, '""')}"`)].join(',');
+        const rows = allMonths.map(m => {
+            const vals = series.map(s => {
+                const i = s.months.indexOf(m);
+                const v = i >= 0 ? s.values[i] : null;
+                return v != null ? v : '';
+            });
+            return [m, ...vals].join(',');
+        });
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `citation-rate-${slug}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // ---- Detail series builder ----
@@ -802,26 +830,67 @@ class IMPACTApp {
             this.updateComparison();
         }, 'data-window');
 
-        this._setupToggleGroup('compare-metric-toggle', (mode) => {
-            this.compareMetric = mode;
-            this.updateComparison();
+        // Article type checkboxes
+        document.querySelectorAll('#compare-type-checkboxes input').forEach(cb => {
+            cb.addEventListener('change', () => this.updateComparison());
         });
 
+        // Combined / Individual visibility toggles
+        const combBtn = document.getElementById('compare-combined-btn');
+        const indBtn = document.getElementById('compare-individual-btn');
+        if (combBtn && indBtn) {
+            combBtn.addEventListener('click', () => {
+                this._compareShowCombined = !this._compareShowCombined;
+                if (!this._compareShowCombined && !this._compareShowIndividual) {
+                    this._compareShowIndividual = true;
+                    indBtn.classList.add('active');
+                }
+                combBtn.classList.toggle('active', this._compareShowCombined);
+                this.updateComparison();
+            });
+            indBtn.addEventListener('click', () => {
+                this._compareShowIndividual = !this._compareShowIndividual;
+                if (!this._compareShowIndividual && !this._compareShowCombined) {
+                    this._compareShowCombined = true;
+                    combBtn.classList.add('active');
+                }
+                indBtn.classList.toggle('active', this._compareShowIndividual);
+                this.updateComparison();
+            });
+        }
+
+        // Y-axis toggle
+        this._setupToggleGroup('compare-y-toggle', (val) => {
+            this._compareYZero = val === 'zero';
+            this.updateComparison();
+        }, 'data-y');
+
+        // Range controls
         this._setupRangeControls('compare',
             { xMin: 'compareXMin', xMax: 'compareXMax', yMin: 'compareYMin', yMax: 'compareYMax' },
             () => this.updateComparison()
         );
+
+        // Download buttons
+        ['png', 'jpg', 'pdf'].forEach(fmt => {
+            const btn = document.getElementById(`compare-dl-${fmt}`);
+            if (btn) btn.addEventListener('click', () => this._downloadCompareChart(fmt));
+        });
+        const csvBtn = document.getElementById('compare-dl-csv');
+        if (csvBtn) csvBtn.addEventListener('click', () => this._downloadCompareCSV());
     }
 
     async updateComparison() {
         const checked = this.comparePicker.getSelected();
-
         const tableContainer = document.getElementById('compare-table-container');
+        const downloadBar = document.getElementById('compare-download-bar');
 
         if (checked.length === 0) {
             chartManager._destroy('compare-chart');
             document.getElementById('compare-range-controls').style.display = 'none';
+            if (downloadBar) downloadBar.style.display = 'none';
             if (tableContainer) tableContainer.innerHTML = '';
+            this._compareSeriesData = null;
             return;
         }
 
@@ -839,28 +908,94 @@ class IMPACTApp {
             }
         }
 
-        // Populate X selects from longest timeseries labels
-        let longestMonths = [];
-        journalsData.forEach(j => {
-            const ts = j[this.compareWindow] || j.timeseries;
-            const startIdx = ts.findIndex(d => d.papers > 0);
-            const data = startIdx >= 0 ? ts.slice(startIdx) : ts;
-            if (data.length > longestMonths.length) longestMonths = data.map(d => d.month);
-        });
-        this._populateXRangeSelects('compare', longestMonths);
+        // Build series from by_type data
+        const checkedTypes = Array.from(
+            document.querySelectorAll('#compare-type-checkboxes input:checked')
+        ).map(cb => cb.value);
 
-        // Set Y step based on metric
-        const isInteger = this.compareMetric === 'citations' || this.compareMetric === 'papers';
-        ['compare-y-min', 'compare-y-max'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.step = isInteger ? '1' : '0.1';
+        if (checkedTypes.length === 0) {
+            chartManager._destroy('compare-chart');
+            if (downloadBar) downloadBar.style.display = 'none';
+            this._compareSeriesData = null;
+            return;
+        }
+
+        const typeLabels = {
+            research: 'Research', review: 'Reviews',
+            editorial: 'Editorials', letter: 'Letters', other: 'Other',
+        };
+        const typeDashes = {
+            research: [8, 4], review: [4, 4],
+            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
+        };
+
+        const colorMap = this.comparePicker.getColorMap();
+        const multiJournal = journalsData.length > 1;
+        const multiType = checkedTypes.length > 1;
+        const series = [];
+
+        const typeRate = (entry, typeKey) => {
+            const bt = entry.by_type && entry.by_type[typeKey];
+            return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
+        };
+
+        journalsData.forEach((jData, jIdx) => {
+            const color = colorMap[jData.slug] || chartManager.palette[jIdx % chartManager.palette.length];
+            const raw = jData[this.compareWindow] || jData.timeseries;
+            const startIdx = raw.findIndex(d => d.papers > 0);
+            const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
+            const months = ts.map(d => d.month);
+
+            if (!multiType) {
+                // Single type: one solid line per journal
+                const typeKey = checkedTypes[0];
+                const values = ts.map(entry => typeRate(entry, typeKey));
+                const label = multiJournal ? jData.journal : typeLabels[typeKey];
+                series.push({ label, color, dash: [], months, values });
+            } else {
+                // Multiple types: combined and/or individual
+                if (this._compareShowCombined) {
+                    const values = ts.map(entry => {
+                        let totalCit = 0, totalPap = 0;
+                        checkedTypes.forEach(typeKey => {
+                            const bt = entry.by_type && entry.by_type[typeKey];
+                            if (bt) { totalCit += bt.citations || 0; totalPap += bt.papers || 0; }
+                        });
+                        return totalPap > 0 ? +(totalCit / totalPap).toFixed(3) : null;
+                    });
+                    const label = multiJournal
+                        ? `${jData.journal} — Combined`
+                        : checkedTypes.map(t => typeLabels[t]).join(' + ');
+                    series.push({ label, color, dash: [], months, values });
+                }
+
+                if (this._compareShowIndividual) {
+                    checkedTypes.forEach(typeKey => {
+                        const values = ts.map(entry => typeRate(entry, typeKey));
+                        const label = multiJournal
+                            ? `${jData.journal} — ${typeLabels[typeKey]}`
+                            : typeLabels[typeKey];
+                        series.push({
+                            label, color,
+                            dash: typeDashes[typeKey] || [],
+                            months, values,
+                        });
+                    });
+                }
+            }
         });
+
+        this._compareSeriesData = series;
+
+        // Populate X selects
+        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        this._populateXRangeSelects('compare', allMonths);
 
         const scaleOverrides = this._buildScaleOverrides(this.compareXMin, this.compareXMax, this.compareYMin, this.compareYMax);
-        chartManager.createComparisonChart('compare-chart', journalsData, this.compareMetric, this.compareWindow, scaleOverrides);
+        chartManager.createMultiSeriesChart('compare-chart', series, this._compareYZero, scaleOverrides);
         document.getElementById('compare-range-controls').style.display = '';
+        if (downloadBar) downloadBar.style.display = '';
 
-        // Build comparison summary table
         if (tableContainer) {
             this.renderComparisonTable(tableContainer, journalsData);
         }
@@ -868,31 +1003,104 @@ class IMPACTApp {
 
     renderComparisonTable(container, journalsData) {
         const rows = journalsData.map(j => {
-            const latest = j.latest || {};
+            const ts24 = j.timeseries || [];
+            const last24 = ts24.slice(-24);
+            const lastEntry = ts24.length > 0 ? ts24[ts24.length - 1] : null;
+            const bt = lastEntry && lastEntry.by_type ? lastEntry.by_type : {};
+
+            let resRateSum = 0, resRateN = 0;
+            let revRateSum = 0, revRateN = 0;
+            for (const entry of last24) {
+                const ebt = entry.by_type || {};
+                if (ebt.research && ebt.research.papers > 0) {
+                    resRateSum += ebt.research.citations / ebt.research.papers;
+                    resRateN++;
+                }
+                if (ebt.review && ebt.review.papers > 0) {
+                    revRateSum += ebt.review.citations / ebt.review.papers;
+                    revRateN++;
+                }
+            }
+
+            const researchPapers = bt.research ? bt.research.papers : 0;
+            const reviewPapers = bt.review ? bt.review.papers : 0;
+            const totalPapers = researchPapers + reviewPapers
+                + (bt.editorial ? bt.editorial.papers : 0)
+                + (bt.letter ? bt.letter.papers : 0)
+                + (bt.other ? bt.other.papers : 0);
+
             return {
                 journal: j.journal,
-                rolling_if: latest.rolling_if,
-                if_no_reviews: latest.rolling_if_no_reviews,
-                papers: latest.paper_count,
-                research: latest.research_count,
-                reviews: latest.review_count,
-                citations: latest.citation_count,
-                review_pct: (latest.paper_count > 0 && latest.review_count != null)
-                    ? (latest.review_count / latest.paper_count * 100) : null,
+                research_rate: resRateN > 0 ? resRateSum / resRateN : null,
+                review_rate: revRateN > 0 ? revRateSum / revRateN : null,
+                research_papers: researchPapers,
+                review_papers: reviewPapers,
+                review_pct: totalPapers > 0 ? (reviewPapers / totalPapers * 100) : null,
             };
         });
 
         const columns = [
             { key: 'journal', label: 'Journal' },
-            { key: 'rolling_if', label: 'Citation Rate', format: UIHelpers.formatIF },
-            { key: 'if_no_reviews', label: 'Rate (No Rev)', format: UIHelpers.formatIF },
-            { key: 'papers', label: 'Papers', format: UIHelpers.formatInt },
-            { key: 'citations', label: 'Citations', format: UIHelpers.formatInt },
+            { key: 'research_rate', label: 'Research Rate', format: UIHelpers.formatIF },
+            { key: 'review_rate', label: 'Review Rate', format: UIHelpers.formatIF },
+            { key: 'research_papers', label: 'Research Papers', format: UIHelpers.formatInt },
+            { key: 'review_papers', label: 'Review Papers', format: UIHelpers.formatInt },
             { key: 'review_pct', label: 'Review %', format: UIHelpers.formatPct },
         ];
 
         container.innerHTML = '';
         container.appendChild(UIHelpers.createTable(rows, columns));
+    }
+
+    // ---- Compare Downloads ----
+
+    _downloadCompareChart(format) {
+        const chart = chartManager.charts['compare-chart'];
+        if (!chart) return;
+        const filename = 'compare-journals';
+
+        if (format === 'pdf') {
+            if (!window.jspdf) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pw = doc.internal.pageSize.getWidth();
+            const ph = doc.internal.pageSize.getHeight();
+            const imgW = pw - 20;
+            const imgH = Math.min(imgW * (chart.height / chart.width), ph - 28);
+            doc.setFontSize(11);
+            doc.text('IMPACT — Journal Comparison', 10, 10);
+            doc.addImage(chart.toBase64Image('image/png', 1), 'PNG', 10, 16, imgW, imgH);
+            doc.save(`${filename}.pdf`);
+            return;
+        }
+        const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+        const url = chart.toBase64Image(mime, 1);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.${format}`;
+        a.click();
+    }
+
+    _downloadCompareCSV() {
+        const series = this._compareSeriesData;
+        if (!series || !series.length) return;
+        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        const header = ['Month', ...series.map(s => `"${s.label.replace(/"/g, '""')}"`)].join(',');
+        const rows = allMonths.map(m => {
+            const vals = series.map(s => {
+                const i = s.months.indexOf(m);
+                const v = i >= 0 ? s.values[i] : null;
+                return v != null ? v : '';
+            });
+            return [m, ...vals].join(',');
+        });
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'compare-journals.csv';
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // ---- Citation Network ----

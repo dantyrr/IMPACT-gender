@@ -170,12 +170,13 @@
 
             <div class="chart-container">
                 <canvas id="journal-chart"></canvas>
-            </div>
-            <div class="download-bar" id="jd-chart-download-bar" style="display:none;">
-                <span class="download-label">Download:</span>
-                <button class="download-btn" id="jd-chart-dl-png">PNG</button>
-                <button class="download-btn" id="jd-chart-dl-jpg">JPG</button>
-                <button class="download-btn" id="jd-chart-dl-pdf">PDF</button>
+                <div class="download-bar" id="jd-chart-download-bar" style="display:none; margin-top:0.5rem;">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="jd-chart-dl-png">PNG</button>
+                    <button class="download-btn" id="jd-chart-dl-jpg">JPG</button>
+                    <button class="download-btn" id="jd-chart-dl-pdf">PDF</button>
+                    <button class="download-btn" id="jd-chart-dl-csv">CSV</button>
+                </div>
             </div>
 
             <div id="composition-type-checkboxes" class="checkbox-grid" style="display:none; margin-bottom: 0.5rem;">
@@ -187,12 +188,12 @@
             </div>
             <div class="chart-container">
                 <canvas id="composition-chart"></canvas>
-            </div>
-            <div class="download-bar" id="composition-chart-download-bar" style="display:none;">
-                <span class="download-label">Download:</span>
-                <button class="download-btn" id="composition-chart-dl-png">PNG</button>
-                <button class="download-btn" id="composition-chart-dl-jpg">JPG</button>
-                <button class="download-btn" id="composition-chart-dl-pdf">PDF</button>
+                <div class="download-bar" id="composition-chart-download-bar" style="display:none; margin-top:0.5rem;">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="composition-chart-dl-png">PNG</button>
+                    <button class="download-btn" id="composition-chart-dl-jpg">JPG</button>
+                    <button class="download-btn" id="composition-chart-dl-pdf">PDF</button>
+                </div>
             </div>
 
         </div>
@@ -213,12 +214,25 @@
         </div>
 
         <div class="chart-controls">
-            <span class="chart-controls-label">Metric:</span>
-            <div class="toggle-group" id="compare-metric-toggle">
-                <button class="toggle-btn active" data-mode="rolling_if">Citation Rate</button>
-                <button class="toggle-btn" data-mode="rolling_if_no_reviews">Citation Rate (Research Only)</button>
-                <button class="toggle-btn" data-mode="citations">Citations</button>
-                <button class="toggle-btn" data-mode="papers">Papers</button>
+            <span class="chart-controls-label">Article type:</span>
+            <div id="compare-type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
+                <label><input type="checkbox" value="research" checked> Research</label>
+                <label><input type="checkbox" value="review"> Reviews</label>
+                <label><input type="checkbox" value="editorial"> Editorials</label>
+                <label><input type="checkbox" value="letter"> Letters</label>
+                <label><input type="checkbox" value="other"> Other</label>
+            </div>
+        </div>
+        <div class="chart-controls">
+            <span class="chart-controls-label">Show:</span>
+            <div class="toggle-group" id="compare-visibility-toggle">
+                <button class="toggle-btn active" id="compare-combined-btn">Combined</button>
+                <button class="toggle-btn active" id="compare-individual-btn">Individual</button>
+            </div>
+            <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
+            <div class="toggle-group" id="compare-y-toggle">
+                <button class="toggle-btn active" data-y="auto">Auto</button>
+                <button class="toggle-btn" data-y="zero">From Zero</button>
             </div>
         </div>
 
@@ -226,6 +240,13 @@
 
         <div class="chart-container">
             <canvas id="compare-chart"></canvas>
+            <div class="download-bar" id="compare-download-bar" style="display:none; margin-top:0.5rem;">
+                <span class="download-label">Download:</span>
+                <button class="download-btn" id="compare-dl-png">PNG</button>
+                <button class="download-btn" id="compare-dl-jpg">JPG</button>
+                <button class="download-btn" id="compare-dl-pdf">PDF</button>
+                <button class="download-btn" id="compare-dl-csv">CSV</button>
+            </div>
         </div>
         <div id="compare-range-controls" class="chart-range-controls" style="display:none">
             <div class="range-control-group">
@@ -713,7 +734,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=3"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=31"></script>
+<script src="js/app.js?v=32"></script>
 
 </body>
 </html>

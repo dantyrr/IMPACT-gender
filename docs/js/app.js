@@ -327,27 +327,34 @@ class IMPACTApp {
             // Title
             document.getElementById('detail-title').textContent = data.journal;
 
-            // Metrics
+            // Metrics from latest timeseries entry's by_type data
             const latest = data.latest || {};
-            const officialIf = data.official_jif_2024;
-            const rollingIf = latest.rolling_if;
-            const diff = (officialIf != null && rollingIf != null)
-                ? (rollingIf - officialIf) : null;
+            const ts24 = data.timeseries || [];
+            const lastEntry = ts24.length > 0 ? ts24[ts24.length - 1] : null;
+            const bt = lastEntry && lastEntry.by_type ? lastEntry.by_type : {};
+
+            const resPapers = (bt.research ? bt.research.papers : 0) + (bt.letter ? bt.letter.papers : 0);
+            const resCitations = (bt.research ? bt.research.citations : 0) + (bt.letter ? bt.letter.citations : 0);
+            const rateResLetters = resPapers > 0 ? resCitations / resPapers : null;
+
+            const inclPapers = resPapers + (bt.review ? bt.review.papers : 0);
+            const inclCitations = resCitations + (bt.review ? bt.review.citations : 0);
+            const rateInclReviews = inclPapers > 0 ? inclCitations / inclPapers : null;
 
             const reviewPct = (latest.paper_count > 0 && latest.review_count != null)
                 ? (latest.review_count / latest.paper_count * 100) : null;
 
-            document.getElementById('metric-if').textContent = UIHelpers.formatIF(rollingIf);
-            document.getElementById('metric-official').textContent = officialIf != null ? UIHelpers.formatIF(officialIf) : 'N/A';
-            document.getElementById('metric-diff').textContent = diff != null ? (diff >= 0 ? '+' : '') + diff.toFixed(2) : '—';
-            document.getElementById('metric-papers').textContent = UIHelpers.formatInt(latest.paper_count);
-            document.getElementById('metric-reviews').textContent = UIHelpers.formatPct(reviewPct);
+            // Compute date range from snapshot month
+            const snapshotMonth = lastEntry ? lastEntry.month : latest.month;
+            const dateRange = this._computeDateRange(snapshotMonth);
 
-            // Color the difference
-            const diffEl = document.getElementById('metric-diff');
-            if (diff != null) {
-                diffEl.style.color = diff >= 0 ? '#27ae60' : '#e74c3c';
-            }
+            document.getElementById('metric-if').textContent = UIHelpers.formatIF(rateResLetters);
+            document.getElementById('metric-if-label').textContent = dateRange ? `Research + Letters · ${dateRange}` : 'Research + Letters';
+            document.getElementById('metric-incl-reviews').textContent = UIHelpers.formatIF(rateInclReviews);
+            document.getElementById('metric-incl-reviews-label').textContent = dateRange ? `Incl. Reviews · ${dateRange}` : 'Incl. Reviews';
+            document.getElementById('metric-papers').textContent = UIHelpers.formatInt(latest.paper_count);
+            document.getElementById('metric-papers-label').textContent = dateRange ? `Papers (24-mo) · ${dateRange}` : 'Papers (24-mo)';
+            document.getElementById('metric-reviews').textContent = UIHelpers.formatPct(reviewPct);
 
             // Reset window/type state for new journal
             this.currentWindow = 'timeseries';
@@ -367,7 +374,7 @@ class IMPACTApp {
 
             // Initial charts
             const ts = this._getDisplayTimeseries(data);
-            chartManager.createJournalChart('journal-chart', ts, officialIf, 'Citation Rate — All Articles (24-month)');
+            chartManager.createJournalChart('journal-chart', ts, null, 'Citation Rate — All Articles (24-month)');
             chartManager.createCitationChart('citation-chart', ts, 'total');
             chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', ts);
@@ -465,6 +472,16 @@ class IMPACTApp {
         });
     }
 
+    _computeDateRange(snapshotMonth) {
+        if (!snapshotMonth) return null;
+        const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const [yr, mo] = snapshotMonth.split('-').map(Number);
+        // Papers window: 24 months ending one month before snapshot
+        const endDate = new Date(yr, mo - 2, 1); // month before snapshot
+        const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 23, 1);
+        return `${MONTH_NAMES[startDate.getMonth()]} ${startDate.getFullYear()} – ${MONTH_NAMES[endDate.getMonth()]} ${endDate.getFullYear()}`;
+    }
+
     _typeLabel(typeKey) {
         const labels = {
             all: 'All Articles', research: 'Research',
@@ -485,7 +502,7 @@ class IMPACTApp {
         const redraw = () => {
             const ts = this._getDisplayTimeseries(data);
             const rateLabel = `Citation Rate — ${this._typeLabel(this.currentType)} (${this._windowLabel(this.currentWindow)})`;
-            chartManager.createJournalChart('journal-chart', ts, data.official_jif_2024, rateLabel, this._journalYZero);
+            chartManager.createJournalChart('journal-chart', ts, null, rateLabel, this._journalYZero);
             chartManager.createCitationChart('citation-chart', ts, this._citationChartMode());
             chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', ts);
@@ -745,7 +762,6 @@ class IMPACTApp {
                 journal: j.journal,
                 rolling_if: latest.rolling_if,
                 if_no_reviews: latest.rolling_if_no_reviews,
-                official_jif: j.official_jif_2024,
                 papers: latest.paper_count,
                 research: latest.research_count,
                 reviews: latest.review_count,
@@ -759,7 +775,6 @@ class IMPACTApp {
             { key: 'journal', label: 'Journal' },
             { key: 'rolling_if', label: 'Citation Rate', format: UIHelpers.formatIF },
             { key: 'if_no_reviews', label: 'Rate (No Rev)', format: UIHelpers.formatIF },
-            { key: 'official_jif', label: 'Official JIF', format: UIHelpers.formatIF },
             { key: 'papers', label: 'Papers', format: UIHelpers.formatInt },
             { key: 'citations', label: 'Citations', format: UIHelpers.formatInt },
             { key: 'review_pct', label: 'Review %', format: UIHelpers.formatPct },
@@ -3198,14 +3213,12 @@ class IMPACTApp {
                 abbr: j.abbreviation,
                 issn: j.issn,
                 latest_if: j.latest_if,
-                official_jif: j.official_jif,
             })),
             [
                 { key: 'name', label: 'Journal' },
                 { key: 'abbr', label: 'Abbreviation' },
                 { key: 'issn', label: 'ISSN' },
                 { key: 'latest_if', label: 'Citation Rate', format: UIHelpers.formatIF },
-                { key: 'official_jif', label: 'Official JIF', format: UIHelpers.formatIF },
             ]
         );
 

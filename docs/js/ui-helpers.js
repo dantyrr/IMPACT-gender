@@ -84,7 +84,6 @@ const UIHelpers = {
                 <small>24-mo citation rate</small>
             </div>
             <div class="card-stats">
-                <span>Official JIF: ${journal.official_jif != null ? this.formatIF(journal.official_jif) : 'N/A'}</span>
                 <span>${this.formatInt(journal.paper_count)} papers</span>
             </div>
         `;

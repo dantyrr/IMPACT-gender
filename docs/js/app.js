@@ -395,7 +395,6 @@ class IMPACTApp {
             this.currentWindow = 'timeseries';
             this._showCombined = true;
             this._showIndividual = true;
-            this._citationMode = 'total';
 
             // Sync toggle button active states
             document.querySelectorAll('#window-toggle .toggle-btn').forEach(b =>
@@ -418,7 +417,6 @@ class IMPACTApp {
             const ts = data[this.currentWindow] || data.timeseries;
             const series = this._buildDetailSeries(data);
             chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero);
-            chartManager.createCitationChart('citation-chart', ts, 'total');
             chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', ts);
 
@@ -436,8 +434,8 @@ class IMPACTApp {
             }
 
             // Show download bars and wire up buttons
-            const detailCharts = ['jd-chart', 'citation-chart', 'composition-chart', 'papers-chart'];
-            const chartCanvasIds = ['journal-chart', 'citation-chart', 'composition-chart', 'papers-chart'];
+            const detailCharts = ['jd-chart', 'composition-chart', 'papers-chart'];
+            const chartCanvasIds = ['journal-chart', 'composition-chart', 'papers-chart'];
             detailCharts.forEach((id, idx) => {
                 const bar = document.getElementById(`${id}-download-bar`);
                 if (bar) bar.style.display = '';
@@ -594,7 +592,6 @@ class IMPACTApp {
 
         const redrawSecondary = () => {
             const rawTs = data[this.currentWindow] || data.timeseries;
-            chartManager.createCitationChart('citation-chart', rawTs, this._citationChartMode());
             chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes());
             chartManager.createPapersChart('papers-chart', rawTs);
         };
@@ -651,16 +648,6 @@ class IMPACTApp {
             redrawRate();
         }, 'data-y');
 
-        // Citation chart mode toggle (independent)
-        this._setupToggleGroup('citation-chart-toggle', (mode) => {
-            this._citationMode = mode;
-            const rawTs = data[this.currentWindow] || data.timeseries;
-            chartManager.createCitationChart('citation-chart', rawTs, mode);
-        });
-    }
-
-    _citationChartMode() {
-        return this._citationMode || 'total';
     }
 
     _getCompositionVisibleTypes() {

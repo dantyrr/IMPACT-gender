@@ -125,13 +125,15 @@ class IMPACTApp {
 
     _renderFilteredList() {
         const term = (document.getElementById('journal-search').value || '').toLowerCase().trim();
+        const selected = this.jcPicker ? this.jcPicker.getSelected() : [];
         document.querySelectorAll('#journal-list [data-slug]').forEach(row => {
             const slug = row.dataset.slug;
             const j = this.journals.find(j => j.slug === slug);
             if (!j) { row.style.display = 'none'; return; }
-            const matches = !term || j.name.toLowerCase().includes(term) ||
+            const matchesSel = selected.length === 0 || selected.includes(slug);
+            const matchesSearch = !term || j.name.toLowerCase().includes(term) ||
                 (j.abbreviation || '').toLowerCase().includes(term) || j.slug.includes(term);
-            row.style.display = matches ? '' : 'none';
+            row.style.display = matchesSel && matchesSearch ? '' : 'none';
         });
     }
 

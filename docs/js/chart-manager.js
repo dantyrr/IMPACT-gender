@@ -193,7 +193,11 @@ class ChartManager {
 
         const startIdx = timeseries.findIndex(d => d.papers > 0);
         const data = startIdx >= 0 ? timeseries.slice(startIdx) : timeseries;
-        const labels = data.map(d => d.month);
+        let labels = data.map(d => d.month);
+        const monthMap = new Map(data.map((d, i) => [d.month, i]));
+
+        // Expand labels to cover scaleOverrides date range
+        labels = this._expandMonthRange(labels, scaleOverrides);
 
         const allTypes = ['research', 'review', 'editorial', 'letter', 'other'];
         const shown = visibleTypes || allTypes;
@@ -206,10 +210,9 @@ class ChartManager {
             other:     { label: 'Other',              color: this.palette[7], bg: 'rgba(127, 127, 127, 0.4)' },
         };
 
-        const getData = (type) => data.map(d => {
+        const getVal = (d, type) => {
             const bt = d.by_type;
             if (!bt) {
-                // Fallback for data without by_type
                 if (type === 'research') return d.research || 0;
                 if (type === 'review') return d.reviews || 0;
                 return 0;
@@ -218,6 +221,11 @@ class ChartManager {
                 return (bt.other?.papers || 0) + (bt.guideline?.papers || 0) + (bt.case_report?.papers || 0);
             }
             return bt[type]?.papers || 0;
+        };
+
+        const getData = (type) => labels.map(m => {
+            const i = monthMap.get(m);
+            return i !== undefined ? getVal(data[i], type) : 0;
         });
 
         const datasets = allTypes
@@ -641,7 +649,8 @@ class ChartManager {
         this._destroy(canvasId);
 
         // Build a unified sorted month axis across all series
-        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        let allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        allMonths = this._expandMonthRange(allMonths, scaleOverrides);
 
         const datasets = series.map(s => {
             const monthToIdx = new Map(s.months.map((m, i) => [m, i]));
@@ -784,6 +793,37 @@ class ChartManager {
                 }
             }
         });
+    }
+
+    /**
+     * Expand a sorted months array to cover scaleOverrides.x min/max range,
+     * and remove x.min/x.max from overrides (category scale needs actual labels).
+     * Returns the expanded months array. Mutates scaleOverrides.x in place.
+     */
+    _expandMonthRange(months, scaleOverrides) {
+        const xOvr = scaleOverrides && scaleOverrides.x;
+        if (!xOvr || (!xOvr.min && !xOvr.max) || !months.length) return months;
+
+        const first = xOvr.min || months[0];
+        const last = xOvr.max || months[months.length - 1];
+        const [sYr, sMo] = first.split('-').map(Number);
+        const [eYr, eMo] = last.split('-').map(Number);
+
+        const full = [];
+        for (let yr = sYr; yr <= eYr; yr++) {
+            const m0 = yr === sYr ? sMo : 1;
+            const m1 = yr === eYr ? eMo : 12;
+            for (let mo = m0; mo <= m1; mo++) {
+                full.push(`${yr}-${String(mo).padStart(2, '0')}`);
+            }
+        }
+
+        // Remove min/max from x overrides — labels now cover the range
+        delete xOvr.min;
+        delete xOvr.max;
+        if (Object.keys(xOvr).length === 0) delete scaleOverrides.x;
+
+        return full;
     }
 
     _destroy(canvasId) {

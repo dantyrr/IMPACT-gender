@@ -272,8 +272,9 @@ class IMPACTApp {
         });
 
         this._jcSeriesData = series;
-        // Populate X selects from unified month axis
-        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        // Populate X selects from full month range (2005-01 onwards)
+        const dataMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        const allMonths = this._generateFullMonthRange(dataMonths);
         this._populateXRangeSelects('jc', allMonths);
         const scaleOverrides = this._buildScaleOverrides(this.jcXMin, this.jcXMax, this.jcYMin, this.jcYMax);
         chartManager.createMultiSeriesChart('jc-chart', series, this.jcYZero, scaleOverrides);
@@ -1085,8 +1086,9 @@ class IMPACTApp {
 
         this._compareSeriesData = series;
 
-        // Populate X selects
-        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        // Populate X selects from full month range (2005-01 onwards)
+        const dataMonths = [...new Set(series.flatMap(s => s.months))].sort();
+        const allMonths = this._generateFullMonthRange(dataMonths);
         this._populateXRangeSelects('compare', allMonths);
 
         const scaleOverrides = this._buildScaleOverrides(this.compareXMin, this.compareXMax, this.compareYMin, this.compareYMax);

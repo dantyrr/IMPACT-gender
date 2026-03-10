@@ -107,11 +107,20 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--workers", type=int, default=1,
                         help="Number of parallel worker processes (default: 1)")
+    parser.add_argument("--slug", type=str, nargs="+", default=None,
+                        help="Only process these journal slug(s)")
     args = parser.parse_args()
 
     db = DatabaseManager(DB_PATH)
     journals = db.get_all_journals()
     db.close()
+
+    if args.slug:
+        slug_set = set(args.slug)
+        journals = [j for j in journals if j["slug"] in slug_set]
+        if not journals:
+            logger.error(f"No journals found for slug(s): {args.slug}")
+            sys.exit(1)
 
     total = len(journals)
     logger.info(f"Processing {total} journals with {args.workers} worker(s)")
@@ -137,6 +146,20 @@ def main():
                     logger.info(f"Worker {wid} finished: {len(entries)} journals")
                 except Exception as e:
                     logger.error(f"Worker {wid} failed: {e}", exc_info=True)
+
+    # When filtering by slug, merge new entries into existing index
+    if args.slug:
+        import json
+        index_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                  "docs", "data", "index.json")
+        if os.path.exists(index_path):
+            with open(index_path) as f:
+                existing = json.load(f)
+            existing_journals = existing.get("journals", existing)
+            updated_slugs = {e["slug"] for e in index_entries}
+            merged = [e for e in existing_journals if e["slug"] not in updated_slugs]
+            merged.extend(index_entries)
+            index_entries = merged
 
     # Sort index by name for consistent output
     index_entries.sort(key=lambda x: x["name"].lower())

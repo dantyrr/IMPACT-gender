@@ -43,6 +43,8 @@ class IMPACTApp {
         this.compareYMin = null; this.compareYMax = null;
         this._influenceXMin = null; this._influenceXMax = null;
         this._influenceYMin = null; this._influenceYMax = null;
+        this.detailXMin = null; this.detailXMax = null;
+        this.detailYMin = null; this.detailYMax = null;
         this.init();
     }
 
@@ -398,6 +400,17 @@ class IMPACTApp {
             this.currentWindow = 'timeseries';
             this._showCombined = true;
             this._showIndividual = true;
+            this.detailXMin = null; this.detailXMax = null;
+            this.detailYMin = null; this.detailYMax = null;
+            // Reset range control inputs
+            const dxMin = document.getElementById('detail-x-min');
+            const dxMax = document.getElementById('detail-x-max');
+            const dyMin = document.getElementById('detail-y-min');
+            const dyMax = document.getElementById('detail-y-max');
+            if (dxMin) dxMin.value = '';
+            if (dxMax) dxMax.value = '';
+            if (dyMin) dyMin.value = '';
+            if (dyMax) dyMax.value = '';
 
             // Sync toggle button active states
             document.querySelectorAll('#window-toggle .toggle-btn').forEach(b =>
@@ -419,8 +432,12 @@ class IMPACTApp {
             // Initial charts
             const ts = data[this.currentWindow] || data.timeseries;
             const series = this._buildDetailSeries(data);
-            chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero);
-            chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes());
+            const detailMonths = [...new Set(series.flatMap(s => s.months))].sort();
+            this._populateXRangeSelects('detail', detailMonths);
+            const detailScaleOverrides = this._buildScaleOverrides(this.detailXMin, this.detailXMax, this.detailYMin, this.detailYMax);
+            chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero, detailScaleOverrides);
+            chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes(), detailScaleOverrides);
+            document.getElementById('detail-range-controls').style.display = '';
 
             // Show composition type checkboxes
             const compCheckboxes = document.getElementById('composition-type-checkboxes');
@@ -430,7 +447,8 @@ class IMPACTApp {
                     cb.checked = true;
                     cb.onchange = () => {
                         const rawTs = data[this.currentWindow] || data.timeseries;
-                        chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes());
+                        const so = this._buildScaleOverrides(this.detailXMin, this.detailXMax, null, null);
+                        chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes(), so);
                     };
                 });
             }
@@ -614,12 +632,16 @@ class IMPACTApp {
     setupDetailToggles(data) {
         const redrawRate = () => {
             const series = this._buildDetailSeries(data);
-            chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero);
+            const detailMonths = [...new Set(series.flatMap(s => s.months))].sort();
+            this._populateXRangeSelects('detail', detailMonths);
+            const scaleOverrides = this._buildScaleOverrides(this.detailXMin, this.detailXMax, this.detailYMin, this.detailYMax);
+            chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero, scaleOverrides);
         };
 
         const redrawSecondary = () => {
             const rawTs = data[this.currentWindow] || data.timeseries;
-            chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes());
+            const scaleOverrides = this._buildScaleOverrides(this.detailXMin, this.detailXMax, null, null);
+            chartManager.createCompositionChart('composition-chart', rawTs, this._getCompositionVisibleTypes(), scaleOverrides);
         };
 
         // Window toggle — affects all charts
@@ -674,6 +696,11 @@ class IMPACTApp {
             redrawRate();
         }, 'data-y');
 
+        // Range controls for detail charts
+        this._setupRangeControls('detail',
+            { xMin: 'detailXMin', xMax: 'detailXMax', yMin: 'detailYMin', yMax: 'detailYMax' },
+            () => { redrawRate(); redrawSecondary(); }
+        );
     }
 
     _getCompositionVisibleTypes() {

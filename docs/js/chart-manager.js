@@ -185,7 +185,7 @@ class ChartManager {
      * @param {Array} timeseries
      * @param {string[]} visibleTypes - which types to show (default all 5)
      */
-    createCompositionChart(canvasId, timeseries, visibleTypes) {
+    createCompositionChart(canvasId, timeseries, visibleTypes, scaleOverrides = {}) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
 
@@ -259,6 +259,7 @@ class ChartManager {
                     x: {
                         title: { display: true, text: 'Month' },
                         ticks: { maxTicksLimit: 12 },
+                        ...(scaleOverrides.x || {}),
                     },
                     y: {
                         title: { display: true, text: 'Papers' },

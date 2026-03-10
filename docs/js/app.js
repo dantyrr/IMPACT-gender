@@ -49,6 +49,8 @@ class IMPACTApp {
         this._compCompYMin = null; this._compCompYMax = null;
         this._compCompShowCombined = true;
         this._compCompShowIndividual = true;
+        this._geoTrendXMin = null; this._geoTrendXMax = null;
+        this._geoTrendYMin = null; this._geoTrendYMax = null;
         this.init();
     }
 
@@ -3026,6 +3028,18 @@ class IMPACTApp {
         hint.style.display = '';
         content.style.display = 'none';
 
+        // Reset range state
+        this._geoTrendXMin = null; this._geoTrendXMax = null;
+        this._geoTrendYMin = null; this._geoTrendYMax = null;
+        const gxMin = document.getElementById('geo-trend-x-min');
+        const gxMax = document.getElementById('geo-trend-x-max');
+        const gyMin = document.getElementById('geo-trend-y-min');
+        const gyMax = document.getElementById('geo-trend-y-max');
+        if (gxMin) gxMin.value = '';
+        if (gxMax) gxMax.value = '';
+        if (gyMin) gyMin.value = '';
+        if (gyMax) gyMax.value = '';
+
         try {
             if (!this.papersDataCache[`${slug}__geo`]) {
                 const d = await dataLoader.loadPapers(slug);
@@ -3089,14 +3103,16 @@ class IMPACTApp {
             this._renderGeoMap(totals);
 
             // Trend chart: stacked bars by year, top 10 countries
-            const trendDatasets = top10.map((country, i) => ({
-                label: country,
-                data: years.map(yr => normalizedGeo[yr][country] || 0),
-                backgroundColor: chartManager.palette[i % chartManager.palette.length] + 'cc',
-                borderColor: chartManager.palette[i % chartManager.palette.length],
-                borderWidth: 1,
-            }));
-            chartManager.createStackedBarChart('geo-trend-chart', years, trendDatasets, 'Papers');
+            this._geoTrendData = { normalizedGeo, years, top10 };
+            this._renderGeoTrendChart();
+
+            // Wire up range controls (only once per load)
+            this._populateGeoYearSelects(years);
+            document.getElementById('geo-trend-range-controls').style.display = '';
+            this._setupRangeControls('geo-trend',
+                { xMin: '_geoTrendXMin', xMax: '_geoTrendXMax', yMin: '_geoTrendYMin', yMax: '_geoTrendYMax' },
+                () => this._renderGeoTrendChart()
+            );
 
             // Top countries overall (horizontal bar)
             const topOverall = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 15);
@@ -3265,6 +3281,71 @@ class IMPACTApp {
 
     // ---- Geography Downloads ----
 
+    _renderGeoTrendChart() {
+        if (!this._geoTrendData) return;
+        const { normalizedGeo, years, top10 } = this._geoTrendData;
+
+        // Filter years by range
+        const minYr = this._geoTrendXMin || years[0];
+        const maxYr = this._geoTrendXMax || years[years.length - 1];
+
+        // Build full year range from 2005 to max data year
+        const lastYr = years[years.length - 1];
+        const allYears = [];
+        for (let y = 2005; y <= parseInt(lastYr); y++) allYears.push(String(y));
+
+        const filtered = allYears.filter(yr => yr >= minYr && yr <= maxYr);
+
+        const trendDatasets = top10.map((country, i) => ({
+            label: country,
+            data: filtered.map(yr => (normalizedGeo[yr] && normalizedGeo[yr][country]) || 0),
+            backgroundColor: chartManager.palette[i % chartManager.palette.length] + 'cc',
+            borderColor: chartManager.palette[i % chartManager.palette.length],
+            borderWidth: 1,
+        }));
+        chartManager.createStackedBarChart('geo-trend-chart', filtered, trendDatasets, 'Papers');
+
+        // Apply Y-axis overrides
+        const chart = chartManager.charts['geo-trend-chart'];
+        if (chart) {
+            if (this._geoTrendYMin != null) chart.options.scales.y.min = this._geoTrendYMin;
+            else delete chart.options.scales.y.min;
+            if (this._geoTrendYMax != null) chart.options.scales.y.max = this._geoTrendYMax;
+            else delete chart.options.scales.y.max;
+            chart.update();
+        }
+    }
+
+    _populateGeoYearSelects(dataYears) {
+        const xMinSel = document.getElementById('geo-trend-x-min');
+        const xMaxSel = document.getElementById('geo-trend-x-max');
+        if (!xMinSel || !xMaxSel) return;
+
+        const prevMin = xMinSel.value;
+        const prevMax = xMaxSel.value;
+
+        const lastYr = dataYears.length ? parseInt(dataYears[dataYears.length - 1]) : 2025;
+        const allYears = [];
+        for (let y = 2005; y <= lastYr; y++) allYears.push(String(y));
+
+        [xMinSel, xMaxSel].forEach((sel, idx) => {
+            sel.innerHTML = '';
+            const blank = document.createElement('option');
+            blank.value = '';
+            blank.textContent = idx === 0 ? '(start)' : '(end)';
+            sel.appendChild(blank);
+            allYears.forEach(yr => {
+                const opt = document.createElement('option');
+                opt.value = yr;
+                opt.textContent = yr;
+                sel.appendChild(opt);
+            });
+        });
+
+        if (prevMin && allYears.includes(prevMin)) xMinSel.value = prevMin;
+        if (prevMax && allYears.includes(prevMax)) xMaxSel.value = prevMax;
+    }
+
     _downloadGeo(chartId, format) {
         const slug = this._geoSlug || 'journal';
         const filename = `geo-${chartId.replace('geo-', '')}-${slug}`;
@@ -3274,7 +3355,8 @@ class IMPACTApp {
             return;
         }
 
-        const chart = chartManager.charts[chartId];
+        const canvasId = `${chartId}-chart`;
+        const chart = chartManager.charts[canvasId];
         if (!chart) return;
 
         if (format === 'pdf') {

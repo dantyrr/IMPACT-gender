@@ -572,6 +572,21 @@
 
             <div class="authors-chart-card" style="margin-bottom:1rem;">
                 <h4>Papers by Country — Over Time (First Author)</h4>
+                <div id="geo-trend-range-controls" class="chart-range-controls" style="display:none">
+                    <div class="range-control-group">
+                        <span class="range-label">Year:</span>
+                        <select id="geo-trend-x-min" class="range-select"></select>
+                        <span class="range-separator">&ndash;</span>
+                        <select id="geo-trend-x-max" class="range-select"></select>
+                    </div>
+                    <div class="range-control-group">
+                        <span class="range-label">Y axis:</span>
+                        <input id="geo-trend-y-min" type="number" class="range-input" placeholder="min" step="1">
+                        <span class="range-separator">&ndash;</span>
+                        <input id="geo-trend-y-max" type="number" class="range-input" placeholder="max" step="1">
+                    </div>
+                    <button id="geo-trend-range-reset" class="range-reset-btn">Reset</button>
+                </div>
                 <div class="chart-container" style="height:420px;">
                     <canvas id="geo-trend-chart"></canvas>
                 </div>

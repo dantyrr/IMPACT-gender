@@ -288,7 +288,7 @@ class ChartManager {
      * @param {string[]} visibleTypes
      * @param {string} windowKey - timeseries key
      */
-    createCompareCompositionChart(canvasId, journalsData, colorMap, visibleTypes, windowKey, scaleOverrides = {}) {
+    createCompareCompositionChart(canvasId, journalsData, colorMap, visibleTypes, windowKey, scaleOverrides = {}, showCombined = true, showIndividual = true) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         this._destroy(canvasId);
@@ -405,29 +405,33 @@ class ChartManager {
                     pointRadius: 0, pointHoverRadius: 5, spanGaps: true,
                 });
             } else {
-                // Total papers line (solid)
-                const typeArrays = shown.map(t => getData(ts, t));
-                const totalData = ts.map((_, idx) => typeArrays.reduce((sum, arr) => sum + (arr[idx] || 0), 0));
-                const totalMapped = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? totalData[i] : null; });
-                datasets.push({
-                    label: `${jData.journal} — Total`,
-                    data: totalMapped, borderColor: color, backgroundColor: 'transparent',
-                    borderWidth: 2.5, tension: 0.3, fill: false,
-                    pointRadius: 0, pointHoverRadius: 5, spanGaps: true,
-                });
-
-                // Per-type lines (dashed)
-                shown.forEach(typeKey => {
-                    const typeData = getData(ts, typeKey);
-                    const data = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? typeData[i] : null; });
+                // Total papers line (solid) — Combined
+                if (showCombined) {
+                    const typeArrays = shown.map(t => getData(ts, t));
+                    const totalData = ts.map((_, idx) => typeArrays.reduce((sum, arr) => sum + (arr[idx] || 0), 0));
+                    const totalMapped = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? totalData[i] : null; });
                     datasets.push({
-                        label: `${jData.journal} — ${typeLabels[typeKey]}`,
-                        data, borderColor: color, backgroundColor: 'transparent',
-                        borderWidth: 1.5, borderDash: typeDashes[typeKey] || [],
-                        tension: 0.3, fill: false,
-                        pointRadius: 0, pointHoverRadius: 4, spanGaps: true,
+                        label: `${jData.journal} — Total`,
+                        data: totalMapped, borderColor: color, backgroundColor: 'transparent',
+                        borderWidth: 2.5, tension: 0.3, fill: false,
+                        pointRadius: 0, pointHoverRadius: 5, spanGaps: true,
                     });
-                });
+                }
+
+                // Per-type lines (dashed) — Individual
+                if (showIndividual) {
+                    shown.forEach(typeKey => {
+                        const typeData = getData(ts, typeKey);
+                        const data = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? typeData[i] : null; });
+                        datasets.push({
+                            label: `${jData.journal} — ${typeLabels[typeKey]}`,
+                            data, borderColor: color, backgroundColor: 'transparent',
+                            borderWidth: 1.5, borderDash: typeDashes[typeKey] || [],
+                            tension: 0.3, fill: false,
+                            pointRadius: 0, pointHoverRadius: 4, spanGaps: true,
+                        });
+                    });
+                }
             }
         });
 

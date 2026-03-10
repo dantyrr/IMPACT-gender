@@ -47,6 +47,8 @@ class IMPACTApp {
         this.detailYMin = null; this.detailYMax = null;
         this._compCompXMin = null; this._compCompXMax = null;
         this._compCompYMin = null; this._compCompYMax = null;
+        this._compCompShowCombined = true;
+        this._compCompShowIndividual = true;
         this.init();
     }
 
@@ -927,6 +929,30 @@ class IMPACTApp {
         const csvBtn = document.getElementById('compare-dl-csv');
         if (csvBtn) csvBtn.addEventListener('click', () => this._downloadCompareCSV());
 
+        // Composition Combined / Individual toggles
+        const compCombBtn = document.getElementById('compare-comp-combined-btn');
+        const compIndBtn = document.getElementById('compare-comp-individual-btn');
+        if (compCombBtn && compIndBtn) {
+            compCombBtn.addEventListener('click', () => {
+                this._compCompShowCombined = !this._compCompShowCombined;
+                if (!this._compCompShowCombined && !this._compCompShowIndividual) {
+                    this._compCompShowIndividual = true;
+                    compIndBtn.classList.add('active');
+                }
+                compCombBtn.classList.toggle('active', this._compCompShowCombined);
+                this.updateComparison();
+            });
+            compIndBtn.addEventListener('click', () => {
+                this._compCompShowIndividual = !this._compCompShowIndividual;
+                if (!this._compCompShowIndividual && !this._compCompShowCombined) {
+                    this._compCompShowCombined = true;
+                    compCombBtn.classList.add('active');
+                }
+                compIndBtn.classList.toggle('active', this._compCompShowIndividual);
+                this.updateComparison();
+            });
+        }
+
         // Composition range controls
         this._setupRangeControls('compare-comp',
             { xMin: '_compCompXMin', xMax: '_compCompXMax', yMin: '_compCompYMin', yMax: '_compCompYMax' },
@@ -1075,7 +1101,8 @@ class IMPACTApp {
             this._populateXRangeSelects('compare-comp', allMonths);
             const compScaleOverrides = this._buildScaleOverrides(this._compCompXMin, this._compCompXMax, this._compCompYMin, this._compCompYMax);
             chartManager.createCompareCompositionChart(
-                'compare-composition-chart', journalsData, colorMap, checkedTypes, this.compareWindow, compScaleOverrides
+                'compare-composition-chart', journalsData, colorMap, checkedTypes, this.compareWindow, compScaleOverrides,
+                this._compCompShowCombined, this._compCompShowIndividual
             );
             document.getElementById('compare-comp-range-controls').style.display = '';
             const compBar = document.getElementById('compare-composition-download-bar');

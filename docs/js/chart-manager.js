@@ -288,7 +288,7 @@ class ChartManager {
      * @param {string[]} visibleTypes
      * @param {string} windowKey - timeseries key
      */
-    createCompareCompositionChart(canvasId, journalsData, colorMap, visibleTypes, windowKey) {
+    createCompareCompositionChart(canvasId, journalsData, colorMap, visibleTypes, windowKey, scaleOverrides = {}) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return;
         this._destroy(canvasId);
@@ -312,13 +312,18 @@ class ChartManager {
             return bt[type]?.papers || 0;
         });
 
+        // Clone scaleOverrides so _expandMonthRange can mutate it
+        const so = JSON.parse(JSON.stringify(scaleOverrides));
+
         if (journalsData.length === 1) {
             // Single journal: use stacked area like the detail tab
             const jData = journalsData[0];
             const raw = jData[windowKey] || jData.timeseries;
             const startIdx = raw.findIndex(d => d.papers > 0);
             const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
-            const labels = ts.map(d => d.month);
+            let labels = ts.map(d => d.month);
+            const sMonthMap = new Map(ts.map((d, i) => [d.month, i]));
+            labels = this._expandMonthRange(labels, so);
 
             const typeConfig = {
                 research:  { label: 'Research Articles', color: this.palette[0], bg: 'rgba(0, 114, 178, 0.4)' },
@@ -328,9 +333,15 @@ class ChartManager {
                 other:     { label: 'Other',              color: this.palette[7], bg: 'rgba(127, 127, 127, 0.4)' },
             };
 
+            const getDataSingle = (type) => labels.map(m => {
+                const i = sMonthMap.get(m);
+                if (i === undefined) return 0;
+                return getData(ts, type)[i];
+            });
+
             const datasets = allTypes.filter(t => shown.includes(t)).map(type => ({
                 label: typeConfig[type].label,
-                data: getData(ts, type),
+                data: getDataSingle(type),
                 borderColor: typeConfig[type].color,
                 backgroundColor: typeConfig[type].bg,
                 borderWidth: 1.5,
@@ -356,8 +367,8 @@ class ChartManager {
                         }
                     },
                     scales: {
-                        x: { title: { display: true, text: 'Month' }, ticks: { maxTicksLimit: 12 } },
-                        y: { title: { display: true, text: 'Papers' }, stacked: true, beginAtZero: true },
+                        x: { title: { display: true, text: 'Month' }, ticks: { maxTicksLimit: 12 }, ...(so.x || {}) },
+                        y: { title: { display: true, text: 'Papers' }, stacked: true, beginAtZero: true, ...(so.y || {}) },
                     }
                 }
             });
@@ -365,11 +376,12 @@ class ChartManager {
         }
 
         // Multiple journals: line chart with journal colors + type dashes
-        const allMonths = [...new Set(journalsData.flatMap(j => {
+        let allMonths = [...new Set(journalsData.flatMap(j => {
             const raw = j[windowKey] || j.timeseries;
             const si = raw.findIndex(d => d.papers > 0);
             return (si >= 0 ? raw.slice(si) : raw).map(d => d.month);
         }))].sort();
+        allMonths = this._expandMonthRange(allMonths, so);
 
         const datasets = [];
         const multiType = shown.length > 1;
@@ -394,7 +406,6 @@ class ChartManager {
                 });
             } else {
                 // Total papers line (solid)
-                // Pre-compute per-type arrays, then sum by index
                 const typeArrays = shown.map(t => getData(ts, t));
                 const totalData = ts.map((_, idx) => typeArrays.reduce((sum, arr) => sum + (arr[idx] || 0), 0));
                 const totalMapped = allMonths.map(m => { const i = monthMap.get(m); return i !== undefined ? totalData[i] : null; });
@@ -431,8 +442,8 @@ class ChartManager {
                     legend: { position: 'bottom' },
                 },
                 scales: {
-                    x: { title: { display: true, text: 'Month' }, ticks: { maxTicksLimit: 12 } },
-                    y: { title: { display: true, text: 'Papers' }, beginAtZero: true },
+                    x: { title: { display: true, text: 'Month' }, ticks: { maxTicksLimit: 12 }, ...(so.x || {}) },
+                    y: { title: { display: true, text: 'Papers' }, beginAtZero: true, ...(so.y || {}) },
                 }
             }
         });

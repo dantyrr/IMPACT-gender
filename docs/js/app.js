@@ -45,6 +45,8 @@ class IMPACTApp {
         this._influenceYMin = null; this._influenceYMax = null;
         this.detailXMin = null; this.detailXMax = null;
         this.detailYMin = null; this.detailYMax = null;
+        this._compCompXMin = null; this._compCompXMax = null;
+        this._compCompYMin = null; this._compCompYMax = null;
         this.init();
     }
 
@@ -925,6 +927,12 @@ class IMPACTApp {
         const csvBtn = document.getElementById('compare-dl-csv');
         if (csvBtn) csvBtn.addEventListener('click', () => this._downloadCompareCSV());
 
+        // Composition range controls
+        this._setupRangeControls('compare-comp',
+            { xMin: '_compCompXMin', xMax: '_compCompXMax', yMin: '_compCompYMin', yMax: '_compCompYMax' },
+            () => this.updateComparison()
+        );
+
         // Composition chart download buttons
         ['png', 'jpg', 'pdf'].forEach(fmt => {
             const btn = document.getElementById(`compare-comp-dl-${fmt}`);
@@ -1064,9 +1072,12 @@ class IMPACTApp {
         const compContainer = document.getElementById('compare-composition-container');
         if (compContainer) {
             compContainer.style.display = '';
+            this._populateXRangeSelects('compare-comp', allMonths);
+            const compScaleOverrides = this._buildScaleOverrides(this._compCompXMin, this._compCompXMax, this._compCompYMin, this._compCompYMax);
             chartManager.createCompareCompositionChart(
-                'compare-composition-chart', journalsData, colorMap, checkedTypes, this.compareWindow
+                'compare-composition-chart', journalsData, colorMap, checkedTypes, this.compareWindow, compScaleOverrides
             );
+            document.getElementById('compare-comp-range-controls').style.display = '';
             const compBar = document.getElementById('compare-composition-download-bar');
             if (compBar) compBar.style.display = '';
         }

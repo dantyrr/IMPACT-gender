@@ -432,8 +432,9 @@ class IMPACTApp {
             // Initial charts
             const ts = data[this.currentWindow] || data.timeseries;
             const series = this._buildDetailSeries(data);
-            const detailMonths = [...new Set(series.flatMap(s => s.months))].sort();
-            this._populateXRangeSelects('detail', detailMonths);
+            const dataMonths = [...new Set(series.flatMap(s => s.months))].sort();
+            const allMonths = this._generateFullMonthRange(dataMonths);
+            this._populateXRangeSelects('detail', allMonths);
             const detailScaleOverrides = this._buildScaleOverrides(this.detailXMin, this.detailXMax, this.detailYMin, this.detailYMax);
             chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero, detailScaleOverrides);
             chartManager.createCompositionChart('composition-chart', ts, this._getCompositionVisibleTypes(), detailScaleOverrides);
@@ -632,8 +633,9 @@ class IMPACTApp {
     setupDetailToggles(data) {
         const redrawRate = () => {
             const series = this._buildDetailSeries(data);
-            const detailMonths = [...new Set(series.flatMap(s => s.months))].sort();
-            this._populateXRangeSelects('detail', detailMonths);
+            const dataMonths = [...new Set(series.flatMap(s => s.months))].sort();
+            const allMonths = this._generateFullMonthRange(dataMonths);
+            this._populateXRangeSelects('detail', allMonths);
             const scaleOverrides = this._buildScaleOverrides(this.detailXMin, this.detailXMax, this.detailYMin, this.detailYMax);
             chartManager.createMultiSeriesChart('journal-chart', series, this._journalYZero, scaleOverrides);
         };
@@ -775,6 +777,23 @@ class IMPACTApp {
             yMaxInp.value = '';
             redrawFn();
         });
+    }
+
+    /**
+     * Generate a full month range from 2005-01 to the last month in the data.
+     */
+    _generateFullMonthRange(dataMonths) {
+        if (!dataMonths.length) return dataMonths;
+        const lastMonth = dataMonths[dataMonths.length - 1];
+        const [endYr, endMo] = lastMonth.split('-').map(Number);
+        const months = [];
+        for (let yr = 2005; yr <= endYr; yr++) {
+            const mEnd = yr === endYr ? endMo : 12;
+            for (let mo = 1; mo <= mEnd; mo++) {
+                months.push(`${yr}-${String(mo).padStart(2, '0')}`);
+            }
+        }
+        return months;
     }
 
     /**

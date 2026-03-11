@@ -1788,8 +1788,12 @@ class IMPACTApp {
             const paperWindowStart = endOrd - 23;
 
             // Part 1: local DB seeds — exact year counts, proportional month allocation
+            // Only subtract citations for seeds published in the 24-mo paper window,
+            // since only those papers' citations are included in the IF numerator.
             let localSeedCits = 0;
             for (const p of localSeeds) {
+                const pOrd = (p.year || 0) * 12 + 6;
+                if (pOrd < paperWindowStart || pOrd > endOrd) continue;
                 const cy = localCyMap[String(p.pmid)];
                 for (const [yearStr, cnt] of Object.entries(cy)) {
                     const k = parseInt(yearStr, 10);
@@ -1802,10 +1806,11 @@ class IMPACTApp {
             }
 
             // Part 2: iCite seeds — compute each seed's contribution independently,
-            // then sum. This correctly handles the case where one citing paper cites
-            // multiple seeds (counts as separate citation events for each).
+            // then sum. Only for seeds published in the paper window.
             let iciteSeedCits = 0;
             for (const seed of iciteSeeds) {
+                const sOrd = (seed.year || 0) * 12 + 6;
+                if (sOrd < paperWindowStart || sOrd > endOrd) continue;
                 const seedCitedBySet = new Set((seed.cited_by || []).map(String));
                 const seedInSample = citingPapers.filter(p => seedCitedBySet.has(String(p.pmid)));
                 const seedTotal = seedCitedBySet.size;

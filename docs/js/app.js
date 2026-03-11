@@ -1767,7 +1767,14 @@ class IMPACTApp {
         const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
         const pj = norm(paper.journal);
         const jj = norm(journalData.journal || '');
-        return jj.length > 3 && (pj === jj || pj.includes(jj) || jj.includes(pj));
+        if (jj.length > 3 && (pj === jj || pj.includes(jj) || jj.includes(pj))) return true;
+        // Also check against the NLM abbreviation (iCite returns abbreviated names)
+        const idx = this.journals.find(j => j.slug === journalData.slug);
+        if (idx?.abbreviation) {
+            const aj = norm(idx.abbreviation);
+            if (aj.length > 3 && (pj === aj || pj.includes(aj) || aj.includes(pj))) return true;
+        }
+        return false;
     }
 
     // Helper: compute the censored IF timeseries for a given set of in-journal seeds.

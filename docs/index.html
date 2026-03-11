@@ -6,7 +6,6 @@
     <title>IMPACT — Studying Publication Bias, Impact Factor Inflation &amp; H-Index Gaming</title>
     <link rel="stylesheet" href="css/style.css?v=7">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -323,8 +322,8 @@
 
     <!-- ============ PAPERS ============ -->
     <section id="papers" class="section">
-        <h2>Citation Network</h2>
-        <p class="section-desc">Enter a PubMed ID to visualize all papers that cite it as an interactive network. Node size reflects a paper's own citation count.</p>
+        <h2>Paper Citation Analysis</h2>
+        <p class="section-desc">Enter a PubMed ID to see its full citation history — annual citation counts, rolling averages, and how it compares to its journal's citation rate.</p>
 
         <div class="search-bar">
             <input type="text" id="network-pmid-input" placeholder="Enter PMID (e.g. 35537787)" autocomplete="off">
@@ -334,10 +333,10 @@
         <div id="network-results" style="display:none">
             <div class="metrics-row" id="network-metrics"></div>
 
-            <!-- Paper Analytics (citation trend + citing journals) -->
+            <!-- Paper Analytics (citation trend) -->
             <div id="paper-analytics" style="display:none;">
-                <h4 id="paper-analytics-title" style="margin:1.2rem 0 0.2rem; font-size:1rem; color:#c8d8e8; font-weight:600;"></h4>
-                <p id="paper-analytics-meta" class="data-note" style="margin:0 0 1rem;"></p>
+                <h4 id="paper-analytics-title" style="margin:1.2rem 0 0.2rem; font-size:1rem; color:var(--text); font-weight:600;"></h4>
+                <p id="paper-analytics-meta" style="margin:0 0 1rem; font-size:0.88rem; color:var(--text-light);"></p>
                 <div class="metrics-row" id="paper-analytics-stats"></div>
                 <div class="chart-controls" style="margin-top:1rem;">
                     <span class="chart-controls-label">Window:</span>
@@ -351,83 +350,21 @@
                         <button class="toggle-btn active" data-jif="off">JIF Window: Off</button>
                         <button class="toggle-btn" data-jif="on">JIF Window: On</button>
                     </div>
-                    <div class="toggle-group" id="paper-overlay-toggle" style="margin-left:0.5rem;">
-                        <button class="toggle-btn active" data-overlay="off">Journal IF: Off</button>
-                        <button class="toggle-btn" id="paper-overlay-on-btn" data-overlay="on" disabled title="Journal not found in database">Journal IF: On</button>
-                    </div>
                 </div>
                 <div class="chart-container" style="margin-top:0.5rem;">
                     <canvas id="paper-citations-chart"></canvas>
                 </div>
-                <p id="paper-chart-note" class="data-note" style="display:none; margin: -0.75rem 0 0.75rem; font-size:0.8rem;"></p>
+                <p id="paper-chart-note" class="data-note" style="display:none; margin: -0.75rem 0 0.75rem; font-size:0.8rem; color:var(--text);"></p>
                 <div class="download-bar" id="paper-cit-download-bar" style="display:none;">
                     <span class="download-label">Download:</span>
                     <button class="download-btn" id="paper-cit-dl-png">PNG</button>
                     <button class="download-btn" id="paper-cit-dl-jpg">JPG</button>
                     <button class="download-btn" id="paper-cit-dl-pdf">PDF</button>
                 </div>
-                <div class="authors-charts-grid" style="margin-top:1.5rem;">
-                    <div class="authors-chart-card">
-                        <h4>Top Citing Journals</h4>
-                        <div class="chart-container" style="margin-bottom:0;">
-                            <canvas id="paper-citing-journals-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <hr style="border:none; border-top:1px solid #2a3a4a; margin:1.5rem 0;">
-            </div>
-
-            <div id="network-controls" class="network-controls" style="display:none">
-                <div class="net-ctrl-group">
-                    <span class="net-ctrl-label">Layout</span>
-                    <button class="btn-view active" data-view="force">Force</button>
-                    <button class="btn-view" data-view="concentric">Concentric</button>
-                    <button class="btn-view" data-view="timeline">Timeline</button>
-                </div>
-                <div class="net-ctrl-group">
-                    <span class="net-ctrl-label">Show</span>
-                    <select id="network-count-select">
-                        <option value="100">100</option>
-                        <option value="200" selected>200</option>
-                        <option value="500">500</option>
-                        <option value="1000">1,000</option>
-                        <option value="2000">2,000</option>
-                        <option value="5000">5,000</option>
-                    </select>
-                    <span class="net-ctrl-hint">citing papers</span>
-                </div>
-                <div class="net-ctrl-group">
-                    <span class="net-ctrl-label">Color</span>
-                    <button class="btn-view active" data-color="year">Year</button>
-                    <button class="btn-view" data-color="rcr">RCR</button>
-                </div>
-            </div>
-            <div id="network-rcr-legend" class="network-rcr-legend" style="display:none">
-                <span class="rcr-swatch" style="background:#b71c1c">≥10</span>
-                <span class="rcr-swatch" style="background:#e53935">≥5</span>
-                <span class="rcr-swatch" style="background:#FB8C00">≥2</span>
-                <span class="rcr-swatch" style="background:#FDD835;color:#555">≥1</span>
-                <span class="rcr-swatch" style="background:#66BB6A">≥0.5</span>
-                <span class="rcr-swatch" style="background:#90A4AE">&lt;0.5</span>
-                <span class="rcr-swatch" style="background:#CFD8DC;color:#555">no data</span>
-                <span style="font-size:0.75rem;color:#888;margin-left:4px">RCR = field-normalized citation rate (1.0 = average for field)</span>
-            </div>
-            <div id="citation-network"></div>
-            <p class="data-note" id="network-note"></p>
-            <div id="network-download-bar" class="download-bar" style="display:none">
-                <span class="download-label">Download network:</span>
-                <button class="download-btn" id="net-dl-png">PNG</button>
-                <button class="download-btn" id="net-dl-jpg">JPG</button>
-                <button class="download-btn" id="net-dl-pdf">PDF</button>
-            </div>
-            <div id="network-selected-panel" class="network-selected-panel" style="display:none">
-                <h4 id="network-sel-title"></h4>
-                <p id="network-sel-meta"></p>
-                <a id="network-sel-link" class="pubmed-link" target="_blank" rel="noopener">Open in PubMed →</a>
             </div>
         </div>
 
-        <p id="network-hint" class="data-note" style="margin-top:1rem;">Enter a PMID above to visualize its citation network.</p>
+        <p id="network-hint" class="data-note" style="margin-top:1rem;">Enter a PMID above to see its citation history.</p>
     </section>
 
     <!-- ============ AUTHORS ============ -->

@@ -2050,15 +2050,14 @@ class IMPACTApp {
                 return {
                     label: `PMID ${seed.pmid}`,
                     data: cumLayers[idx],
-                    borderColor: color,
+                    borderColor: 'transparent',
                     backgroundColor: bgColor,
-                    borderWidth: 3,
+                    borderWidth: 0,
                     tension: 0.3,
                     fill: fillTarget,
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     hidden: !isCensored,
-                    order: idx,
                 };
             });
 

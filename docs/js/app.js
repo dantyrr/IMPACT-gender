@@ -1990,7 +1990,7 @@ class IMPACTApp {
         const labels = ts.map(d => d.month);
 
         const originalDataset = {
-            label: 'Original IF',
+            label: 'Original Rolling Citation Rate',
             data: ts.map(d => d.rolling_if),
             borderColor: chartManager.palette[0],
             backgroundColor: 'rgba(0, 114, 178, 0.08)',
@@ -2023,7 +2023,7 @@ class IMPACTApp {
             // Dataset 1: Combined censored IF baseline (bottom)
             // Datasets 2+: cumulative layers, each filled down to the previous
             const censoredDataset = {
-                label: 'Censored IF (all removed)',
+                label: 'Censored Rolling Citation Rate (all removed)',
                 data: adjIf,
                 borderColor: chartManager.palette[7],
                 backgroundColor: 'transparent',
@@ -2037,7 +2037,7 @@ class IMPACTApp {
             };
 
             const layerDatasets = seedsInJournal.map((seed, idx) => {
-                const palIdx = (idx + 1) % chartManager.palette.length;
+                const palIdx = (idx + 2) % chartManager.palette.length;
                 const color = chartManager.palette[palIdx];
                 // fill down to previous layer: dataset index 1 (censored) for first, or idx+1 for subsequent
                 const fillTarget = idx === 0 ? 1 : idx + 1;
@@ -2063,7 +2063,7 @@ class IMPACTApp {
             datasets = [
                 originalDataset,
                 {
-                    label: `Censored IF (without ${censorLabel})`,
+                    label: `Censored Rolling Citation Rate (without ${censorLabel})`,
                     data: adjIf,
                     borderColor: chartManager.palette[1],
                     backgroundColor: 'transparent',
@@ -2202,7 +2202,7 @@ class IMPACTApp {
                 }
 
                 seedsInJournal.forEach((seed, idx) => {
-                    const palIdx = (idx + 1) % chartManager.palette.length;
+                    const palIdx = (idx + 2) % chartManager.palette.length;
                     const color = chartManager.palette[palIdx];
                     const fillTarget = idx === 0 ? 0 : idx;
                     monthlyDatasets.push({
@@ -2327,7 +2327,7 @@ class IMPACTApp {
             }
 
             seedsInJournal.forEach((seed, idx) => {
-                const palIdx = (idx + 1) % chartManager.palette.length;
+                const palIdx = (idx + 2) % chartManager.palette.length;
                 const color = chartManager.palette[palIdx];
                 const fillTarget = idx === 0 ? 0 : idx;
                 countDatasets.push({

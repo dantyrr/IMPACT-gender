@@ -2402,8 +2402,9 @@ class IMPACTApp {
     _toggleCensoredLine(show) {
         const chart = chartManager.charts['influence-chart'];
         if (!chart) return;
-        // Toggle all datasets except the first (original IF)
-        chart.data.datasets.slice(1).forEach(ds => { ds.hidden = !show; });
+        // Toggle only the censored dataset (index 1), not the PMID layers
+        const censoredDs = chart.data.datasets[1];
+        if (censoredDs) censoredDs.hidden = !show;
         chart.update();
 
         // Toggle monthly and cumulative citation charts visibility

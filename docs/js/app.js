@@ -2122,19 +2122,14 @@ class IMPACTApp {
 
         if (seedsInJournal.length > 0 && isCensored && allPapers.length > 0) {
 
-            // --- Monthly Citation Count Chart ---
+            // --- Monthly Citation Count Chart (rolling 12-month window) ---
             monthlyContainer.style.display = '';
 
-            // Monthly totals: 1/12 of each year's citations per month
-            const monthlyTotal = labels.map(lbl => {
-                const yrStr = lbl.split('-')[0];
-                return Math.round((yearTotals[yrStr] || 0) / 12);
-            });
-            const monthlySeed = seedsInJournal.map((seed, s) =>
-                labels.map(lbl => {
-                    const yrStr = lbl.split('-')[0];
-                    return Math.round((seedYearTotals[s][yrStr] || 0) / 12);
-                })
+            // Use the timeseries citations field (12-month rolling window, real monthly data)
+            const monthlyTotal = ts.map(d => d.citations || 0);
+            // Per-seed: use _computeSeedCitCount which computes 12-mo window contribution
+            const monthlySeed = seedsInJournal.map(seed =>
+                this._computeSeedCitCount(ts, seed, citingPapers, localCyMap)
             );
 
             const monthlyDatasets = [{
@@ -2183,7 +2178,7 @@ class IMPACTApp {
                     plugins: {
                         title: {
                             display: true,
-                            text: `${journalData.journal} — Monthly Citation Count`,
+                            text: `${journalData.journal} — Rolling 12-Month Citation Count`,
                             font: { size: 14 },
                         },
                         legend: { position: 'bottom' },
@@ -2208,7 +2203,7 @@ class IMPACTApp {
                             ...(infScaleOverrides.x || {}),
                         },
                         y: {
-                            title: { display: true, text: 'Citations per Month' },
+                            title: { display: true, text: 'Citation Count (12-mo window)' },
                             beginAtZero: true,
                         },
                     },

@@ -2027,7 +2027,7 @@ class IMPACTApp {
                 data: adjIf,
                 borderColor: chartManager.palette[7],
                 backgroundColor: 'transparent',
-                borderWidth: 1.5,
+                borderWidth: 2,
                 borderDash: [4, 3],
                 tension: 0.3,
                 fill: false,

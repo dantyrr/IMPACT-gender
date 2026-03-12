@@ -2016,10 +2016,10 @@ class IMPACTApp {
                 cumLayers.push(prev.map((v, i) => v + contribs[s][i]));
             }
 
-            // Individual view: Dataset 0 = Original IF, Dataset 1 = Censored baseline (hidden from legend), Datasets 2+ = PMID layers
+            // Individual view: Dataset 0 = Original IF, Dataset 1 = Censored baseline, Datasets 2+ = PMID layers
             // Include censored dataset with gray border so first PMID layer shows border
             const censoredDataset = {
-                label: '',  // Empty label to hide from legend
+                label: 'Individual PMID borders',
                 data: adjIf,
                 borderColor: chartManager.palette[7],
                 backgroundColor: 'transparent',
@@ -2028,7 +2028,7 @@ class IMPACTApp {
                 fill: false,
                 pointRadius: 0,
                 pointHoverRadius: 0,
-                hidden: false,  // Not hidden, but won't show in legend due to empty label
+                hidden: false,
             };
 
             const layerDatasets = seedsInJournal.map((seed, idx) => {

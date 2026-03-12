@@ -2016,8 +2016,21 @@ class IMPACTApp {
                 cumLayers.push(prev.map((v, i) => v + contribs[s][i]));
             }
 
-            // Individual view: Dataset 0 = Original IF, Datasets 1+ = PMID layers
-            // No censored dataset in Individual view to avoid legend index mismatch
+            // Individual view: Dataset 0 = Original IF, Dataset 1 = Censored baseline (hidden from legend), Datasets 2+ = PMID layers
+            // Include censored dataset as hidden baseline so layers fill correctly, but exclude from legend
+            const censoredDataset = {
+                label: '',  // Empty label to hide from legend
+                data: adjIf,
+                borderColor: 'transparent',
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                tension: 0.3,
+                fill: false,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                hidden: false,  // Not hidden, but won't show in legend due to empty label
+            };
+
             const layerDatasets = seedsInJournal.map((seed, idx) => {
                 const palIdx = (idx + 2) % chartManager.palette.length;
                 const color = chartManager.palette[palIdx];
@@ -2026,8 +2039,8 @@ class IMPACTApp {
                 const g = parseInt(color.slice(3, 5), 16);
                 const b = parseInt(color.slice(5, 7), 16);
                 const bgColor = `rgba(${r}, ${g}, ${b}, 0.25)`;
-                // fill down to previous layer: dataset 0 (Original) for first, or idx for subsequent
-                const fillTarget = idx === 0 ? 0 : idx;
+                // fill down to previous layer: dataset 1 (censored) for first, or idx+1 for subsequent
+                const fillTarget = idx === 0 ? 1 : idx + 1;
                 return {
                     label: `PMID ${seed.pmid}`,
                     data: cumLayers[idx],
@@ -2041,7 +2054,7 @@ class IMPACTApp {
                 };
             });
 
-            datasets = [originalDataset, ...layerDatasets];
+            datasets = [originalDataset, censoredDataset, ...layerDatasets];
         } else {
             // Combined: one censored line = IF with all seeds removed together
             const censorLabel = seedsInJournal.length === 1
@@ -2087,7 +2100,7 @@ class IMPACTApp {
                     tooltip: {
                         callbacks: {
                             label: (ctx) => {
-                                if (viewMode === 'individual' && ctx.datasetIndex >= 1) {
+                                if (viewMode === 'individual' && ctx.datasetIndex >= 2) {
                                     // Show per-PMID contribution (layer value minus previous layer)
                                     const prevDs = ctx.chart.data.datasets[ctx.datasetIndex - 1];
                                     const prevVal = prevDs ? prevDs.data[ctx.dataIndex] : 0;

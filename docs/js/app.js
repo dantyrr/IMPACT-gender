@@ -2052,12 +2052,13 @@ class IMPACTApp {
                     data: cumLayers[idx],
                     borderColor: color,
                     backgroundColor: bgColor,
-                    borderWidth: 2.5,
+                    borderWidth: 3,
                     tension: 0.3,
                     fill: fillTarget,
                     pointRadius: 0,
                     pointHoverRadius: 4,
                     hidden: !isCensored,
+                    order: idx,
                 };
             });
 

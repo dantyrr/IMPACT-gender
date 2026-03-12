@@ -2052,7 +2052,7 @@ class IMPACTApp {
                     data: cumLayers[idx],
                     borderColor: chartManager.palette[7],
                     backgroundColor: bgColor,
-                    borderWidth: 2,
+                    borderWidth: 1.5,
                     tension: 0.3,
                     fill: fillTarget,
                     pointRadius: 0,

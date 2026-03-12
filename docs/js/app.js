@@ -2096,7 +2096,10 @@ class IMPACTApp {
                         text: `${journalData.journal} — Rolling ${windowLabel} Citation Rate`,
                         font: { size: 14 },
                     },
-                    legend: { position: 'bottom' },
+                    legend: { 
+                        position: 'bottom',
+                        onClick: null  // Disable legend clicks - users should control PMIDs via input
+                    },
                     tooltip: {
                         callbacks: {
                             label: (ctx) => {

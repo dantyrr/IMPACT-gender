@@ -2017,13 +2017,13 @@ class IMPACTApp {
             }
 
             // Individual view: Dataset 0 = Original IF, Dataset 1 = Censored baseline (hidden from legend), Datasets 2+ = PMID layers
-            // Include censored dataset as hidden baseline so layers fill correctly, but exclude from legend
+            // Include censored dataset with gray border so first PMID layer shows border
             const censoredDataset = {
                 label: '',  // Empty label to hide from legend
                 data: adjIf,
-                borderColor: 'transparent',
+                borderColor: chartManager.palette[7],
                 backgroundColor: 'transparent',
-                borderWidth: 0,
+                borderWidth: 1.5,
                 tension: 0.3,
                 fill: false,
                 pointRadius: 0,

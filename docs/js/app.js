@@ -2039,14 +2039,19 @@ class IMPACTApp {
             const layerDatasets = seedsInJournal.map((seed, idx) => {
                 const palIdx = (idx + 2) % chartManager.palette.length;
                 const color = chartManager.palette[palIdx];
-                console.log(`PMID ${seed.pmid} (idx=${idx}, dataset=${idx+2}): color=${color} (palette[${palIdx}])`);
+                // Convert hex to rgba for background with 0.25 alpha
+                const r = parseInt(color.slice(1, 3), 16);
+                const g = parseInt(color.slice(3, 5), 16);
+                const b = parseInt(color.slice(5, 7), 16);
+                const bgColor = `rgba(${r}, ${g}, ${b}, 0.25)`;
+                console.log(`PMID ${seed.pmid} (idx=${idx}, dataset=${idx+2}): border=${color}, bg=${bgColor}`);
                 // fill down to previous layer: dataset index 1 (censored) for first, or idx+1 for subsequent
                 const fillTarget = idx === 0 ? 1 : idx + 1;
                 return {
                     label: `PMID ${seed.pmid}`,
                     data: cumLayers[idx],
                     borderColor: color,
-                    backgroundColor: color + '30',
+                    backgroundColor: bgColor,
                     borderWidth: 2.5,
                     tension: 0.3,
                     fill: fillTarget,

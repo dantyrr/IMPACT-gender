@@ -2148,6 +2148,14 @@ class IMPACTApp {
         if (seedsInJournal.length > 0 && allPapers.length > 0) {
             const journalMonthlyCits = papersData?.monthly_cits || {};
             const hasMonthlyData = Object.keys(journalMonthlyCits).length > 0;
+            
+            console.log('Monthly chart debug:', {
+                seedsInJournal: seedsInJournal.length,
+                allPapers: allPapers.length,
+                hasMonthlyData,
+                monthlyCitsKeys: Object.keys(journalMonthlyCits).slice(0, 5), // Show first 5 keys
+                papersDataExists: !!papersData
+            });
 
             if (hasMonthlyData) {
                 newMonthlyContainer.style.display = '';

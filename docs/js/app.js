@@ -2047,7 +2047,7 @@ class IMPACTApp {
                     data: cumLayers[idx],
                     borderColor: color,
                     backgroundColor: color + '30',
-                    borderWidth: 1.5,
+                    borderWidth: 2.5,
                     tension: 0.3,
                     fill: fillTarget,
                     pointRadius: 0,

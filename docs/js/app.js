@@ -2050,9 +2050,9 @@ class IMPACTApp {
                 return {
                     label: `PMID ${seed.pmid}`,
                     data: cumLayers[idx],
-                    borderColor: 'transparent',
+                    borderColor: chartManager.palette[7],
                     backgroundColor: bgColor,
-                    borderWidth: 0,
+                    borderWidth: 2,
                     tension: 0.3,
                     fill: fillTarget,
                     pointRadius: 0,

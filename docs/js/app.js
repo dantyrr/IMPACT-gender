@@ -2039,7 +2039,7 @@ class IMPACTApp {
             const layerDatasets = seedsInJournal.map((seed, idx) => {
                 const palIdx = (idx + 2) % chartManager.palette.length;
                 const color = chartManager.palette[palIdx];
-                console.log(`PMID ${seed.pmid} (idx=${idx}): color=${color} (palette[${palIdx}])`);
+                console.log(`PMID ${seed.pmid} (idx=${idx}, dataset=${idx+2}): color=${color} (palette[${palIdx}])`);
                 // fill down to previous layer: dataset index 1 (censored) for first, or idx+1 for subsequent
                 const fillTarget = idx === 0 ? 1 : idx + 1;
                 return {

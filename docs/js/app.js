@@ -2033,7 +2033,7 @@ class IMPACTApp {
                 fill: false,
                 pointRadius: 0,
                 pointHoverRadius: 4,
-                hidden: !isCensored,
+                hidden: !isCensored || viewMode === 'individual',
             };
 
             const layerDatasets = seedsInJournal.map((seed, idx) => {

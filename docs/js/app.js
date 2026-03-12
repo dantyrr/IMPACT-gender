@@ -1668,9 +1668,6 @@ class IMPACTApp {
         document.getElementById('influence-pmid-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.loadInfluenceData();
         });
-        document.getElementById('influence-censor-toggle').addEventListener('change', (e) => {
-            this._toggleCensoredLine(e.target.checked);
-        });
         document.getElementById('influence-view-row').addEventListener('change', () => {
             if (this._lastInfluenceRenderArgs) {
                 this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
@@ -1986,7 +1983,7 @@ class IMPACTApp {
 
         // Build chart datasets based on view mode
         const viewMode = document.querySelector('input[name="inf-view"]:checked')?.value || 'combined';
-        const isCensored = document.getElementById('influence-censor-toggle').checked;
+        const isCensored = true; // Always show censored line
         const labels = ts.map(d => d.month);
 
         const originalDataset = {
@@ -2028,7 +2025,6 @@ class IMPACTApp {
                 borderColor: chartManager.palette[7],
                 backgroundColor: 'transparent',
                 borderWidth: 2,
-                borderDash: [4, 3],
                 tension: 0.3,
                 fill: false,
                 pointRadius: 0,
@@ -2074,7 +2070,6 @@ class IMPACTApp {
                     borderColor: chartManager.palette[1],
                     backgroundColor: 'transparent',
                     borderWidth: 2,
-                    borderDash: [6, 3],
                     tension: 0.3,
                     fill: false,
                     pointRadius: 0,

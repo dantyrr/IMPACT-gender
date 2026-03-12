@@ -1750,7 +1750,7 @@ class IMPACTApp {
                 }
             }
 
-            this._lastInfluenceRenderArgs = [journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy];
+            this._lastInfluenceRenderArgs = [journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy, papersData];
             this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
 
             hint.style.display = 'none';
@@ -1841,7 +1841,49 @@ class IMPACTApp {
         });
     }
 
-    _renderInfluenceChart(journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy) {
+    // Helper: compute raw citation count attributed to a single seed per month.
+    // Returns array of numbers (one per timeseries point).
+    _computeSeedCitCount(ts, seed, citingPapers, localCyMap) {
+        const pmidStr = String(seed.pmid);
+        const cy = localCyMap[pmidStr];
+        return ts.map(point => {
+            const [y, m] = point.month.split('-').map(Number);
+            const endOrd = y * 12 + m;
+            const startOrd = endOrd - 11;
+            const paperWindowStart = endOrd - 23;
+            const pOrd = (seed.year || 0) * 12 + 6;
+            if (pOrd < paperWindowStart || pOrd > endOrd) return 0;
+
+            if (cy) {
+                // Local DB: proportional month allocation from year-level data
+                let cits = 0;
+                for (const [yearStr, cnt] of Object.entries(cy)) {
+                    const k = parseInt(yearStr, 10);
+                    const kStart = k * 12 + 1;
+                    const kEnd = k * 12 + 12;
+                    const overlapMonths = Math.max(0,
+                        Math.min(kEnd, endOrd) - Math.max(kStart, startOrd) + 1);
+                    cits += cnt * overlapMonths / 12;
+                }
+                return cits;
+            } else {
+                // iCite fallback
+                const seedCitedBySet = new Set((seed.cited_by || []).map(String));
+                const seedInSample = citingPapers.filter(p => seedCitedBySet.has(String(p.pmid)));
+                const seedTotal = seedCitedBySet.size;
+                const seedScale = (seedTotal > 0 && seedInSample.length > 0 && seedInSample.length < seedTotal)
+                    ? seedTotal / seedInSample.length : 1;
+                let count = 0;
+                for (const p of seedInSample) {
+                    const ord = (p.year || 0) * 12 + 6;
+                    if (ord >= startOrd && ord <= endOrd) count++;
+                }
+                return count * seedScale;
+            }
+        });
+    }
+
+    _renderInfluenceChart(journalData, seedPapers, seedsInJournal, localCyMap, citingPapers, totalCitedBy, papersData) {
         // Paper info card
         const listEl = document.getElementById('inf-paper-list');
         listEl.innerHTML = seedPapers.map(p => {
@@ -2059,6 +2101,233 @@ class IMPACTApp {
             },
         });
         document.getElementById('influence-range-controls').style.display = '';
+
+        // --- Shared: compute yearly citation totals from papers data ---
+        const countContainer = document.getElementById('influence-count-container');
+        const monthlyContainer = document.getElementById('influence-monthly-container');
+        const allPapers = papersData?.papers || [];
+
+        // Build year-level totals for the whole journal and per-seed
+        const yearTotals = {};  // year → total citations received that year (all papers)
+        for (const p of allPapers) {
+            if (!p.cy) continue;
+            for (const [yr, cnt] of Object.entries(p.cy)) {
+                yearTotals[yr] = (yearTotals[yr] || 0) + cnt;
+            }
+        }
+        const seedYearTotals = seedsInJournal.map(seed => {
+            const cy = localCyMap[String(seed.pmid)];
+            return cy || {};
+        });
+
+        if (seedsInJournal.length > 0 && isCensored && allPapers.length > 0) {
+
+            // --- Monthly Citation Count Chart ---
+            monthlyContainer.style.display = '';
+
+            // Monthly totals: 1/12 of each year's citations per month
+            const monthlyTotal = labels.map(lbl => {
+                const yrStr = lbl.split('-')[0];
+                return Math.round((yearTotals[yrStr] || 0) / 12);
+            });
+            const monthlySeed = seedsInJournal.map((seed, s) =>
+                labels.map(lbl => {
+                    const yrStr = lbl.split('-')[0];
+                    return Math.round((seedYearTotals[s][yrStr] || 0) / 12);
+                })
+            );
+
+            const monthlyDatasets = [{
+                label: 'Total Citations',
+                data: monthlyTotal,
+                borderColor: chartManager.palette[0],
+                backgroundColor: 'rgba(0, 114, 178, 0.08)',
+                borderWidth: 2.5,
+                tension: 0.3,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+            }];
+
+            const monthlyInvLayers = [];
+            for (let s = 0; s < seedsInJournal.length; s++) {
+                const prev = s === 0 ? monthlyTotal : monthlyInvLayers[s - 1];
+                monthlyInvLayers.push(prev.map((v, i) => Math.max(0, v - monthlySeed[s][i])));
+            }
+
+            seedsInJournal.forEach((seed, idx) => {
+                const palIdx = (idx + 1) % chartManager.palette.length;
+                const color = chartManager.palette[palIdx];
+                const fillTarget = idx === 0 ? 0 : idx;
+                monthlyDatasets.push({
+                    label: `PMID ${seed.pmid}`,
+                    data: monthlyInvLayers[idx],
+                    borderColor: color,
+                    backgroundColor: color + '30',
+                    borderWidth: 1.5,
+                    tension: 0.3,
+                    fill: fillTarget,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                });
+            });
+
+            chartManager._destroy('influence-monthly-chart');
+            const ctxM = document.getElementById('influence-monthly-chart');
+            chartManager.charts['influence-monthly-chart'] = new Chart(ctxM, {
+                type: 'line',
+                data: { labels, datasets: monthlyDatasets },
+                options: {
+                    responsive: true,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${journalData.journal} — Monthly Citation Count`,
+                            font: { size: 14 },
+                        },
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    if (ctx.datasetIndex === 0) {
+                                        return `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()}`;
+                                    }
+                                    const fillTarget = ctx.datasetIndex === 1 ? 0 : ctx.datasetIndex - 1;
+                                    const prevVal = ctx.chart.data.datasets[fillTarget].data[ctx.dataIndex];
+                                    const cits = Math.round(prevVal - ctx.parsed.y);
+                                    return `${ctx.dataset.label}: ${cits.toLocaleString()} citations`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Month' },
+                            ticks: { maxTicksLimit: 12 },
+                            ...(infScaleOverrides.x || {}),
+                        },
+                        y: {
+                            title: { display: true, text: 'Citations per Month' },
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            });
+
+            // --- Cumulative Citation Count Chart ---
+            countContainer.style.display = '';
+
+            // Convert to cumulative monthly timeseries aligned with labels
+            const cumulativeTotal = [];
+            const cumulativeSeed = seedsInJournal.map(() => []);
+            let runningTotal = 0;
+            const seedRunning = seedsInJournal.map(() => 0);
+
+            // Pre-compute: for each label month, add 1/12 of that year's citations
+            // Track which year we're in and accumulate
+            let prevYear = null;
+            let monthsInYear = 0;
+
+            for (let i = 0; i < labels.length; i++) {
+                const [y, m] = labels[i].split('-').map(Number);
+
+                // Add this month's share of the year's citations (1/12 of annual total)
+                const yrStr = String(y);
+                runningTotal += (yearTotals[yrStr] || 0) / 12;
+                cumulativeTotal.push(Math.round(runningTotal));
+
+                for (let s = 0; s < seedsInJournal.length; s++) {
+                    seedRunning[s] += (seedYearTotals[s][yrStr] || 0) / 12;
+                    cumulativeSeed[s].push(Math.round(seedRunning[s]));
+                }
+            }
+
+            // Build datasets: total cumulative line + inverted seed bands from the top
+            const countDatasets = [{
+                label: 'Total Citations',
+                data: cumulativeTotal,
+                borderColor: chartManager.palette[0],
+                backgroundColor: 'rgba(0, 114, 178, 0.08)',
+                borderWidth: 2.5,
+                tension: 0.3,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+            }];
+
+            // Inverted layers: start from total and subtract each seed's cumulative contribution
+            const invertedLayers = [];
+            for (let s = 0; s < seedsInJournal.length; s++) {
+                const prev = s === 0 ? cumulativeTotal : invertedLayers[s - 1];
+                invertedLayers.push(prev.map((v, i) => Math.max(0, v - cumulativeSeed[s][i])));
+            }
+
+            seedsInJournal.forEach((seed, idx) => {
+                const palIdx = (idx + 1) % chartManager.palette.length;
+                const color = chartManager.palette[palIdx];
+                const fillTarget = idx === 0 ? 0 : idx;
+                countDatasets.push({
+                    label: `PMID ${seed.pmid}`,
+                    data: invertedLayers[idx],
+                    borderColor: color,
+                    backgroundColor: color + '30',
+                    borderWidth: 1.5,
+                    tension: 0.3,
+                    fill: fillTarget,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                });
+            });
+
+            chartManager._destroy('influence-count-chart');
+            const ctx2 = document.getElementById('influence-count-chart');
+            chartManager.charts['influence-count-chart'] = new Chart(ctx2, {
+                type: 'line',
+                data: { labels, datasets: countDatasets },
+                options: {
+                    responsive: true,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${journalData.journal} — Cumulative Citation Count`,
+                            font: { size: 14 },
+                        },
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    if (ctx.datasetIndex === 0) {
+                                        return `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()}`;
+                                    }
+                                    const fillTarget = ctx.datasetIndex === 1 ? 0 : ctx.datasetIndex - 1;
+                                    const prevVal = ctx.chart.data.datasets[fillTarget].data[ctx.dataIndex];
+                                    const cits = Math.round(prevVal - ctx.parsed.y);
+                                    return `${ctx.dataset.label}: ${cits.toLocaleString()} citations`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Month' },
+                            ticks: { maxTicksLimit: 12 },
+                            ...(infScaleOverrides.x || {}),
+                        },
+                        y: {
+                            title: { display: true, text: 'Cumulative Citations' },
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            });
+        } else {
+            monthlyContainer.style.display = 'none';
+            countContainer.style.display = 'none';
+            chartManager._destroy('influence-monthly-chart');
+            chartManager._destroy('influence-count-chart');
+        }
     }
 
     _toggleCensoredLine(show) {
@@ -2067,6 +2336,12 @@ class IMPACTApp {
         // Toggle all datasets except the first (original IF)
         chart.data.datasets.slice(1).forEach(ds => { ds.hidden = !show; });
         chart.update();
+
+        // Toggle monthly and cumulative citation charts visibility
+        for (const id of ['influence-monthly-container', 'influence-count-container']) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = show ? '' : 'none';
+        }
     }
 
     _downloadInfluence(format) {

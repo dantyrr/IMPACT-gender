@@ -396,6 +396,51 @@ class DatabaseManager:
             result.setdefault(pmid, {})[year] = row['cnt']
         return result
 
+    def get_citations_by_month_for_pmids(self, pmids: list) -> dict:
+        """Return {pmid_str: {"YYYY-MM": count}} for the given PMIDs."""
+        if not pmids:
+            return {}
+        placeholders = ','.join('?' * len(pmids))
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"""SELECT cited_pmid, citing_year, citing_month, COUNT(*) as cnt
+                FROM citations
+                WHERE cited_pmid IN ({placeholders})
+                  AND citing_year IS NOT NULL
+                  AND citing_month IS NOT NULL
+                GROUP BY cited_pmid, citing_year, citing_month""",
+            pmids,
+        )
+        result = {}
+        for row in cursor.fetchall():
+            pmid = str(row['cited_pmid'])
+            key = f"{row['citing_year']}-{row['citing_month']:02d}"
+            result.setdefault(pmid, {})[key] = row['cnt']
+        return result
+
+    def get_journal_monthly_citations(self, journal_id: int) -> dict:
+        """Return {"YYYY-MM": total_citations} for all papers in a journal.
+
+        Counts citations received per calendar month across ALL papers in the
+        journal (not limited to any paper window).
+        """
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """SELECT c.citing_year, c.citing_month, COUNT(*) as cnt
+               FROM citations c
+               WHERE c.cited_pmid IN (SELECT pmid FROM papers WHERE journal_id = ?)
+                 AND c.citing_year IS NOT NULL
+                 AND c.citing_month IS NOT NULL
+               GROUP BY c.citing_year, c.citing_month
+               ORDER BY c.citing_year, c.citing_month""",
+            (journal_id,),
+        )
+        result = {}
+        for row in cursor.fetchall():
+            key = f"{row['citing_year']}-{row['citing_month']:02d}"
+            result[key] = row['cnt']
+        return result
+
     def get_papers_for_export(self, journal_id: int, limit: int = 2000) -> list:
         """Return papers for the papers browser export, sorted by citation count desc."""
         cursor = self.conn.cursor()

@@ -180,7 +180,9 @@ class JSONExporter:
 
     def export_journal_papers(self, slug: str, rows: list,
                               geo_rows: list = None,
-                              cits_by_year: dict = None) -> str:
+                              cits_by_year: dict = None,
+                              cits_by_month: dict = None,
+                              journal_monthly_cits: dict = None) -> str:
         """
         Export per-paper data for the papers browser tab, plus country-by-year geo data.
         Saves to docs/data/papers/{slug}.json
@@ -188,6 +190,11 @@ class JSONExporter:
         cits_by_year: optional {pmid_str: {year_str: count}} from
                       db.get_citations_by_year_for_pmids(); adds a compact "cy"
                       field to each entry for exact Influence-tab computation.
+        cits_by_month: optional {pmid_str: {"YYYY-MM": count}} from
+                       db.get_citations_by_month_for_pmids(); adds "cm" field.
+        journal_monthly_cits: optional {"YYYY-MM": total} from
+                              db.get_journal_monthly_citations(); adds top-level
+                              "monthly_cits" field for the Influence monthly chart.
         """
         papers_dir = os.path.join(self.data_dir, "papers")
         os.makedirs(papers_dir, exist_ok=True)
@@ -221,6 +228,9 @@ class JSONExporter:
             cy = (cits_by_year or {}).get(str(row["pmid"]))
             if cy:
                 entry["cy"] = cy  # {year_str: count} — used by Influence tab
+            cm = (cits_by_month or {}).get(str(row["pmid"]))
+            if cm:
+                entry["cm"] = cm  # {"YYYY-MM": count} — Influence monthly chart
             entries.append(entry)
 
         # Build compact geo summary: {year: {country: count}}
@@ -240,6 +250,8 @@ class JSONExporter:
         }
         if geo:
             data["geo"] = geo
+        if journal_monthly_cits:
+            data["monthly_cits"] = journal_monthly_cits
 
         path = os.path.join(papers_dir, f"{slug}.json")
         with open(path, "w") as f:

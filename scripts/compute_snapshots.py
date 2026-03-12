@@ -85,7 +85,10 @@ def process_journals(journal_chunk, db_path, official_jifs, worker_id):
         geo_rows = db.get_country_by_year(jid)
         pmids = [r['pmid'] for r in paper_rows]
         cits_by_year = db.get_citations_by_year_for_pmids(pmids)
-        exporter.export_journal_papers(slug, paper_rows, geo_rows, cits_by_year)
+        cits_by_month = db.get_citations_by_month_for_pmids(pmids)
+        journal_monthly_cits = db.get_journal_monthly_citations(jid)
+        exporter.export_journal_papers(slug, paper_rows, geo_rows, cits_by_year,
+                                       cits_by_month, journal_monthly_cits)
 
         index_entries.append({
             "slug": slug,

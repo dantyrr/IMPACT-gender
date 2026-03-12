@@ -28,6 +28,7 @@ class IMPACTApp {
         this.jcYZero = false;
         this._journalYZero = false;
         this._influenceYZero = false;
+        this._influenceWindow = 'timeseries';
         this.papersDataCache = {};
         this._worldTopology = null;
         this._rcitsVersion = 0;
@@ -1676,6 +1677,13 @@ class IMPACTApp {
             }
         });
 
+        this._setupToggleGroup('influence-window-toggle', (windowKey) => {
+            this._influenceWindow = windowKey;
+            if (this._lastInfluenceRenderArgs) {
+                this._renderInfluenceChart(...this._lastInfluenceRenderArgs);
+            }
+        }, 'data-window');
+
         this._setupToggleGroup('influence-y-toggle', (val) => {
             this._influenceYZero = val === 'zero';
             if (this._lastInfluenceRenderArgs) {
@@ -1780,20 +1788,30 @@ class IMPACTApp {
     // Helper: compute the censored IF timeseries for a given set of in-journal seeds.
     // localSeeds: seeds with exact cy data; iciteSeeds: seeds using iCite cited_by fallback.
     // Each iCite seed contributes independently (additive, handles multi-seed double-counting).
-    _computeAdjIf(ts, localSeeds, iciteSeeds, citingPapers, localCyMap) {
+    // windowKey: which timeseries variant is selected (determines paper window bounds).
+    _computeAdjIf(ts, localSeeds, iciteSeeds, citingPapers, localCyMap, windowKey) {
+        // Paper window parameters: (months, skip) matching backend compute_rolling_if
+        const windowParams = {
+            'timeseries':      { pw: 24, skip: 0 },
+            'timeseries_12mo': { pw: 12, skip: 0 },
+            'timeseries_5yr':  { pw: 60, skip: 12 },
+        };
+        const { pw, skip } = windowParams[windowKey] || windowParams['timeseries'];
         return ts.map(point => {
             const [y, m] = point.month.split('-').map(Number);
             const endOrd = y * 12 + m;
             const startOrd = endOrd - 11;
-            const paperWindowStart = endOrd - 23;
+            // Paper window: pw months ending (1+skip) months before citation window start
+            const paperWindowEnd = startOrd - 1 - skip;
+            const paperWindowStart = paperWindowEnd - pw + 1;
 
             // Part 1: local DB seeds — exact year counts, proportional month allocation
-            // Only subtract citations for seeds published in the 24-mo paper window,
+            // Only subtract citations for seeds published in the paper window,
             // since only those papers' citations are included in the IF numerator.
             let localSeedCits = 0;
             for (const p of localSeeds) {
                 const pOrd = (p.year || 0) * 12 + 6;
-                if (pOrd < paperWindowStart || pOrd > endOrd) continue;
+                if (pOrd < paperWindowStart || pOrd > paperWindowEnd) continue;
                 const cy = localCyMap[String(p.pmid)];
                 for (const [yearStr, cnt] of Object.entries(cy)) {
                     const k = parseInt(yearStr, 10);
@@ -1810,7 +1828,7 @@ class IMPACTApp {
             let iciteSeedCits = 0;
             for (const seed of iciteSeeds) {
                 const sOrd = (seed.year || 0) * 12 + 6;
-                if (sOrd < paperWindowStart || sOrd > endOrd) continue;
+                if (sOrd < paperWindowStart || sOrd > paperWindowEnd) continue;
                 const seedCitedBySet = new Set((seed.cited_by || []).map(String));
                 const seedInSample = citingPapers.filter(p => seedCitedBySet.has(String(p.pmid)));
                 const seedTotal = seedCitedBySet.size;
@@ -1824,13 +1842,13 @@ class IMPACTApp {
                 iciteSeedCits += count * seedScale;
             }
 
-            // Denominator: subtract in-journal research seeds published in 24-mo paper window
+            // Denominator: subtract in-journal research seeds published in paper window
             const allSeeds = [...localSeeds, ...iciteSeeds];
             let seedResearchInWindow = 0;
             for (const s of allSeeds) {
                 if (s.is_research_article === 'Yes' || s.is_research_article === true) {
                     const ord = (s.year || 0) * 12 + 6;
-                    if (ord >= paperWindowStart && ord <= endOrd) seedResearchInWindow++;
+                    if (ord >= paperWindowStart && ord <= paperWindowEnd) seedResearchInWindow++;
                 }
             }
 
@@ -1843,16 +1861,23 @@ class IMPACTApp {
 
     // Helper: compute raw citation count attributed to a single seed per month.
     // Returns array of numbers (one per timeseries point).
-    _computeSeedCitCount(ts, seed, citingPapers, localCyMap) {
+    _computeSeedCitCount(ts, seed, citingPapers, localCyMap, windowKey) {
+        const windowParams = {
+            'timeseries':      { pw: 24, skip: 0 },
+            'timeseries_12mo': { pw: 12, skip: 0 },
+            'timeseries_5yr':  { pw: 60, skip: 12 },
+        };
+        const { pw, skip } = windowParams[windowKey] || windowParams['timeseries'];
         const pmidStr = String(seed.pmid);
         const cy = localCyMap[pmidStr];
         return ts.map(point => {
             const [y, m] = point.month.split('-').map(Number);
             const endOrd = y * 12 + m;
             const startOrd = endOrd - 11;
-            const paperWindowStart = endOrd - 23;
+            const paperWindowEnd = startOrd - 1 - skip;
+            const paperWindowStart = paperWindowEnd - pw + 1;
             const pOrd = (seed.year || 0) * 12 + 6;
-            if (pOrd < paperWindowStart || pOrd > endOrd) return 0;
+            if (pOrd < paperWindowStart || pOrd > paperWindowEnd) return 0;
 
             if (cy) {
                 // Local DB: proportional month allocation from year-level data
@@ -1898,14 +1923,22 @@ class IMPACTApp {
             </div>`;
         }).join('<hr class="inf-paper-divider">');
 
-        const ts = journalData.timeseries || [];
+        const windowKey = this._influenceWindow || 'timeseries';
+        const ts = journalData[windowKey] || journalData.timeseries || [];
         if (!ts.length) return;
+
+        const windowLabels = {
+            'timeseries': '24-Month',
+            'timeseries_12mo': '12-Month',
+            'timeseries_5yr': '5-Year (yr 2–6)',
+        };
+        const windowLabel = windowLabels[windowKey] || '24-Month';
 
         const localSeeds = seedsInJournal.filter(p => localCyMap[String(p.pmid)]);
         const iciteSeeds = seedsInJournal.filter(p => !localCyMap[String(p.pmid)]);
 
         // Combined adjIf — all seeds removed together (used for metrics always)
-        const adjIf = this._computeAdjIf(ts, localSeeds, iciteSeeds, citingPapers, localCyMap);
+        const adjIf = this._computeAdjIf(ts, localSeeds, iciteSeeds, citingPapers, localCyMap, windowKey);
 
         // Metric cards (always based on combined)
         const totalLocalCits = localSeeds.reduce((s, p) => {
@@ -1923,15 +1956,19 @@ class IMPACTApp {
             ? ` (${localSeeds.length} exact${iciteSeeds.length > 0 ? `, ${iciteSeeds.length} via iCite` : ''})`
             : iciteSeeds.length > 0 ? ' (via iCite — rerun compute_snapshots for exact data)' : '';
 
-        // Format rolling window date range for a snapshot month (e.g. "2024-10")
-        // Papers: 24-mo window ending at month, Citations: 12-mo window ending at month
+        // Format rolling window date range for a snapshot month
+        const winParams = { 'timeseries': { pw: 24, skip: 0 }, 'timeseries_12mo': { pw: 12, skip: 0 }, 'timeseries_5yr': { pw: 60, skip: 12 } };
+        const { pw: fmtPw, skip: fmtSkip } = winParams[windowKey] || winParams['timeseries'];
         const fmtWindow = (monthStr) => {
             const [y, m] = monthStr.split('-').map(Number);
-            const papStart = new Date(y, m - 25, 1); // 24 months before
-            const citStart = new Date(y, m - 13, 1); // 12 months before
+            // Citation window: 12 months ending at target
+            const citStart = new Date(y, m - 13, 1);
             const end = new Date(y, m - 1, 1);
+            // Paper window: pw months ending (1+skip) months before citation start
+            const papEnd = new Date(y, m - 13 - fmtSkip, 1);
+            const papStart = new Date(y, m - 13 - fmtSkip - fmtPw + 1, 1);
             const fmt = d => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-            return { papers: `${fmt(papStart)}–${fmt(end)}`, citations: `${fmt(citStart)}–${fmt(end)}` };
+            return { papers: `${fmt(papStart)}–${fmt(papEnd)}`, citations: `${fmt(citStart)}–${fmt(end)}` };
         };
         const peakWin = peakMonth !== '—' ? fmtWindow(peakMonth) : null;
         const firstMonth = ts[0]?.month || '—';
@@ -1971,7 +2008,7 @@ class IMPACTApp {
             const contribs = seedsInJournal.map(seed => {
                 const sl = localCyMap[String(seed.pmid)] ? [seed] : [];
                 const si = localCyMap[String(seed.pmid)] ? [] : [seed];
-                const singleAdjIf = this._computeAdjIf(ts, sl, si, citingPapers, localCyMap);
+                const singleAdjIf = this._computeAdjIf(ts, sl, si, citingPapers, localCyMap, windowKey);
                 return ts.map((pt, i) => Math.max(0, (pt.rolling_if || 0) - singleAdjIf[i]));
             });
 
@@ -2058,7 +2095,7 @@ class IMPACTApp {
                 plugins: {
                     title: {
                         display: true,
-                        text: `${journalData.journal} — Rolling 24-Month Citation Rate`,
+                        text: `${journalData.journal} — Rolling ${windowLabel} Citation Rate`,
                         font: { size: 14 },
                     },
                     legend: { position: 'bottom' },
@@ -2093,7 +2130,7 @@ class IMPACTApp {
                         ...(infScaleOverrides.x || {}),
                     },
                     y: {
-                        title: { display: true, text: 'Citation Rate (24-mo)' },
+                        title: { display: true, text: `Citation Rate (${windowLabel})` },
                         beginAtZero: this._influenceYZero,
                         ...(infScaleOverrides.y || {}),
                     },
@@ -2122,118 +2159,149 @@ class IMPACTApp {
 
         if (seedsInJournal.length > 0 && isCensored && allPapers.length > 0) {
 
-            // --- Monthly Citation Count Chart (rolling 12-month window) ---
-            monthlyContainer.style.display = '';
+            // --- Monthly Citation Count Chart (actual per-calendar-month counts) ---
+            const journalMonthlyCits = papersData?.monthly_cits || {};
+            const hasMonthlyData = Object.keys(journalMonthlyCits).length > 0;
 
-            // Use the timeseries citations field (12-month rolling window, real monthly data)
-            const monthlyTotal = ts.map(d => d.citations || 0);
-            // Per-seed: use _computeSeedCitCount which computes 12-mo window contribution
-            const monthlySeed = seedsInJournal.map(seed =>
-                this._computeSeedCitCount(ts, seed, citingPapers, localCyMap)
-            );
+            if (hasMonthlyData) {
+                monthlyContainer.style.display = '';
 
-            const monthlyDatasets = [{
-                label: 'Total Citations',
-                data: monthlyTotal,
-                borderColor: chartManager.palette[0],
-                backgroundColor: 'rgba(0, 114, 178, 0.08)',
-                borderWidth: 2.5,
-                tension: 0.3,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-            }];
-
-            const monthlyInvLayers = [];
-            for (let s = 0; s < seedsInJournal.length; s++) {
-                const prev = s === 0 ? monthlyTotal : monthlyInvLayers[s - 1];
-                monthlyInvLayers.push(prev.map((v, i) => Math.max(0, v - monthlySeed[s][i])));
-            }
-
-            seedsInJournal.forEach((seed, idx) => {
-                const palIdx = (idx + 1) % chartManager.palette.length;
-                const color = chartManager.palette[palIdx];
-                const fillTarget = idx === 0 ? 0 : idx;
-                monthlyDatasets.push({
-                    label: `PMID ${seed.pmid}`,
-                    data: monthlyInvLayers[idx],
-                    borderColor: color,
-                    backgroundColor: color + '30',
-                    borderWidth: 1.5,
-                    tension: 0.3,
-                    fill: fillTarget,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
+                // Build per-seed cm maps
+                const seedCmMaps = seedsInJournal.map(seed => {
+                    const pmidStr = String(seed.pmid);
+                    // Try cm from papers data first
+                    for (const p of allPapers) {
+                        if (p.pmid === seed.pmid || String(p.pmid) === pmidStr) {
+                            return p.cm || {};
+                        }
+                    }
+                    return {};
                 });
-            });
 
-            chartManager._destroy('influence-monthly-chart');
-            const ctxM = document.getElementById('influence-monthly-chart');
-            chartManager.charts['influence-monthly-chart'] = new Chart(ctxM, {
-                type: 'line',
-                data: { labels, datasets: monthlyDatasets },
-                options: {
-                    responsive: true,
-                    interaction: { intersect: false, mode: 'index' },
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `${journalData.journal} — Rolling 12-Month Citation Count`,
-                            font: { size: 14 },
-                        },
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: (ctx) => {
-                                    if (ctx.datasetIndex === 0) {
-                                        return `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()}`;
-                                    }
-                                    const fillTarget = ctx.datasetIndex === 1 ? 0 : ctx.datasetIndex - 1;
-                                    const prevVal = ctx.chart.data.datasets[fillTarget].data[ctx.dataIndex];
-                                    const cits = Math.round(prevVal - ctx.parsed.y);
-                                    return `${ctx.dataset.label}: ${cits.toLocaleString()} citations`;
+                const monthlyTotal = labels.map(lbl => journalMonthlyCits[lbl] || 0);
+                const monthlySeed = seedsInJournal.map((seed, s) =>
+                    labels.map(lbl => seedCmMaps[s][lbl] || 0)
+                );
+
+                const monthlyDatasets = [{
+                    label: 'Total Citations',
+                    data: monthlyTotal,
+                    borderColor: chartManager.palette[0],
+                    backgroundColor: 'rgba(0, 114, 178, 0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                }];
+
+                const monthlyInvLayers = [];
+                for (let s = 0; s < seedsInJournal.length; s++) {
+                    const prev = s === 0 ? monthlyTotal : monthlyInvLayers[s - 1];
+                    monthlyInvLayers.push(prev.map((v, i) => Math.max(0, v - monthlySeed[s][i])));
+                }
+
+                seedsInJournal.forEach((seed, idx) => {
+                    const palIdx = (idx + 1) % chartManager.palette.length;
+                    const color = chartManager.palette[palIdx];
+                    const fillTarget = idx === 0 ? 0 : idx;
+                    monthlyDatasets.push({
+                        label: `PMID ${seed.pmid}`,
+                        data: monthlyInvLayers[idx],
+                        borderColor: color,
+                        backgroundColor: color + '30',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: fillTarget,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                    });
+                });
+
+                chartManager._destroy('influence-monthly-chart');
+                const ctxM = document.getElementById('influence-monthly-chart');
+                chartManager.charts['influence-monthly-chart'] = new Chart(ctxM, {
+                    type: 'line',
+                    data: { labels, datasets: monthlyDatasets },
+                    options: {
+                        responsive: true,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `${journalData.journal} — Monthly Citation Count`,
+                                font: { size: 14 },
+                            },
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => {
+                                        if (ctx.datasetIndex === 0) {
+                                            return `${ctx.dataset.label}: ${Math.round(ctx.parsed.y).toLocaleString()}`;
+                                        }
+                                        const fillTarget = ctx.datasetIndex === 1 ? 0 : ctx.datasetIndex - 1;
+                                        const prevVal = ctx.chart.data.datasets[fillTarget].data[ctx.dataIndex];
+                                        const cits = Math.round(prevVal - ctx.parsed.y);
+                                        return `${ctx.dataset.label}: ${cits.toLocaleString()} citations`;
+                                    },
                                 },
                             },
                         },
-                    },
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'Month' },
-                            ticks: { maxTicksLimit: 12 },
-                            ...(infScaleOverrides.x || {}),
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Month' },
+                                ticks: { maxTicksLimit: 12 },
+                                ...(infScaleOverrides.x || {}),
+                            },
+                            y: {
+                                title: { display: true, text: 'Citations per Month' },
+                                beginAtZero: true,
+                            },
                         },
-                        y: {
-                            title: { display: true, text: 'Citation Count (12-mo window)' },
-                            beginAtZero: true,
-                        },
                     },
-                },
-            });
+                });
+            } else {
+                monthlyContainer.style.display = 'none';
+                chartManager._destroy('influence-monthly-chart');
+            }
 
             // --- Cumulative Citation Count Chart ---
             countContainer.style.display = '';
 
-            // Convert to cumulative monthly timeseries aligned with labels
+            // Build cumulative from monthly_cits/cm if available, else fall back to yearly cy
             const cumulativeTotal = [];
             const cumulativeSeed = seedsInJournal.map(() => []);
             let runningTotal = 0;
             const seedRunning = seedsInJournal.map(() => 0);
 
-            // Pre-compute: for each label month, add 1/12 of that year's citations
-            // Track which year we're in and accumulate
-            let prevYear = null;
-            let monthsInYear = 0;
+            const hasMC = Object.keys(journalMonthlyCits).length > 0;
+            // Reuse seedCmMaps if monthly chart was built, otherwise build them
+            const cumSeedCm = (typeof seedCmMaps !== 'undefined') ? seedCmMaps :
+                seedsInJournal.map(seed => {
+                    const pmidStr = String(seed.pmid);
+                    for (const p of allPapers) {
+                        if (String(p.pmid) === pmidStr) return p.cm || {};
+                    }
+                    return {};
+                });
 
             for (let i = 0; i < labels.length; i++) {
-                const [y, m] = labels[i].split('-').map(Number);
-
-                // Add this month's share of the year's citations (1/12 of annual total)
-                const yrStr = String(y);
-                runningTotal += (yearTotals[yrStr] || 0) / 12;
+                const lbl = labels[i];
+                if (hasMC) {
+                    runningTotal += journalMonthlyCits[lbl] || 0;
+                    for (let s = 0; s < seedsInJournal.length; s++) {
+                        seedRunning[s] += cumSeedCm[s][lbl] || 0;
+                    }
+                } else {
+                    // Fallback: yearly allocation
+                    const yrStr = lbl.split('-')[0];
+                    runningTotal += (yearTotals[yrStr] || 0) / 12;
+                    for (let s = 0; s < seedsInJournal.length; s++) {
+                        seedRunning[s] += (seedYearTotals[s][yrStr] || 0) / 12;
+                    }
+                }
                 cumulativeTotal.push(Math.round(runningTotal));
-
                 for (let s = 0; s < seedsInJournal.length; s++) {
-                    seedRunning[s] += (seedYearTotals[s][yrStr] || 0) / 12;
                     cumulativeSeed[s].push(Math.round(seedRunning[s]));
                 }
             }

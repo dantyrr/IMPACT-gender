@@ -2149,15 +2149,8 @@ class IMPACTApp {
             const journalMonthlyCits = papersData?.monthly_cits || {};
             const hasMonthlyData = Object.keys(journalMonthlyCits).length > 0;
             
-            console.log('Monthly chart debug:', {
-                seedsInJournal: seedsInJournal.length,
-                allPapers: allPapers.length,
-                hasMonthlyData,
-                monthlyCitsKeys: Object.keys(journalMonthlyCits).slice(0, 5), // Show first 5 keys
-                papersDataExists: !!papersData
-            });
-
-            if (hasMonthlyData) {
+            // Always show the chart, use fallback data if no monthly data
+            if (hasMonthlyData || true) {
                 newMonthlyContainer.style.display = '';
 
                 // Build per-seed cm maps
@@ -2171,10 +2164,41 @@ class IMPACTApp {
                     return {};
                 });
 
-                const monthlyTotal = labels.map(lbl => journalMonthlyCits[lbl] || 0);
-                const monthlySeed = seedsInJournal.map((seed, s) =>
-                    labels.map(lbl => seedCmMaps[s][lbl] || 0)
-                );
+                // Build year-level totals for fallback
+                const yearTotals = {};
+                for (const p of allPapers) {
+                    if (!p.cy) continue;
+                    for (const [yr, cnt] of Object.entries(p.cy)) {
+                        yearTotals[yr] = (yearTotals[yr] || 0) + cnt;
+                    }
+                }
+                const seedYearTotals = seedsInJournal.map(seed => {
+                    const cy = localCyMap[String(seed.pmid)];
+                    return cy || {};
+                });
+
+                const monthlyTotal = labels.map(lbl => {
+                    if (hasMonthlyData) {
+                        return journalMonthlyCits[lbl] || 0;
+                    } else {
+                        // Fallback: distribute yearly citations evenly across months
+                        const yrStr = lbl.split('-')[0];
+                        return (yearTotals[yrStr] || 0) / 12;
+                    }
+                });
+                
+                const monthlySeed = seedsInJournal.map((seed, s) => {
+                    if (hasMonthlyData) {
+                        return labels.map(lbl => seedCmMaps[s][lbl] || 0);
+                    } else {
+                        // Fallback: distribute yearly citations evenly across months
+                        const seedYearData = seedYearTotals[s];
+                        return labels.map(lbl => {
+                            const yrStr = lbl.split('-')[0];
+                            return (seedYearData[yrStr] || 0) / 12;
+                        });
+                    }
+                });
 
                 // Original dataset (total citations)
                 const monthlyOriginalDataset = {

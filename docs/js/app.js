@@ -19,11 +19,8 @@ class IMPACTApp {
         this.currentWindow = 'timeseries';
         this._showCombined = true;
         this._showIndividual = true;
-        this._compareShowCombined = true;
-        this._compareShowIndividual = true;
-        this._compareYZero = false;
-        this._compareSeriesData = null;
-        this.compareWindow = 'timeseries';
+        this._jcShowCombined = true;
+        this._jcShowIndividual = true;
         this.jcWindow = 'timeseries';
         this.jcYZero = false;
         this._journalYZero = false;
@@ -35,16 +32,14 @@ class IMPACTApp {
         // Range control state (null = auto)
         this.jcXMin = null; this.jcXMax = null;
         this.jcYMin = null; this.jcYMax = null;
-        this.compareXMin = null; this.compareXMax = null;
-        this.compareYMin = null; this.compareYMax = null;
+        this._jcCompXMin = null; this._jcCompXMax = null;
+        this._jcCompYMin = null; this._jcCompYMax = null;
         this._influenceXMin = null; this._influenceXMax = null;
         this._influenceYMin = null; this._influenceYMax = null;
         this.detailXMin = null; this.detailXMax = null;
         this.detailYMin = null; this.detailYMax = null;
-        this._compCompXMin = null; this._compCompXMax = null;
-        this._compCompYMin = null; this._compCompYMax = null;
-        this._compCompShowCombined = true;
-        this._compCompShowIndividual = true;
+        this._jcCompShowCombined = true;
+        this._jcCompShowIndividual = true;
         this._geoTrendXMin = null; this._geoTrendXMax = null;
         this._geoTrendYMin = null; this._geoTrendYMax = null;
         this.init();
@@ -58,7 +53,6 @@ class IMPACTApp {
             this.renderJournalList(this.journals);
             this.setupSearch();
             this.setupJournalTrendsPanel();
-            this.setupCompare();
             this.setupCitationNetwork();
             this.setupAuthorSearch();
             this.setupGeography();
@@ -163,15 +157,78 @@ class IMPACTApp {
             this.updateJournalsTrendsChart();
         }, 'data-y');
 
+        // Combined / Individual visibility toggles
+        const combBtn = document.getElementById('jc-combined-btn');
+        const indBtn = document.getElementById('jc-individual-btn');
+        if (combBtn && indBtn) {
+            combBtn.addEventListener('click', () => {
+                this._jcShowCombined = !this._jcShowCombined;
+                if (!this._jcShowCombined && !this._jcShowIndividual) {
+                    this._jcShowIndividual = true;
+                    indBtn.classList.add('active');
+                }
+                combBtn.classList.toggle('active', this._jcShowCombined);
+                this.updateJournalsTrendsChart();
+            });
+            indBtn.addEventListener('click', () => {
+                this._jcShowIndividual = !this._jcShowIndividual;
+                if (!this._jcShowIndividual && !this._jcShowCombined) {
+                    this._jcShowCombined = true;
+                    combBtn.classList.add('active');
+                }
+                indBtn.classList.toggle('active', this._jcShowIndividual);
+                this.updateJournalsTrendsChart();
+            });
+        }
+
         this._setupRangeControls('jc',
             { xMin: 'jcXMin', xMax: 'jcXMax', yMin: 'jcYMin', yMax: 'jcYMax' },
             () => this.updateJournalsTrendsChart()
         );
 
+        // Main chart download buttons
         document.getElementById('dl-png').addEventListener('click', () => this._downloadChart('png'));
         document.getElementById('dl-jpg').addEventListener('click', () => this._downloadChart('jpg'));
         document.getElementById('dl-pdf').addEventListener('click', () => this._downloadPDF());
         document.getElementById('dl-csv').addEventListener('click', () => this._downloadCSV());
+
+        // Composition Combined / Individual toggles
+        const compCombBtn = document.getElementById('jc-comp-combined-btn');
+        const compIndBtn = document.getElementById('jc-comp-individual-btn');
+        if (compCombBtn && compIndBtn) {
+            compCombBtn.addEventListener('click', () => {
+                this._jcCompShowCombined = !this._jcCompShowCombined;
+                if (!this._jcCompShowCombined && !this._jcCompShowIndividual) {
+                    this._jcCompShowIndividual = true;
+                    compIndBtn.classList.add('active');
+                }
+                compCombBtn.classList.toggle('active', this._jcCompShowCombined);
+                this.updateJournalsTrendsChart();
+            });
+            compIndBtn.addEventListener('click', () => {
+                this._jcCompShowIndividual = !this._jcCompShowIndividual;
+                if (!this._jcCompShowIndividual && !this._jcCompShowCombined) {
+                    this._jcCompShowCombined = true;
+                    compCombBtn.classList.add('active');
+                }
+                compIndBtn.classList.toggle('active', this._jcCompShowIndividual);
+                this.updateJournalsTrendsChart();
+            });
+        }
+
+        // Composition range controls
+        this._setupRangeControls('jc-comp',
+            { xMin: '_jcCompXMin', xMax: '_jcCompXMax', yMin: '_jcCompYMin', yMax: '_jcCompYMax' },
+            () => this.updateJournalsTrendsChart()
+        );
+
+        // Composition chart download buttons
+        ['png', 'jpg', 'pdf'].forEach(fmt => {
+            const btn = document.getElementById(`jc-comp-dl-${fmt}`);
+            if (btn) btn.addEventListener('click', () => this._downloadCompareChart(fmt, 'jc-composition-chart', 'journal-composition'));
+        });
+        const compCsvBtn = document.getElementById('jc-comp-dl-csv');
+        if (compCsvBtn) compCsvBtn.addEventListener('click', () => this._downloadJcCompositionCSV());
     }
 
     async updateJournalsTrendsChart() {
@@ -183,13 +240,21 @@ class IMPACTApp {
 
         const chartContainer = document.getElementById('jc-chart-container');
         const hint = document.getElementById('jc-hint');
+        const downloadBar = document.getElementById('jc-download-bar');
+        const tableContainer = document.getElementById('jc-table-container');
+        const metricsContainer = document.getElementById('jc-metrics-container');
+        const compContainer = document.getElementById('jc-composition-container');
 
         if (checkedJournals.length === 0 || checkedTypes.length === 0) {
             chartManager._destroy('jc-chart');
+            chartManager._destroy('jc-composition-chart');
             chartContainer.style.display = 'none';
             hint.style.display = '';
-            document.getElementById('jc-download-bar').style.display = 'none';
+            downloadBar.style.display = 'none';
             document.getElementById('jc-range-controls').style.display = 'none';
+            if (metricsContainer) metricsContainer.innerHTML = '';
+            if (compContainer) compContainer.style.display = 'none';
+            if (tableContainer) tableContainer.innerHTML = '';
             this._jcSeriesData = null;
             this._renderFilteredList();
             return;
@@ -215,63 +280,106 @@ class IMPACTApp {
         hint.style.display = 'none';
         chartContainer.style.display = 'block';
 
-        const typeDashes = {
-            all: [], research: [8, 4], review: [4, 4],
-            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
-        };
+        // Build series from by_type data
         const typeLabels = {
-            all: 'All Articles', research: 'Research', review: 'Reviews',
+            research: 'Research', review: 'Reviews',
             editorial: 'Editorials', letter: 'Letters', other: 'Other',
         };
+        const typeDashes = {
+            research: [8, 4], review: [4, 4],
+            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
+        };
 
+        const typeRate = (entry, typeKey) => {
+            const bt = entry.by_type && entry.by_type[typeKey];
+            return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
+        };
+
+        const colorMap = this.jcPicker.getColorMap();
         const multiJournal = journalsData.length > 1;
         const multiType = checkedTypes.length > 1;
         const series = [];
-        const colorMap = this.jcPicker.getColorMap();
 
         journalsData.forEach((jData, jIdx) => {
             const color = colorMap[jData.slug] || chartManager.palette[jIdx % chartManager.palette.length];
             const raw = jData[this.jcWindow] || jData.timeseries;
             const startIdx = raw.findIndex(d => d.papers > 0);
             const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
+            const months = ts.map(d => d.month);
 
-            checkedTypes.forEach(typeKey => {
-                const values = ts.map(entry => {
-                    if (typeKey === 'all') return entry.rolling_if;
-                    if (typeKey === 'research') return entry.rolling_if_no_reviews;
-                    const bt = entry.by_type && entry.by_type[typeKey];
-                    return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
-                });
-
-                let label;
-                if (multiJournal && multiType) {
-                    label = `${jData.journal} — ${typeLabels[typeKey]}`;
-                } else if (multiJournal) {
-                    label = jData.journal;
-                } else {
-                    label = typeLabels[typeKey];
+            if (!multiType) {
+                // Single type: one solid line per journal
+                const typeKey = checkedTypes[0];
+                const values = ts.map(entry => typeRate(entry, typeKey));
+                const label = multiJournal ? jData.journal : typeLabels[typeKey];
+                series.push({ label, color, dash: [], months, values });
+            } else {
+                // Multiple types: combined and/or individual
+                if (this._jcShowCombined) {
+                    const values = ts.map(entry => {
+                        let totalCit = 0, totalPap = 0;
+                        checkedTypes.forEach(typeKey => {
+                            const bt = entry.by_type && entry.by_type[typeKey];
+                            if (bt) { totalCit += bt.citations || 0; totalPap += bt.papers || 0; }
+                        });
+                        return totalPap > 0 ? +(totalCit / totalPap).toFixed(3) : null;
+                    });
+                    const label = multiJournal
+                        ? `${jData.journal} — Combined`
+                        : checkedTypes.map(t => typeLabels[t]).join(' + ');
+                    series.push({ label, color, dash: [], months, values });
                 }
 
-                series.push({
-                    label,
-                    color,
-                    // Only use dashes to distinguish types when multiple types are selected
-                    dash: multiType ? (typeDashes[typeKey] || []) : [],
-                    months: ts.map(d => d.month),
-                    values,
-                });
-            });
+                if (this._jcShowIndividual) {
+                    checkedTypes.forEach(typeKey => {
+                        const values = ts.map(entry => typeRate(entry, typeKey));
+                        const label = multiJournal
+                            ? `${jData.journal} — ${typeLabels[typeKey]}`
+                            : typeLabels[typeKey];
+                        series.push({
+                            label, color,
+                            dash: typeDashes[typeKey] || [],
+                            months, values,
+                        });
+                    });
+                }
+            }
         });
 
         this._jcSeriesData = series;
+
         // Populate X selects from full month range (2005-01 onwards)
         const dataMonths = [...new Set(series.flatMap(s => s.months))].sort();
         const allMonths = this._generateFullMonthRange(dataMonths);
         this._populateXRangeSelects('jc', allMonths);
+
         const scaleOverrides = this._buildScaleOverrides(this.jcXMin, this.jcXMax, this.jcYMin, this.jcYMax);
         chartManager.createMultiSeriesChart('jc-chart', series, this.jcYZero, scaleOverrides);
         document.getElementById('jc-range-controls').style.display = '';
-        document.getElementById('jc-download-bar').style.display = '';
+        downloadBar.style.display = '';
+
+        // Render per-journal metrics cards
+        this._renderJcMetrics(journalsData);
+
+        // Paper Composition chart
+        if (compContainer) {
+            compContainer.style.display = '';
+            this._populateXRangeSelects('jc-comp', allMonths);
+            const compScaleOverrides = this._buildScaleOverrides(this._jcCompXMin, this._jcCompXMax, this._jcCompYMin, this._jcCompYMax);
+            chartManager.createCompareCompositionChart(
+                'jc-composition-chart', journalsData, colorMap, checkedTypes, this.jcWindow, compScaleOverrides,
+                this._jcCompShowCombined, this._jcCompShowIndividual
+            );
+            document.getElementById('jc-comp-range-controls').style.display = '';
+            const compBar = document.getElementById('jc-composition-download-bar');
+            if (compBar) compBar.style.display = '';
+        }
+
+        // Comparison table
+        if (tableContainer) {
+            this.renderComparisonTable(tableContainer, journalsData);
+        }
+
         this._renderFilteredList();
     }
 
@@ -320,6 +428,85 @@ class IMPACTApp {
         const a = document.createElement('a');
         a.href = url;
         a.download = 'impact-citation-rates.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    _renderJcMetrics(journalsData) {
+        const container = document.getElementById('jc-metrics-container');
+        if (!container) return;
+        if (!journalsData.length) { container.innerHTML = ''; return; }
+
+        const colorMap = this.jcPicker.getColorMap();
+
+        container.innerHTML = journalsData.map((j, jIdx) => {
+            const ts24 = j.timeseries || [];
+            const last24 = ts24.slice(-24);
+            const lastEntry = ts24.length > 0 ? ts24[ts24.length - 1] : null;
+            const bt = lastEntry && lastEntry.by_type ? lastEntry.by_type : {};
+
+            let resRateSum = 0, resRateN = 0;
+            let revRateSum = 0, revRateN = 0;
+            for (const entry of last24) {
+                const ebt = entry.by_type || {};
+                if (ebt.research && ebt.research.papers > 0) {
+                    resRateSum += ebt.research.citations / ebt.research.papers;
+                    resRateN++;
+                }
+                if (ebt.review && ebt.review.papers > 0) {
+                    revRateSum += ebt.review.citations / ebt.review.papers;
+                    revRateN++;
+                }
+            }
+
+            const researchPapers = bt.research ? bt.research.papers : 0;
+            const reviewPapers = bt.review ? bt.review.papers : 0;
+            const totalPapers = researchPapers + reviewPapers
+                + (bt.editorial ? bt.editorial.papers : 0)
+                + (bt.letter ? bt.letter.papers : 0)
+                + (bt.other ? bt.other.papers : 0);
+            const reviewPct = totalPapers > 0 ? (reviewPapers / totalPapers * 100) : null;
+
+            const snapshotMonth = lastEntry ? lastEntry.month : null;
+            const dateRange = this._computeDateRange(snapshotMonth);
+            const avgLabel = dateRange ? `24-mo avg · ${dateRange}` : '24-mo avg';
+            const color = colorMap[j.slug] || chartManager.palette[jIdx % chartManager.palette.length];
+
+            const cards = [
+                [UIHelpers.formatIF(resRateN > 0 ? resRateSum / resRateN : null), `Research Rate (${avgLabel})`],
+                [UIHelpers.formatIF(revRateN > 0 ? revRateSum / revRateN : null), `Review Rate (${avgLabel})`],
+                [UIHelpers.formatInt(researchPapers), dateRange ? `Research Papers · ${dateRange}` : 'Research Papers'],
+                [UIHelpers.formatInt(reviewPapers), dateRange ? `Review Papers · ${dateRange}` : 'Review Papers'],
+                [UIHelpers.formatPct(reviewPct), 'Review %'],
+            ].map(([v, l]) =>
+                `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
+            ).join('');
+
+            return `<div class="compare-metrics-journal">
+                <div class="compare-metrics-header" style="border-left: 4px solid ${color}; padding-left: 0.5rem;">${j.journal}</div>
+                <div class="metrics-row">${cards}</div>
+            </div>`;
+        }).join('');
+    }
+
+    _downloadJcCompositionCSV() {
+        const chart = chartManager.charts['jc-composition-chart'];
+        if (!chart) return;
+        const labels = chart.data.labels;
+        const datasets = chart.data.datasets;
+        const header = ['Month', ...datasets.map(ds => `"${ds.label.replace(/"/g, '""')}"`)].join(',');
+        const rows = labels.map((m, i) => {
+            const vals = datasets.map(ds => {
+                const v = ds.data[i];
+                return v != null ? v : '';
+            });
+            return [m, ...vals].join(',');
+        });
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'journal-composition.csv';
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -732,7 +919,7 @@ class IMPACTApp {
 
     /**
      * Wire up range controls for a chart.
-     * prefix: 'jc' | 'compare' | 'influence'
+     * prefix: 'jc' | 'jc-comp' | 'detail' | 'influence'
      * stateKeys: {xMin, xMax, yMin, yMax} — property names on `this`
      * redrawFn: () => void
      */
@@ -862,310 +1049,7 @@ class IMPACTApp {
         return overrides;
     }
 
-    // ---- Compare ----
-
-    setupCompare() {
-        this.comparePicker = new JournalPicker(
-            'compare-picker', this.journals, chartManager.palette,
-            () => this.updateComparison()
-        );
-
-        this._setupToggleGroup('compare-window-toggle', (windowKey) => {
-            this.compareWindow = windowKey;
-            this.updateComparison();
-        }, 'data-window');
-
-        // Article type checkboxes
-        document.querySelectorAll('#compare-type-checkboxes input').forEach(cb => {
-            cb.addEventListener('change', () => this.updateComparison());
-        });
-
-        // Combined / Individual visibility toggles
-        const combBtn = document.getElementById('compare-combined-btn');
-        const indBtn = document.getElementById('compare-individual-btn');
-        if (combBtn && indBtn) {
-            combBtn.addEventListener('click', () => {
-                this._compareShowCombined = !this._compareShowCombined;
-                if (!this._compareShowCombined && !this._compareShowIndividual) {
-                    this._compareShowIndividual = true;
-                    indBtn.classList.add('active');
-                }
-                combBtn.classList.toggle('active', this._compareShowCombined);
-                this.updateComparison();
-            });
-            indBtn.addEventListener('click', () => {
-                this._compareShowIndividual = !this._compareShowIndividual;
-                if (!this._compareShowIndividual && !this._compareShowCombined) {
-                    this._compareShowCombined = true;
-                    combBtn.classList.add('active');
-                }
-                indBtn.classList.toggle('active', this._compareShowIndividual);
-                this.updateComparison();
-            });
-        }
-
-        // Y-axis toggle
-        this._setupToggleGroup('compare-y-toggle', (val) => {
-            this._compareYZero = val === 'zero';
-            this.updateComparison();
-        }, 'data-y');
-
-        // Range controls
-        this._setupRangeControls('compare',
-            { xMin: 'compareXMin', xMax: 'compareXMax', yMin: 'compareYMin', yMax: 'compareYMax' },
-            () => this.updateComparison()
-        );
-
-        // Download buttons
-        ['png', 'jpg', 'pdf'].forEach(fmt => {
-            const btn = document.getElementById(`compare-dl-${fmt}`);
-            if (btn) btn.addEventListener('click', () => this._downloadCompareChart(fmt));
-        });
-        const csvBtn = document.getElementById('compare-dl-csv');
-        if (csvBtn) csvBtn.addEventListener('click', () => this._downloadCompareCSV());
-
-        // Composition Combined / Individual toggles
-        const compCombBtn = document.getElementById('compare-comp-combined-btn');
-        const compIndBtn = document.getElementById('compare-comp-individual-btn');
-        if (compCombBtn && compIndBtn) {
-            compCombBtn.addEventListener('click', () => {
-                this._compCompShowCombined = !this._compCompShowCombined;
-                if (!this._compCompShowCombined && !this._compCompShowIndividual) {
-                    this._compCompShowIndividual = true;
-                    compIndBtn.classList.add('active');
-                }
-                compCombBtn.classList.toggle('active', this._compCompShowCombined);
-                this.updateComparison();
-            });
-            compIndBtn.addEventListener('click', () => {
-                this._compCompShowIndividual = !this._compCompShowIndividual;
-                if (!this._compCompShowIndividual && !this._compCompShowCombined) {
-                    this._compCompShowCombined = true;
-                    compCombBtn.classList.add('active');
-                }
-                compIndBtn.classList.toggle('active', this._compCompShowIndividual);
-                this.updateComparison();
-            });
-        }
-
-        // Composition range controls
-        this._setupRangeControls('compare-comp',
-            { xMin: '_compCompXMin', xMax: '_compCompXMax', yMin: '_compCompYMin', yMax: '_compCompYMax' },
-            () => this.updateComparison()
-        );
-
-        // Composition chart download buttons
-        ['png', 'jpg', 'pdf'].forEach(fmt => {
-            const btn = document.getElementById(`compare-comp-dl-${fmt}`);
-            if (btn) btn.addEventListener('click', () => this._downloadCompareChart(fmt, 'compare-composition-chart', 'compare-composition'));
-        });
-        const compCsvBtn = document.getElementById('compare-comp-dl-csv');
-        if (compCsvBtn) compCsvBtn.addEventListener('click', () => this._downloadCompareCompositionCSV());
-    }
-
-    async updateComparison() {
-        const checked = this.comparePicker.getSelected();
-        const tableContainer = document.getElementById('compare-table-container');
-        const downloadBar = document.getElementById('compare-download-bar');
-
-        if (checked.length === 0) {
-            chartManager._destroy('compare-chart');
-            chartManager._destroy('compare-composition-chart');
-            document.getElementById('compare-range-controls').style.display = 'none';
-            if (downloadBar) downloadBar.style.display = 'none';
-            if (tableContainer) tableContainer.innerHTML = '';
-            const metricsContainer = document.getElementById('compare-metrics-container');
-            if (metricsContainer) metricsContainer.innerHTML = '';
-            const compContainer = document.getElementById('compare-composition-container');
-            if (compContainer) compContainer.style.display = 'none';
-            this._compareSeriesData = null;
-            return;
-        }
-
-        const journalsData = [];
-        for (const slug of checked) {
-            try {
-                let data = this.journalDataCache[slug];
-                if (!data) {
-                    data = await dataLoader.loadJournal(slug);
-                    this.journalDataCache[slug] = data;
-                }
-                journalsData.push(data);
-            } catch (error) {
-                console.error(`Error loading ${slug}:`, error);
-            }
-        }
-
-        // Build series from by_type data
-        const checkedTypes = Array.from(
-            document.querySelectorAll('#compare-type-checkboxes input:checked')
-        ).map(cb => cb.value);
-
-        if (checkedTypes.length === 0) {
-            chartManager._destroy('compare-chart');
-            chartManager._destroy('compare-composition-chart');
-            if (downloadBar) downloadBar.style.display = 'none';
-            const compContainer = document.getElementById('compare-composition-container');
-            if (compContainer) compContainer.style.display = 'none';
-            this._compareSeriesData = null;
-            return;
-        }
-
-        const typeLabels = {
-            research: 'Research', review: 'Reviews',
-            editorial: 'Editorials', letter: 'Letters', other: 'Other',
-        };
-        const typeDashes = {
-            research: [8, 4], review: [4, 4],
-            editorial: [2, 2], letter: [8, 4, 2, 4], other: [12, 3],
-        };
-
-        const colorMap = this.comparePicker.getColorMap();
-        const multiJournal = journalsData.length > 1;
-        const multiType = checkedTypes.length > 1;
-        const series = [];
-
-        const typeRate = (entry, typeKey) => {
-            const bt = entry.by_type && entry.by_type[typeKey];
-            return (bt && bt.papers > 0) ? +(bt.citations / bt.papers).toFixed(3) : null;
-        };
-
-        journalsData.forEach((jData, jIdx) => {
-            const color = colorMap[jData.slug] || chartManager.palette[jIdx % chartManager.palette.length];
-            const raw = jData[this.compareWindow] || jData.timeseries;
-            const startIdx = raw.findIndex(d => d.papers > 0);
-            const ts = startIdx >= 0 ? raw.slice(startIdx) : raw;
-            const months = ts.map(d => d.month);
-
-            if (!multiType) {
-                // Single type: one solid line per journal
-                const typeKey = checkedTypes[0];
-                const values = ts.map(entry => typeRate(entry, typeKey));
-                const label = multiJournal ? jData.journal : typeLabels[typeKey];
-                series.push({ label, color, dash: [], months, values });
-            } else {
-                // Multiple types: combined and/or individual
-                if (this._compareShowCombined) {
-                    const values = ts.map(entry => {
-                        let totalCit = 0, totalPap = 0;
-                        checkedTypes.forEach(typeKey => {
-                            const bt = entry.by_type && entry.by_type[typeKey];
-                            if (bt) { totalCit += bt.citations || 0; totalPap += bt.papers || 0; }
-                        });
-                        return totalPap > 0 ? +(totalCit / totalPap).toFixed(3) : null;
-                    });
-                    const label = multiJournal
-                        ? `${jData.journal} — Combined`
-                        : checkedTypes.map(t => typeLabels[t]).join(' + ');
-                    series.push({ label, color, dash: [], months, values });
-                }
-
-                if (this._compareShowIndividual) {
-                    checkedTypes.forEach(typeKey => {
-                        const values = ts.map(entry => typeRate(entry, typeKey));
-                        const label = multiJournal
-                            ? `${jData.journal} — ${typeLabels[typeKey]}`
-                            : typeLabels[typeKey];
-                        series.push({
-                            label, color,
-                            dash: typeDashes[typeKey] || [],
-                            months, values,
-                        });
-                    });
-                }
-            }
-        });
-
-        this._compareSeriesData = series;
-
-        // Populate X selects from full month range (2005-01 onwards)
-        const dataMonths = [...new Set(series.flatMap(s => s.months))].sort();
-        const allMonths = this._generateFullMonthRange(dataMonths);
-        this._populateXRangeSelects('compare', allMonths);
-
-        const scaleOverrides = this._buildScaleOverrides(this.compareXMin, this.compareXMax, this.compareYMin, this.compareYMax);
-        chartManager.createMultiSeriesChart('compare-chart', series, this._compareYZero, scaleOverrides);
-        document.getElementById('compare-range-controls').style.display = '';
-        if (downloadBar) downloadBar.style.display = '';
-
-        this._renderCompareMetrics(journalsData);
-
-        // Paper Composition chart
-        const compContainer = document.getElementById('compare-composition-container');
-        if (compContainer) {
-            compContainer.style.display = '';
-            this._populateXRangeSelects('compare-comp', allMonths);
-            const compScaleOverrides = this._buildScaleOverrides(this._compCompXMin, this._compCompXMax, this._compCompYMin, this._compCompYMax);
-            chartManager.createCompareCompositionChart(
-                'compare-composition-chart', journalsData, colorMap, checkedTypes, this.compareWindow, compScaleOverrides,
-                this._compCompShowCombined, this._compCompShowIndividual
-            );
-            document.getElementById('compare-comp-range-controls').style.display = '';
-            const compBar = document.getElementById('compare-composition-download-bar');
-            if (compBar) compBar.style.display = '';
-        }
-
-        if (tableContainer) {
-            this.renderComparisonTable(tableContainer, journalsData);
-        }
-    }
-
-    _renderCompareMetrics(journalsData) {
-        const container = document.getElementById('compare-metrics-container');
-        if (!container) return;
-        if (!journalsData.length) { container.innerHTML = ''; return; }
-
-        const colorMap = this.comparePicker.getColorMap();
-
-        container.innerHTML = journalsData.map((j, jIdx) => {
-            const ts24 = j.timeseries || [];
-            const last24 = ts24.slice(-24);
-            const lastEntry = ts24.length > 0 ? ts24[ts24.length - 1] : null;
-            const bt = lastEntry && lastEntry.by_type ? lastEntry.by_type : {};
-
-            let resRateSum = 0, resRateN = 0;
-            let revRateSum = 0, revRateN = 0;
-            for (const entry of last24) {
-                const ebt = entry.by_type || {};
-                if (ebt.research && ebt.research.papers > 0) {
-                    resRateSum += ebt.research.citations / ebt.research.papers;
-                    resRateN++;
-                }
-                if (ebt.review && ebt.review.papers > 0) {
-                    revRateSum += ebt.review.citations / ebt.review.papers;
-                    revRateN++;
-                }
-            }
-
-            const researchPapers = bt.research ? bt.research.papers : 0;
-            const reviewPapers = bt.review ? bt.review.papers : 0;
-            const totalPapers = researchPapers + reviewPapers
-                + (bt.editorial ? bt.editorial.papers : 0)
-                + (bt.letter ? bt.letter.papers : 0)
-                + (bt.other ? bt.other.papers : 0);
-            const reviewPct = totalPapers > 0 ? (reviewPapers / totalPapers * 100) : null;
-
-            const snapshotMonth = lastEntry ? lastEntry.month : null;
-            const dateRange = this._computeDateRange(snapshotMonth);
-            const avgLabel = dateRange ? `24-mo avg · ${dateRange}` : '24-mo avg';
-            const color = colorMap[j.slug] || chartManager.palette[jIdx % chartManager.palette.length];
-
-            const cards = [
-                [UIHelpers.formatIF(resRateN > 0 ? resRateSum / resRateN : null), `Research Rate (${avgLabel})`],
-                [UIHelpers.formatIF(revRateN > 0 ? revRateSum / revRateN : null), `Review Rate (${avgLabel})`],
-                [UIHelpers.formatInt(researchPapers), dateRange ? `Research Papers · ${dateRange}` : 'Research Papers'],
-                [UIHelpers.formatInt(reviewPapers), dateRange ? `Review Papers · ${dateRange}` : 'Review Papers'],
-                [UIHelpers.formatPct(reviewPct), 'Review %'],
-            ].map(([v, l]) =>
-                `<div class="metric-card"><span class="metric-value">${v}</span><span class="metric-label">${l}</span></div>`
-            ).join('');
-
-            return `<div class="compare-metrics-journal">
-                <div class="compare-metrics-header" style="border-left: 4px solid ${color}; padding-left: 0.5rem;">${j.journal}</div>
-                <div class="metrics-row">${cards}</div>
-            </div>`;
-        }).join('');
-    }
+    // ---- Comparison Helpers ----
 
     renderComparisonTable(container, journalsData) {
         const rows = journalsData.map(j => {
@@ -1218,9 +1102,7 @@ class IMPACTApp {
         container.appendChild(UIHelpers.createTable(rows, columns));
     }
 
-    // ---- Compare Downloads ----
-
-    _downloadCompareChart(format, chartId = 'compare-chart', filename = 'compare-journals') {
+    _downloadCompareChart(format, chartId = 'jc-chart', filename = 'journal-comparison') {
         const chart = chartManager.charts[chartId];
         if (!chart) return;
 
@@ -1244,50 +1126,6 @@ class IMPACTApp {
         a.href = url;
         a.download = `${filename}.${format}`;
         a.click();
-    }
-
-    _downloadCompareCSV() {
-        const series = this._compareSeriesData;
-        if (!series || !series.length) return;
-        const allMonths = [...new Set(series.flatMap(s => s.months))].sort();
-        const header = ['Month', ...series.map(s => `"${s.label.replace(/"/g, '""')}"`)].join(',');
-        const rows = allMonths.map(m => {
-            const vals = series.map(s => {
-                const i = s.months.indexOf(m);
-                const v = i >= 0 ? s.values[i] : null;
-                return v != null ? v : '';
-            });
-            return [m, ...vals].join(',');
-        });
-        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'compare-journals.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    _downloadCompareCompositionCSV() {
-        const chart = chartManager.charts['compare-composition-chart'];
-        if (!chart) return;
-        const labels = chart.data.labels;
-        const datasets = chart.data.datasets;
-        const header = ['Month', ...datasets.map(ds => `"${ds.label.replace(/"/g, '""')}"`)].join(',');
-        const rows = labels.map((m, i) => {
-            const vals = datasets.map(ds => {
-                const v = ds.data[i];
-                return v != null ? v : '';
-            });
-            return [m, ...vals].join(',');
-        });
-        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'compare-composition.csv';
-        a.click();
-        URL.revokeObjectURL(url);
     }
 
     // ---- Citation Network ----

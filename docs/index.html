@@ -18,7 +18,6 @@
     </div>
     <nav>
         <a href="#journals" class="nav-link active" data-section="journals">Journals</a>
-        <a href="#compare" class="nav-link" data-section="compare">Compare</a>
         <a href="#papers" class="nav-link" data-section="papers">Papers</a>
         <a href="#authors" class="nav-link" data-section="authors">Authors</a>
         <a href="#geography" class="nav-link" data-section="geography">Geography</a>
@@ -45,32 +44,45 @@
                         <button class="toggle-btn active" data-window="timeseries">24-month</button>
                         <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
                     </div>
+                </div>
+
+                <div class="chart-controls">
+                    <span class="chart-controls-label">Article type:</span>
+                    <div id="jc-type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
+                        <label><input type="checkbox" value="research" checked> Research</label>
+                        <label><input type="checkbox" value="review"> Reviews</label>
+                        <label><input type="checkbox" value="editorial"> Editorials</label>
+                        <label><input type="checkbox" value="letter"> Letters</label>
+                        <label><input type="checkbox" value="other"> Other</label>
+                    </div>
+                </div>
+                <div class="chart-controls">
+                    <span class="chart-controls-label">Show:</span>
+                    <div class="toggle-group" id="jc-visibility-toggle">
+                        <button class="toggle-btn active" id="jc-combined-btn">Combined</button>
+                        <button class="toggle-btn active" id="jc-individual-btn">Individual</button>
+                    </div>
                     <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
                     <div class="toggle-group" id="jc-y-toggle">
                         <button class="toggle-btn active" data-y="auto">Auto</button>
                         <button class="toggle-btn" data-y="zero">From Zero</button>
                     </div>
                 </div>
-                <div class="jc-selector-row">
-                    <div class="jc-selector-group">
-                        <div class="jc-selector-label">Article Types</div>
-                        <div id="jc-type-checkboxes" class="checkbox-grid">
-                            <label><input type="checkbox" value="all" checked> All Articles</label>
-                            <label><input type="checkbox" value="research"> Research</label>
-                            <label><input type="checkbox" value="review"> Reviews</label>
-                            <label><input type="checkbox" value="editorial"> Editorials</label>
-                            <label><input type="checkbox" value="letter"> Letters</label>
-                            <label><input type="checkbox" value="other"> Other</label>
-                        </div>
-                    </div>
-                    <div class="jc-selector-group" style="flex:2;">
-                        <div class="jc-selector-label">Journals</div>
-                        <div id="jc-picker"></div>
-                    </div>
-                </div>
+
+                <div id="jc-picker"></div>
+
+                <div id="jc-metrics-container"></div>
+
                 <p id="jc-hint" class="data-note">Select one or more journals above to display citation trends.</p>
                 <div class="chart-container" id="jc-chart-container" style="display:none;">
                     <canvas id="jc-chart"></canvas>
+                </div>
+                <div id="jc-download-bar" class="download-bar" style="display:none">
+                    <span class="download-label">Download:</span>
+                    <button class="download-btn" id="dl-png">PNG</button>
+                    <button class="download-btn" id="dl-jpg">JPG</button>
+                    <button class="download-btn" id="dl-pdf">PDF</button>
+                    <button class="download-btn" id="dl-csv">CSV data</button>
                 </div>
                 <div id="jc-range-controls" class="chart-range-controls" style="display:none">
                     <div class="range-control-group">
@@ -87,13 +99,44 @@
                     </div>
                     <button id="jc-range-reset" class="range-reset-btn">Reset</button>
                 </div>
-                <div id="jc-download-bar" class="download-bar" style="display:none">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="dl-png">PNG</button>
-                    <button class="download-btn" id="dl-jpg">JPG</button>
-                    <button class="download-btn" id="dl-pdf">PDF</button>
-                    <button class="download-btn" id="dl-csv">CSV data</button>
+
+                <div id="jc-composition-container" style="display:none">
+                    <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary);">Paper Composition</h3>
+                    <div class="chart-controls">
+                        <span class="chart-controls-label">Show:</span>
+                        <div class="toggle-group" id="jc-comp-visibility-toggle">
+                            <button class="toggle-btn active" id="jc-comp-combined-btn">Combined</button>
+                            <button class="toggle-btn active" id="jc-comp-individual-btn">Individual</button>
+                        </div>
+                    </div>
+                    <div id="jc-comp-range-controls" class="chart-range-controls" style="display:none">
+                        <div class="range-control-group">
+                            <span class="range-label">Date:</span>
+                            <select id="jc-comp-x-min" class="range-select"></select>
+                            <span class="range-separator">&ndash;</span>
+                            <select id="jc-comp-x-max" class="range-select"></select>
+                        </div>
+                        <div class="range-control-group">
+                            <span class="range-label">Y axis:</span>
+                            <input id="jc-comp-y-min" type="number" class="range-input" placeholder="min" step="1">
+                            <span class="range-separator">&ndash;</span>
+                            <input id="jc-comp-y-max" type="number" class="range-input" placeholder="max" step="1">
+                        </div>
+                        <button id="jc-comp-range-reset" class="range-reset-btn">Reset</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="jc-composition-chart"></canvas>
+                        <div class="download-bar" id="jc-composition-download-bar" style="display:none; margin-top:0.5rem;">
+                            <span class="download-label">Download:</span>
+                            <button class="download-btn" id="jc-comp-dl-png">PNG</button>
+                            <button class="download-btn" id="jc-comp-dl-jpg">JPG</button>
+                            <button class="download-btn" id="jc-comp-dl-pdf">PDF</button>
+                            <button class="download-btn" id="jc-comp-dl-csv">CSV</button>
+                        </div>
+                    </div>
                 </div>
+
+                <div id="jc-table-container"></div>
             </div>
 
             <hr class="section-divider">
@@ -212,112 +255,6 @@
             </div>
 
         </div>
-    </section>
-
-    <!-- ============ COMPARE ============ -->
-    <section id="compare" class="section">
-        <h2>Compare Journals</h2>
-        <p class="section-desc">Select journals to overlay their trends side by side.</p>
-
-        <div class="chart-controls">
-            <span class="chart-controls-label">Window:</span>
-            <div class="toggle-group" id="compare-window-toggle">
-                <button class="toggle-btn" data-window="timeseries_12mo">12-month</button>
-                <button class="toggle-btn active" data-window="timeseries">24-month</button>
-                <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
-            </div>
-        </div>
-
-        <div class="chart-controls">
-            <span class="chart-controls-label">Article type:</span>
-            <div id="compare-type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
-                <label><input type="checkbox" value="research" checked> Research</label>
-                <label><input type="checkbox" value="review"> Reviews</label>
-                <label><input type="checkbox" value="editorial"> Editorials</label>
-                <label><input type="checkbox" value="letter"> Letters</label>
-                <label><input type="checkbox" value="other"> Other</label>
-            </div>
-        </div>
-        <div class="chart-controls">
-            <span class="chart-controls-label">Show:</span>
-            <div class="toggle-group" id="compare-visibility-toggle">
-                <button class="toggle-btn active" id="compare-combined-btn">Combined</button>
-                <button class="toggle-btn active" id="compare-individual-btn">Individual</button>
-            </div>
-            <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
-            <div class="toggle-group" id="compare-y-toggle">
-                <button class="toggle-btn active" data-y="auto">Auto</button>
-                <button class="toggle-btn" data-y="zero">From Zero</button>
-            </div>
-        </div>
-
-        <div id="compare-picker"></div>
-
-        <div id="compare-metrics-container"></div>
-
-        <div class="chart-container">
-            <canvas id="compare-chart"></canvas>
-            <div class="download-bar" id="compare-download-bar" style="display:none; margin-top:0.5rem;">
-                <span class="download-label">Download:</span>
-                <button class="download-btn" id="compare-dl-png">PNG</button>
-                <button class="download-btn" id="compare-dl-jpg">JPG</button>
-                <button class="download-btn" id="compare-dl-pdf">PDF</button>
-                <button class="download-btn" id="compare-dl-csv">CSV</button>
-            </div>
-        </div>
-        <div id="compare-range-controls" class="chart-range-controls" style="display:none">
-            <div class="range-control-group">
-                <span class="range-label">Date:</span>
-                <select id="compare-x-min" class="range-select"></select>
-                <span class="range-separator">–</span>
-                <select id="compare-x-max" class="range-select"></select>
-            </div>
-            <div class="range-control-group">
-                <span class="range-label">Y axis:</span>
-                <input id="compare-y-min" type="number" class="range-input" placeholder="min" step="0.1">
-                <span class="range-separator">–</span>
-                <input id="compare-y-max" type="number" class="range-input" placeholder="max" step="0.1">
-            </div>
-            <button id="compare-range-reset" class="range-reset-btn">Reset</button>
-        </div>
-
-        <div id="compare-composition-container" style="display:none">
-            <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary);">Paper Composition</h3>
-            <div class="chart-controls">
-                <span class="chart-controls-label">Show:</span>
-                <div class="toggle-group" id="compare-comp-visibility-toggle">
-                    <button class="toggle-btn active" id="compare-comp-combined-btn">Combined</button>
-                    <button class="toggle-btn active" id="compare-comp-individual-btn">Individual</button>
-                </div>
-            </div>
-            <div id="compare-comp-range-controls" class="chart-range-controls" style="display:none">
-                <div class="range-control-group">
-                    <span class="range-label">Date:</span>
-                    <select id="compare-comp-x-min" class="range-select"></select>
-                    <span class="range-separator">&ndash;</span>
-                    <select id="compare-comp-x-max" class="range-select"></select>
-                </div>
-                <div class="range-control-group">
-                    <span class="range-label">Y axis:</span>
-                    <input id="compare-comp-y-min" type="number" class="range-input" placeholder="min" step="1">
-                    <span class="range-separator">&ndash;</span>
-                    <input id="compare-comp-y-max" type="number" class="range-input" placeholder="max" step="1">
-                </div>
-                <button id="compare-comp-range-reset" class="range-reset-btn">Reset</button>
-            </div>
-            <div class="chart-container">
-                <canvas id="compare-composition-chart"></canvas>
-                <div class="download-bar" id="compare-composition-download-bar" style="display:none; margin-top:0.5rem;">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="compare-comp-dl-png">PNG</button>
-                    <button class="download-btn" id="compare-comp-dl-jpg">JPG</button>
-                    <button class="download-btn" id="compare-comp-dl-pdf">PDF</button>
-                    <button class="download-btn" id="compare-comp-dl-csv">CSV</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="compare-table-container"></div>
     </section>
 
     <!-- ============ PAPERS ============ -->
@@ -743,7 +680,7 @@
 <script src="js/chart-manager.js?v=5"></script>
 <script src="js/ui-helpers.js?v=3"></script>
 <script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=34"></script>
+<script src="js/app.js?v=35"></script>
 
 </body>
 </html>

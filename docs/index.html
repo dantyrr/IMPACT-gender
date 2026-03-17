@@ -3,659 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IMPACT — Studying Publication Bias, Impact Factor Inflation &amp; H-Index Gaming</title>
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <title>IMPACT — Gender &amp; Citation Analysis</title>
+    <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
 <header>
     <div class="header-content">
-        <h1>IMPACT</h1>
-        <p class="subtitle">Independent Metrics for Publication Analysis and Citation Tracking</p>
-        <p class="tagline">Open tools to study publication bias, impact factor inflation, and h-index gaming — using transparent, reproducible metrics from PubMed &amp; iCite data</p>
+        <h1>IMPACT <span class="header-badge">Gender Analysis</span></h1>
+        <p class="subtitle">Citation Rate Differences by Inferred Author Gender</p>
+        <p class="tagline">Analyzing ~24M PubMed papers (2005–2026) to examine whether papers led by women are cited differently than those led by men</p>
     </div>
     <nav>
-        <a href="#journals" class="nav-link active" data-section="journals">Journals</a>
-        <a href="#papers" class="nav-link" data-section="papers">Papers</a>
-        <a href="#authors" class="nav-link" data-section="authors">Authors</a>
-        <a href="#geography" class="nav-link" data-section="geography">Geography</a>
-        <a href="#influence" class="nav-link" data-section="influence">Influence</a>
-        <a href="#about" class="nav-link" data-section="about">About</a>
+        <a href="#overview" class="nav-link active" data-section="overview">Overview</a>
+        <a href="#journal" class="nav-link" data-section="journal">By Journal</a>
+        <a href="#citing" class="nav-link" data-section="citing">Who Cites Whom</a>
+        <a href="#quality" class="nav-link" data-section="quality">Data Quality</a>
+        <a href="#methods" class="nav-link" data-section="methods">Methods</a>
     </nav>
 </header>
 
 <main>
 
-    <!-- ============ JOURNALS ============ -->
-    <section id="journals" class="section active">
-        <h2>Journal Citation Rate Trends</h2>
-        <p class="section-desc">Compare citation rate trends across journals and article types, or browse individual journals below.</p>
+    <!-- ============ OVERVIEW ============ -->
+    <section id="overview" class="section active">
+        <h2>Gender Composition &amp; Citation Trends</h2>
+        <p class="section-desc">How has the gender composition of first and last authors changed over time, and do citation rates differ by gender pair?</p>
 
-        <div id="journals-main">
-
-            <!-- Trends comparison panel -->
-            <div id="jc-panel">
-                <div class="chart-controls">
-                    <span class="chart-controls-label">Window:</span>
-                    <div class="toggle-group" id="jc-window-toggle">
-                        <button class="toggle-btn" data-window="timeseries_12mo">12-month</button>
-                        <button class="toggle-btn active" data-window="timeseries">24-month</button>
-                        <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
-                    </div>
-                </div>
-
-                <div class="chart-controls">
-                    <span class="chart-controls-label">Article type:</span>
-                    <div id="jc-type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
-                        <label><input type="checkbox" value="research" checked> Research</label>
-                        <label><input type="checkbox" value="review"> Reviews</label>
-                        <label><input type="checkbox" value="editorial"> Editorials</label>
-                        <label><input type="checkbox" value="letter"> Letters</label>
-                        <label><input type="checkbox" value="other"> Other</label>
-                    </div>
-                </div>
-                <div class="chart-controls">
-                    <span class="chart-controls-label">Show:</span>
-                    <div class="toggle-group" id="jc-visibility-toggle">
-                        <button class="toggle-btn active" id="jc-combined-btn">Combined</button>
-                        <button class="toggle-btn active" id="jc-individual-btn">Individual</button>
-                    </div>
-                    <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
-                    <div class="toggle-group" id="jc-y-toggle">
-                        <button class="toggle-btn active" data-y="auto">Auto</button>
-                        <button class="toggle-btn" data-y="zero">From Zero</button>
-                    </div>
-                </div>
-
-                <div id="jc-picker"></div>
-
-                <div id="jc-metrics-container"></div>
-
-                <p id="jc-hint" class="data-note">Select one or more journals above to display citation trends.</p>
-                <div class="chart-container" id="jc-chart-container" style="display:none;">
-                    <canvas id="jc-chart"></canvas>
-                </div>
-                <div id="jc-download-bar" class="download-bar" style="display:none">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="dl-png">PNG</button>
-                    <button class="download-btn" id="dl-jpg">JPG</button>
-                    <button class="download-btn" id="dl-pdf">PDF</button>
-                    <button class="download-btn" id="dl-csv">CSV data</button>
-                </div>
-                <div id="jc-range-controls" class="chart-range-controls" style="display:none">
-                    <div class="range-control-group">
-                        <span class="range-label">Date:</span>
-                        <select id="jc-x-min" class="range-select"></select>
-                        <span class="range-separator">–</span>
-                        <select id="jc-x-max" class="range-select"></select>
-                    </div>
-                    <div class="range-control-group">
-                        <span class="range-label">Y axis:</span>
-                        <input id="jc-y-min" type="number" class="range-input" placeholder="min" step="0.1">
-                        <span class="range-separator">–</span>
-                        <input id="jc-y-max" type="number" class="range-input" placeholder="max" step="0.1">
-                    </div>
-                    <button id="jc-range-reset" class="range-reset-btn">Reset</button>
-                </div>
-
-                <div id="jc-composition-container" style="display:none">
-                    <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary);">Paper Composition</h3>
-                    <div class="chart-controls">
-                        <span class="chart-controls-label">Show:</span>
-                        <div class="toggle-group" id="jc-comp-visibility-toggle">
-                            <button class="toggle-btn active" id="jc-comp-combined-btn">Combined</button>
-                            <button class="toggle-btn active" id="jc-comp-individual-btn">Individual</button>
-                        </div>
-                    </div>
-                    <div id="jc-comp-range-controls" class="chart-range-controls" style="display:none">
-                        <div class="range-control-group">
-                            <span class="range-label">Date:</span>
-                            <select id="jc-comp-x-min" class="range-select"></select>
-                            <span class="range-separator">&ndash;</span>
-                            <select id="jc-comp-x-max" class="range-select"></select>
-                        </div>
-                        <div class="range-control-group">
-                            <span class="range-label">Y axis:</span>
-                            <input id="jc-comp-y-min" type="number" class="range-input" placeholder="min" step="1">
-                            <span class="range-separator">&ndash;</span>
-                            <input id="jc-comp-y-max" type="number" class="range-input" placeholder="max" step="1">
-                        </div>
-                        <button id="jc-comp-range-reset" class="range-reset-btn">Reset</button>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="jc-composition-chart"></canvas>
-                        <div class="download-bar" id="jc-composition-download-bar" style="display:none; margin-top:0.5rem;">
-                            <span class="download-label">Download:</span>
-                            <button class="download-btn" id="jc-comp-dl-png">PNG</button>
-                            <button class="download-btn" id="jc-comp-dl-jpg">JPG</button>
-                            <button class="download-btn" id="jc-comp-dl-pdf">PDF</button>
-                            <button class="download-btn" id="jc-comp-dl-csv">CSV</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="jc-table-container"></div>
-            </div>
-
-            <hr class="section-divider">
-
-            <!-- Browse section -->
-            <div id="journals-browse">
-                <div class="search-bar">
-                    <input type="text" id="journal-search" placeholder="Search journals..." autocomplete="off">
-                </div>
-                <div id="journal-list" class="journal-list"></div>
-            </div>
-
-        </div><!-- /#journals-main -->
-
-        <div id="journal-detail" class="detail-panel" style="display:none;">
-            <button class="back-btn" id="back-to-list">&larr; Back to list</button>
-            <h3 id="detail-title"></h3>
-
-            <div class="metrics-row">
-                <div class="metric-card">
-                    <span class="metric-value" id="metric-research-rate">—</span>
-                    <span class="metric-label" id="metric-research-rate-label">Research Rate</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="metric-review-rate">—</span>
-                    <span class="metric-label" id="metric-review-rate-label">Review Rate</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="metric-research-papers">—</span>
-                    <span class="metric-label" id="metric-research-papers-label">Research Papers</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="metric-review-papers">—</span>
-                    <span class="metric-label" id="metric-review-papers-label">Review Papers</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-value" id="metric-review-pct">—</span>
-                    <span class="metric-label" id="metric-review-pct-label">Review %</span>
-                </div>
-            </div>
-
-            <div class="chart-controls">
-                <span class="chart-controls-label">Window:</span>
-                <div class="toggle-group" id="window-toggle">
-                    <button class="toggle-btn" data-window="timeseries_12mo">12-month</button>
-                    <button class="toggle-btn active" data-window="timeseries">24-month</button>
-                    <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
-                </div>
-            </div>
-
-            <div class="chart-controls">
-                <span class="chart-controls-label">Article type:</span>
-                <div id="type-checkboxes" class="checkbox-grid" style="margin-bottom:0;">
-                    <label><input type="checkbox" value="research" checked> Research</label>
-                    <label><input type="checkbox" value="review"> Reviews</label>
-                    <label><input type="checkbox" value="editorial"> Editorials</label>
-                    <label><input type="checkbox" value="letter"> Letters</label>
-                    <label><input type="checkbox" value="other"> Other</label>
-                </div>
-            </div>
-            <div class="chart-controls">
-                <span class="chart-controls-label">Show:</span>
-                <div class="toggle-group" id="type-visibility-toggle">
-                    <button class="toggle-btn active" id="show-combined-btn">Combined</button>
-                    <button class="toggle-btn active" id="show-individual-btn">Individual</button>
-                </div>
-                <span class="chart-controls-label" style="margin-left:1.2rem;">Y-axis:</span>
-                <div class="toggle-group" id="journal-y-toggle">
-                    <button class="toggle-btn active" data-y="auto">Auto</button>
-                    <button class="toggle-btn" data-y="zero">From Zero</button>
-                </div>
-            </div>
-
-            <div id="detail-range-controls" class="chart-range-controls" style="display:none">
-                <div class="range-control-group">
-                    <span class="range-label">Date:</span>
-                    <select id="detail-x-min" class="range-select"></select>
-                    <span class="range-separator">&ndash;</span>
-                    <select id="detail-x-max" class="range-select"></select>
-                </div>
-                <div class="range-control-group">
-                    <span class="range-label">Y axis:</span>
-                    <input id="detail-y-min" type="number" class="range-input" placeholder="min" step="0.1">
-                    <span class="range-separator">&ndash;</span>
-                    <input id="detail-y-max" type="number" class="range-input" placeholder="max" step="0.1">
-                </div>
-                <button id="detail-range-reset" class="range-reset-btn">Reset</button>
-            </div>
-
-            <div class="chart-container">
-                <canvas id="journal-chart"></canvas>
-                <div class="download-bar" id="jd-chart-download-bar" style="display:none; margin-top:0.5rem;">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="jd-chart-dl-png">PNG</button>
-                    <button class="download-btn" id="jd-chart-dl-jpg">JPG</button>
-                    <button class="download-btn" id="jd-chart-dl-pdf">PDF</button>
-                    <button class="download-btn" id="jd-chart-dl-csv">CSV</button>
-                </div>
-            </div>
-
-            <div id="composition-type-checkboxes" class="checkbox-grid" style="display:none; margin-bottom: 0.5rem;">
-                <label><input type="checkbox" value="research" checked> Research</label>
-                <label><input type="checkbox" value="review" checked> Reviews</label>
-                <label><input type="checkbox" value="editorial" checked> Editorials</label>
-                <label><input type="checkbox" value="letter" checked> Letters</label>
-                <label><input type="checkbox" value="other" checked> Other</label>
-            </div>
+        <div class="card">
+            <h3>Gender Pair Composition Over Time</h3>
+            <p class="chart-note">Papers classified by inferred gender of first author (FA) and last/senior author (LA). WW = woman FA + woman LA, MM = man FA + man LA, etc.</p>
             <div class="chart-container">
                 <canvas id="composition-chart"></canvas>
-                <div class="download-bar" id="composition-chart-download-bar" style="display:none; margin-top:0.5rem;">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="composition-chart-dl-png">PNG</button>
-                    <button class="download-btn" id="composition-chart-dl-jpg">JPG</button>
-                    <button class="download-btn" id="composition-chart-dl-pdf">PDF</button>
-                </div>
-            </div>
-
-        </div>
-    </section>
-
-    <!-- ============ PAPERS ============ -->
-    <section id="papers" class="section">
-        <h2>Paper Citation Analysis</h2>
-        <p class="section-desc">Enter a PubMed ID to see its full citation history — annual citation counts, rolling averages, and how it compares to its journal's citation rate.</p>
-
-        <div class="search-bar">
-            <input type="text" id="network-pmid-input" placeholder="Enter PMID (e.g. 35537787)" autocomplete="off">
-            <button id="network-search-btn">Search</button>
-        </div>
-
-        <div id="network-results" style="display:none">
-            <div class="metrics-row" id="network-metrics"></div>
-
-            <!-- Paper Analytics (citation trend) -->
-            <div id="paper-analytics" style="display:none;">
-                <h4 id="paper-analytics-title" style="margin:1.2rem 0 0.2rem; font-size:1rem; color:var(--text); font-weight:600;"></h4>
-                <p id="paper-analytics-meta" style="margin:0 0 1rem; font-size:0.88rem; color:var(--text-light);"></p>
-                <div class="metrics-row" id="paper-analytics-stats"></div>
-                <div class="chart-controls" style="margin-top:1rem;">
-                    <span class="chart-controls-label">Window:</span>
-                    <div class="toggle-group" id="paper-window-toggle">
-                        <button class="toggle-btn active" data-win="1">Annual</button>
-                        <button class="toggle-btn" data-win="2">2-Year Rolling</button>
-                        <button class="toggle-btn" data-win="5">5-Year Rolling</button>
-                    </div>
-                    <span class="chart-controls-label" style="margin-left:1.2rem;">Overlays:</span>
-                    <div class="toggle-group" id="paper-jif-toggle">
-                        <button class="toggle-btn active" data-jif="off">JIF Window: Off</button>
-                        <button class="toggle-btn" data-jif="on">JIF Window: On</button>
-                    </div>
-                </div>
-                <div class="chart-container" style="margin-top:0.5rem;">
-                    <canvas id="paper-citations-chart"></canvas>
-                </div>
-                <p id="paper-chart-note" class="data-note" style="display:none; margin: -0.75rem 0 0.75rem; font-size:0.8rem; color:var(--text);"></p>
-                <div class="download-bar" id="paper-cit-download-bar" style="display:none;">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="paper-cit-dl-png">PNG</button>
-                    <button class="download-btn" id="paper-cit-dl-jpg">JPG</button>
-                    <button class="download-btn" id="paper-cit-dl-pdf">PDF</button>
-                </div>
             </div>
         </div>
 
-        <p id="network-hint" class="data-note" style="margin-top:1rem;">Enter a PMID above to see its citation history.</p>
-    </section>
-
-    <!-- ============ AUTHORS ============ -->
-    <section id="authors" class="section">
-        <h2>Author Search</h2>
-        <p class="section-desc">Search by name, load from an NCBI bibliography URL, or paste a list of PMIDs to analyze any author's publication record — including estimated h-index, citation trends, top journals, and article type breakdown.</p>
-
-        <div class="author-search-modes">
-            <div class="author-mode-block">
-                <label class="author-mode-label">Search by name</label>
-                <p class="author-mode-hint">May return multiple authors with similar names. Use "Lastname AB" format for best results.</p>
-                <div class="search-bar">
-                    <input type="text" id="author-name-input" placeholder='e.g. "Tyrrell D" — multiple names: "Smith JA, Jones JA"' autocomplete="off">
-                    <button id="author-name-search-btn">Search</button>
-                </div>
-            </div>
-
-            <div class="author-mode-divider">or</div>
-
-            <div class="author-mode-block">
-                <label class="author-mode-label">Load from NCBI bibliography URL</label>
-                <p class="author-mode-hint">Paste your public MyNCBI bibliography URL. All pages are fetched automatically. Find yours at <a href="https://www.ncbi.nlm.nih.gov/myncbi/" target="_blank" rel="noopener">ncbi.nlm.nih.gov/myncbi</a>.</p>
-                <div class="search-bar">
-                    <input type="text" id="author-ncbi-input" placeholder="https://www.ncbi.nlm.nih.gov/myncbi/yourname/bibliography/public/" autocomplete="off">
-                    <button id="author-ncbi-btn">Load</button>
-                </div>
-            </div>
-
-            <div class="author-mode-divider">or</div>
-
-            <div class="author-mode-block">
-                <label class="author-mode-label">Paste PMID list</label>
-                <p class="author-mode-hint">Paste PMIDs one per line or comma-separated (e.g. exported via NCBI "Manage Citations → Export File").</p>
-                <textarea id="author-pmid-paste" class="paste-pmid-area" rows="4" placeholder="41177156&#10;40504687&#10;39757022&#10;..."></textarea>
-                <button id="author-pmid-paste-btn">Load PMIDs</button>
-            </div>
-        </div>
-
-        <div id="author-search-results" style="display:none">
-            <div class="metrics-row" id="author-search-metrics"></div>
-
-            <div id="author-type-filters" class="type-filter-pills" style="display:none"></div>
-
-            <!-- All-papers charts -->
-            <div class="authors-charts-grid">
-                <div class="authors-chart-card">
-                    <div class="card-header-row">
-                        <h4>Publications per Year</h4>
-                        <div class="card-dl-bar">
-                            <button class="dl-btn-sm" id="dl-pubs-png">PNG</button>
-                            <button class="dl-btn-sm" id="dl-pubs-jpg">JPG</button>
-                            <button class="dl-btn-sm" id="dl-pubs-pdf">PDF</button>
-                        </div>
-                    </div>
-                    <div class="chart-container" style="height:240px; margin-bottom:0">
-                        <canvas id="author-pubs-chart"></canvas>
-                    </div>
-                </div>
-                <div class="authors-chart-card">
-                    <div class="card-header-row">
-                        <h4>Citations by Publication Year</h4>
-                        <div class="card-dl-bar">
-                            <button class="dl-btn-sm" id="dl-cits-png">PNG</button>
-                            <button class="dl-btn-sm" id="dl-cits-jpg">JPG</button>
-                            <button class="dl-btn-sm" id="dl-cits-pdf">PDF</button>
-                        </div>
-                    </div>
-                    <div class="chart-container" style="height:240px; margin-bottom:0">
-                        <canvas id="author-cits-chart"></canvas>
-                    </div>
-                </div>
-                <div class="authors-chart-card">
-                    <div class="card-header-row">
-                        <h4>Citations per Year <span class="metric-info" data-tooltip="Total citations received in each calendar year across all papers — like the Google Scholar citations chart.">ⓘ</span></h4>
-                        <div class="card-dl-bar">
-                            <button class="dl-btn-sm" id="dl-rcits-png">PNG</button>
-                            <button class="dl-btn-sm" id="dl-rcits-jpg">JPG</button>
-                            <button class="dl-btn-sm" id="dl-rcits-pdf">PDF</button>
-                        </div>
-                    </div>
-                    <div id="author-rcits-loading" style="display:none;font-size:0.8rem;color:#888;padding:0.25rem 0 0.5rem">Loading…</div>
-                    <div class="chart-container" style="height:240px; margin-bottom:0">
-                        <canvas id="author-rcits-chart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Top Journals -->
-            <div class="authors-chart-card" style="margin-top:1rem">
-                <div class="card-header-row">
-                    <h4>Top Journals <span id="author-journals-drill-hint" style="font-size:0.78rem;font-weight:400;color:#888;margin-left:0.4rem">(click a bar to see pubs per year)</span></h4>
-                    <div class="card-dl-bar">
-                        <button class="dl-btn-sm" id="dl-journals-png">PNG</button>
-                        <button class="dl-btn-sm" id="dl-journals-jpg">JPG</button>
-                        <button class="dl-btn-sm" id="dl-journals-pdf">PDF</button>
-                    </div>
-                </div>
-                <div class="chart-container" style="height:360px; margin-bottom:0">
-                    <canvas id="author-journals-chart"></canvas>
-                </div>
-                <div id="author-journal-drill" style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border)">
-                    <div class="card-header-row">
-                        <h4 id="author-journal-drill-title">Publications per Year</h4>
-                        <button class="dl-btn-sm" id="author-journal-drill-close">✕ Close</button>
-                    </div>
-                    <div class="chart-container" style="height:200px">
-                        <canvas id="author-journal-drill-chart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div id="author-papers-list" style="margin-top:1.5rem"></div>
-        </div>
-
-        <p id="author-search-hint" class="data-note" style="margin-top:1rem;">Search an author name above to explore their publication history.</p>
-    </section>
-
-    <!-- ============ GEOGRAPHY ============ -->
-    <section id="geography" class="section">
-        <h2>Geographic Breakdown</h2>
-        <p class="section-desc">Where are papers published? See how a journal's country distribution has changed over time, based on first-author affiliation.</p>
-
-        <div id="geo-picker-wrap">
-            <div class="section-label">Select a journal</div>
-            <div id="geo-journal-picker"></div>
-        </div>
-
-        <div id="geo-content" style="display:none;">
-            <div class="metrics-row" id="geo-metrics-row"></div>
-
-            <div class="authors-chart-card" style="margin-bottom:1rem;">
-                <h4>Papers by Country — World Map (First Author, All Years)</h4>
-                <div id="geo-map" style="position:relative; width:100%; border-radius:6px; overflow:hidden;"></div>
-                <div class="download-bar" id="geo-map-download-bar" style="display:none;">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="geo-map-dl-png">PNG</button>
-                    <button class="download-btn" id="geo-map-dl-jpg">JPG</button>
-                    <button class="download-btn" id="geo-map-dl-pdf">PDF</button>
-                </div>
-            </div>
-
-            <div class="authors-chart-card" style="margin-bottom:1rem;">
-                <h4>Papers by Country — Over Time (First Author)</h4>
-                <div id="geo-trend-range-controls" class="chart-range-controls" style="display:none">
-                    <div class="range-control-group">
-                        <span class="range-label">Year:</span>
-                        <select id="geo-trend-x-min" class="range-select"></select>
-                        <span class="range-separator">&ndash;</span>
-                        <select id="geo-trend-x-max" class="range-select"></select>
-                    </div>
-                    <div class="range-control-group">
-                        <span class="range-label">Y axis:</span>
-                        <input id="geo-trend-y-min" type="number" class="range-input" placeholder="min" step="1">
-                        <span class="range-separator">&ndash;</span>
-                        <input id="geo-trend-y-max" type="number" class="range-input" placeholder="max" step="1">
-                    </div>
-                    <button id="geo-trend-range-reset" class="range-reset-btn">Reset</button>
-                </div>
-                <div class="chart-container" style="height:420px;">
-                    <canvas id="geo-trend-chart"></canvas>
-                </div>
-                <div class="download-bar" id="geo-trend-download-bar" style="display:none;">
-                    <span class="download-label">Download:</span>
-                    <button class="download-btn" id="geo-trend-dl-png">PNG</button>
-                    <button class="download-btn" id="geo-trend-dl-jpg">JPG</button>
-                    <button class="download-btn" id="geo-trend-dl-pdf">PDF</button>
-                </div>
-            </div>
-
-            <div class="authors-charts-grid">
-                <div class="authors-chart-card">
-                    <h4>Top Countries Overall</h4>
-                    <div class="chart-container" style="margin-bottom:0;">
-                        <canvas id="geo-top-chart"></canvas>
-                    </div>
-                    <div class="download-bar" id="geo-top-download-bar" style="display:none;">
-                        <span class="download-label">Download:</span>
-                        <button class="download-btn" id="geo-top-dl-png">PNG</button>
-                        <button class="download-btn" id="geo-top-dl-jpg">JPG</button>
-                        <button class="download-btn" id="geo-top-dl-pdf">PDF</button>
-                    </div>
-                </div>
-                <div class="authors-chart-card">
-                    <h4>Country Share — Most Recent 3 Years</h4>
-                    <div class="chart-container" style="margin-bottom:0;">
-                        <canvas id="geo-recent-chart"></canvas>
-                    </div>
-                    <div class="download-bar" id="geo-recent-download-bar" style="display:none;">
-                        <span class="download-label">Download:</span>
-                        <button class="download-btn" id="geo-recent-dl-png">PNG</button>
-                        <button class="download-btn" id="geo-recent-dl-jpg">JPG</button>
-                        <button class="download-btn" id="geo-recent-dl-pdf">PDF</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <p id="geo-hint" class="data-note" style="margin-top:1rem;">Select a journal above to see its geographic breakdown.</p>
-    </section>
-
-    <!-- ============ INFLUENCE ============ -->
-    <section id="influence" class="section">
-        <h2>PMID Influence</h2>
-        <p class="section-desc">Select a journal and enter one or more PMIDs (comma-separated) to see how those papers inflate the journal's rolling citation rate. Choose a window (12-month, 24-month, or 5-year). View as a <strong>combined</strong> counterfactual (all PMIDs removed together) or as <strong>individual</strong> dashed lines showing each paper's standalone contribution.</p>
-
-        <div class="influence-ctrl-row">
-            <div class="influence-picker-wrap">
-                <label class="influence-label">Journal</label>
-                <div id="influence-journal-picker"></div>
-            </div>
-            <div class="influence-pmid-wrap">
-                <label class="influence-label">PMID(s)</label>
-                <div class="search-bar" style="margin-top:0">
-                    <input type="text" id="influence-pmid-input" placeholder="e.g. 26799652, 33634751" autocomplete="off">
-                    <button id="influence-analyze-btn">Analyze</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="influence-results" style="display:none">
-            <div id="influence-paper-card" class="network-selected-panel" style="margin-bottom:1rem">
-                <div id="inf-paper-list"></div>
-            </div>
-
-            <div class="metrics-row" id="influence-metrics"></div>
-
-            <div class="influence-view-row" id="influence-view-row">
-                <label>
-                    <input type="radio" name="inf-view" id="inf-view-combined" value="combined" checked>
-                    Combined (all PMIDs censored together)
-                </label>
-                <label>
-                    <input type="radio" name="inf-view" id="inf-view-individual" value="individual">
-                    Individual (one line per PMID)
-                </label>
-            </div>
-
-            <div class="influence-toggle-row">
-                <span style="font-size:0.85rem; color:#555;">Window:</span>
-                <div class="toggle-group" id="influence-window-toggle" style="margin-left:0.5rem;">
-                    <button class="toggle-btn" data-window="timeseries_12mo">12-month</button>
-                    <button class="toggle-btn active" data-window="timeseries">24-month</button>
-                    <button class="toggle-btn" data-window="timeseries_5yr">5-yr (yr 2–6)</button>
-                </div>
-                <span style="margin-left:1.5rem; font-size:0.85rem; color:#555;">Y-axis:</span>
-                <div class="toggle-group" id="influence-y-toggle" style="margin-left:0.5rem;">
-                    <button class="toggle-btn active" data-y="auto">Auto</button>
-                    <button class="toggle-btn" data-y="zero">From Zero</button>
-                </div>
-            </div>
-
+        <div class="card">
+            <h3>Citation Rate by Gender Pair</h3>
+            <p class="chart-note">Average citations per paper by publication year, stratified by gender pair. Only research articles included.</p>
             <div class="chart-container">
-                <canvas id="influence-chart"></canvas>
-            </div>
-            <div id="influence-range-controls" class="chart-range-controls" style="display:none">
-                <div class="range-control-group">
-                    <span class="range-label">Date:</span>
-                    <select id="influence-x-min" class="range-select"></select>
-                    <span class="range-separator">–</span>
-                    <select id="influence-x-max" class="range-select"></select>
-                </div>
-                <div class="range-control-group">
-                    <span class="range-label">Y axis:</span>
-                    <input id="influence-y-min" type="number" class="range-input" placeholder="min" step="0.1">
-                    <span class="range-separator">–</span>
-                    <input id="influence-y-max" type="number" class="range-input" placeholder="max" step="0.1">
-                </div>
-                <button id="influence-range-reset" class="range-reset-btn">Reset</button>
-            </div>
-
-            <div class="download-bar" id="influence-download-bar">
-                <span class="download-label">Download:</span>
-                <button class="download-btn" id="inf-dl-png">PNG</button>
-                <button class="download-btn" id="inf-dl-jpg">JPG</button>
-                <button class="download-btn" id="inf-dl-pdf">PDF</button>
-                <button class="download-btn" id="inf-dl-csv">CSV</button>
+                <canvas id="citation-rate-chart"></canvas>
             </div>
         </div>
 
-        <p id="influence-hint" class="data-note" style="margin-top:1rem;">Select a journal and enter a PMID above to analyze its contribution to the citation rate.</p>
+        <div class="card">
+            <h3>Normalized Citation Rate (MM = 1.0)</h3>
+            <p class="chart-note">Citation rate of each gender pair relative to MM papers in the same year. Values above 1.0 mean higher citation rates than MM.</p>
+            <div class="chart-container">
+                <canvas id="normalized-rate-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="overview-summary" class="summary-box"></div>
     </section>
 
-    <!-- ============ ABOUT ============ -->
-    <section id="about" class="section">
-        <h2>About IMPACT</h2>
-        <div class="about-content">
-            <h3>What is IMPACT?</h3>
-            <p>
-                IMPACT (Independent Metrics for Publication Analysis and Citation Tracking)
-                is an open-source tool built to study <strong>publication bias</strong>,
-                <strong>impact factor inflation</strong>, and <strong>h-index gaming</strong>
-                in the current academic publishing system. It computes rolling 24-month journal
-                citation rates from freely available PubMed and NIH iCite data, providing a
-                transparent, reproducible alternative to Clarivate's proprietary Journal Impact
-                Factor.
-            </p>
-            <p>
-                Key questions IMPACT helps investigate: Which journals boost their metrics with
-                highly-cited review articles? How much does a single landmark paper or clinical
-                guideline inflate a journal's citation rate? How do author h-indexes vary by
-                article type, and are they padded by self-citations or review series? These
-                questions matter for how science is evaluated, funded, and incentivized.
-            </p>
+    <!-- ============ BY JOURNAL ============ -->
+    <section id="journal" class="section">
+        <h2>Journal-Level Analysis</h2>
+        <p class="section-desc">Select a journal to see its gender composition and citation rate trends.</p>
 
-            <h3>How is the Rolling 24-Month Citation Rate Calculated?</h3>
-            <p>
-                For each target month, IMPACT computes:
-            </p>
-            <div class="formula-box">
-                Citation Rate = Citations received in 12-month window / Research articles published in preceding 24-month window
+        <div class="journal-picker-container">
+            <input type="text" id="journal-search" class="journal-search"
+                   placeholder="Search journals..." autocomplete="off">
+            <div id="journal-dropdown" class="journal-dropdown"></div>
+        </div>
+
+        <div id="journal-detail" style="display:none;">
+            <h3 id="journal-name"></h3>
+
+            <div class="card">
+                <h4>Gender Pair Composition</h4>
+                <div class="chart-container">
+                    <canvas id="journal-composition-chart"></canvas>
+                </div>
             </div>
-            <p>
-                This mirrors the official JIF methodology but uses a rolling monthly window
-                instead of a fixed calendar year, providing more timely and granular metrics.
-            </p>
+
+            <div class="card">
+                <h4>Citation Rate by Gender Pair</h4>
+                <div class="chart-container">
+                    <canvas id="journal-rate-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="journal-summary" class="summary-box"></div>
+        </div>
+    </section>
+
+    <!-- ============ WHO CITES WHOM ============ -->
+    <section id="citing" class="section">
+        <h2>Citing Gender Analysis</h2>
+        <p class="section-desc">When a paper by a given gender pair is cited, what is the gender of the citing author? This reveals potential citation homophily — the tendency to cite authors of the same gender.</p>
+
+        <div class="card">
+            <h3>Gender of Citing First Authors</h3>
+            <p class="chart-note">For each cited gender pair, the percentage of citing papers with a woman vs man first author. Aggregated across all journals.</p>
+            <div class="chart-container chart-container-short">
+                <canvas id="citing-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="citing-summary" class="summary-box"></div>
+    </section>
+
+    <!-- ============ DATA QUALITY ============ -->
+    <section id="quality" class="section">
+        <h2>Gender Inference Quality</h2>
+        <p class="section-desc">How well does the gender-guesser classify names? Accuracy varies by region due to name conventions.</p>
+
+        <div class="card">
+            <h3>Classification Rate by Country</h3>
+            <p class="chart-note">Percentage of authors with an assigned gender (W or M), by first author country. Lower rates indicate more names the algorithm could not classify.</p>
+            <div class="chart-container chart-container-tall">
+                <canvas id="quality-country-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Overall Classification Breakdown</h3>
+            <div class="chart-container chart-container-short">
+                <canvas id="quality-overall-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="quality-summary" class="summary-box"></div>
+    </section>
+
+    <!-- ============ METHODS ============ -->
+    <section id="methods" class="section">
+        <h2>Methodology</h2>
+        <div class="methods-content">
+            <h3>Gender Inference</h3>
+            <p>Author gender is <strong>inferred from first names</strong> using the <code>gender-guesser</code> Python package, which classifies names based on a large international corpus. This is a probabilistic estimate — not self-reported identity.</p>
+
+            <h3>Limitations</h3>
+            <ul>
+                <li><strong>Binary classification</strong>: Only "woman" and "man" categories are assigned. Non-binary identities are not captured.</li>
+                <li><strong>Name-based inference</strong>: Gender is inferred from the name associated with a publication, not the author's actual gender identity.</li>
+                <li><strong>East Asian names</strong>: Chinese, Japanese, and Korean names have significantly higher "unknown" rates (~70-80%) because many names are used by multiple genders or are unfamiliar to the classification algorithm.</li>
+                <li><strong>Initials-only names</strong>: ~5% of papers have only initials (e.g., "J Smith") and cannot be classified.</li>
+                <li><strong>Confidence threshold</strong>: Names classified as "mostly_male" or "mostly_female" are included (probability >= 0.60). Names classified as "androgynous" or "unknown" are excluded.</li>
+            </ul>
+
+            <h3>Gender Pair Categories</h3>
+            <table class="methods-table">
+                <tr><th>Code</th><th>First Author</th><th>Last Author</th></tr>
+                <tr><td><span class="pair-badge pair-ww">WW</span></td><td>Woman</td><td>Woman</td></tr>
+                <tr><td><span class="pair-badge pair-wm">WM</span></td><td>Woman</td><td>Man</td></tr>
+                <tr><td><span class="pair-badge pair-mw">MW</span></td><td>Man</td><td>Woman</td></tr>
+                <tr><td><span class="pair-badge pair-mm">MM</span></td><td>Man</td><td>Man</td></tr>
+            </table>
+
+            <h3>Citation Analysis</h3>
+            <p>Citation counts are from the <a href="https://icite.od.nih.gov/">NIH iCite</a> Open Citation Collection. Only research articles are included (reviews, editorials, etc. are excluded). Citation rates are calculated as total citations divided by number of papers for each gender pair and year.</p>
 
             <h3>Data Sources</h3>
-            <p>
-                <strong>PubMed Bulk Data</strong> — 40M papers with metadata, author affiliations, and publication dates.<br>
-                <strong>NIH iCite Open Citation Collection</strong> — 893M citation links, downloaded and processed locally.
-            </p>
+            <ul>
+                <li><strong>PubMed Annual Baseline</strong>: ~40M article records with author names</li>
+                <li><strong>iCite Open Citation Collection</strong>: Citation links between PubMed articles</li>
+                <li><strong>gender-guesser</strong>: Open-source name-to-gender classification</li>
+            </ul>
 
-            <h3>Review-Excluded Citation Rate</h3>
-            <p>
-                IMPACT also computes a citation rate excluding review articles from both the numerator
-                and denominator. This helps detect "review inflation" — when journals boost
-                their metrics by publishing highly-cited review articles.
-            </p>
+            <h3>Reference</h3>
+            <p>Woitowich NC, et al. (2025) "Assessing the influence of author gender on the integration of sex and gender in COVID-19 publications." <em>PLoS ONE</em>. PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/39970134/">39970134</a></p>
 
-            <h3>Tracked Journals</h3>
-            <div id="about-journal-list"></div>
-
-            <h3>Accessibility &amp; Color</h3>
-            <p>
-                All charts use the <strong>Okabe-Ito colorblind-safe palette</strong>, recommended by
-                <a href="https://www.nature.com/articles/nmeth.1618" target="_blank" rel="noopener"><em>Nature Methods</em></a>
-                for scientific visualization. The eight core colors remain distinguishable under the most common
-                forms of color vision deficiency — deuteranopia, protanopia, and tritanopia — which together
-                affect roughly 8% of males and 0.5% of females. We substituted yellow and black (the original
-                Okabe-Ito slots 7 and 8) with purple and gray for better legibility on white backgrounds.
-            </p>
-            <p>
-                If you have suggestions for improving accessibility, the color scheme, or any other aspect
-                of IMPACT, please
-                <a href="https://github.com/dantyrr/IMPACT/issues/new" target="_blank" rel="noopener">open an issue on GitHub</a>
-                — feedback is always welcome.
-            </p>
-
-            <h3>Open Source</h3>
-            <p>
-                All code and data are available on
-                <a href="https://github.com/dantyrr/IMPACT" target="_blank">GitHub</a>.
-                Contributions welcome!
+            <p class="methods-footer">
+                <a href="https://github.com/dantyrr/IMPACT">Source code on GitHub</a> |
+                <a href="https://dantyrr.github.io/IMPACT">Main IMPACT site</a>
             </p>
         </div>
     </section>
@@ -663,24 +177,12 @@
 </main>
 
 <footer>
-    <p>
-        IMPACT is open-source software by
-        <a href="https://github.com/dantyrr" target="_blank">Daniel Tyrrell</a>.
-        Data from <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank">PubMed</a> &amp;
-        <a href="https://icite.od.nih.gov/" target="_blank">NIH iCite</a>.
-    </p>
-    <p>Last updated: <span id="last-updated">—</span></p>
-    <p>Charts use the <a href="https://www.nature.com/articles/nmeth.1618" target="_blank" rel="noopener">Okabe-Ito colorblind-safe palette</a>.
-    Suggestions? <a href="https://github.com/dantyrr/IMPACT/issues/new" target="_blank" rel="noopener">Open an issue on GitHub.</a></p>
+    <p>IMPACT Gender Analysis — Open-source research tool | Data from PubMed &amp; iCite</p>
 </footer>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
-<script src="js/data-loader.js?v=6"></script>
-<script src="js/chart-manager.js?v=5"></script>
-<script src="js/ui-helpers.js?v=3"></script>
-<script src="js/journal-picker.js?v=3"></script>
-<script src="js/app.js?v=35"></script>
+<script src="js/data-loader.js"></script>
+<script src="js/chart-manager.js"></script>
+<script src="js/app.js"></script>
 
 </body>
 </html>

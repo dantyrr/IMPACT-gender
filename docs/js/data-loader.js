@@ -1,46 +1,35 @@
 /**
- * IMPACT Data Loader
- * Fetches JSON data from Cloudflare R2 (production) or local data/ (dev).
- *
- * Detection: if the page is served from localhost/file://, uses local data/.
- * Otherwise uses R2_BASE_URL.
+ * Data loader for gender analysis dashboard.
+ * Loads JSON from local data/ directory.
  */
+const GenderDataLoader = {
+    _cache: {},
 
-const R2_BASE_URL = 'https://pub-4368cf00a45748488f64d2b648550d4d.r2.dev';
-
-class DataLoader {
-    constructor() {
-        const isLocal = location.hostname === 'localhost' ||
-                        location.hostname === '127.0.0.1' ||
-                        location.protocol === 'file:';
-        this.baseUrl = isLocal ? 'data' : R2_BASE_URL;
-        this.cache = {};
-    }
-
-    async loadIndex() {
-        return this._fetch(`${this.baseUrl}/index.json`);
-    }
+    async loadAggregate() {
+        if (this._cache.aggregate) return this._cache.aggregate;
+        const resp = await fetch('data/gender/aggregate.json');
+        if (!resp.ok) throw new Error('Failed to load aggregate data');
+        const data = await resp.json();
+        this._cache.aggregate = data;
+        return data;
+    },
 
     async loadJournal(slug) {
-        return this._fetch(`${this.baseUrl}/journals/${slug}.json`);
-    }
-
-    async loadAuthor(slug) {
-        return this._fetch(`${this.baseUrl}/authors/${slug}.json`);
-    }
-
-    async loadPapers(slug) {
-        return this._fetch(`${this.baseUrl}/papers/${slug}.json`);
-    }
-
-    async _fetch(url) {
-        if (this.cache[url]) return this.cache[url];
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`);
-        const data = await response.json();
-        this.cache[url] = data;
+        const key = `journal_${slug}`;
+        if (this._cache[key]) return this._cache[key];
+        const resp = await fetch(`data/gender/journals/${slug}.json`);
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        this._cache[key] = data;
         return data;
-    }
-}
+    },
 
-const dataLoader = new DataLoader();
+    async loadJournalIndex() {
+        if (this._cache.index) return this._cache.index;
+        const resp = await fetch('data/index.json');
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        this._cache.index = data;
+        return data;
+    },
+};

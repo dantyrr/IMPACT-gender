@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMPACT — Gender &amp; Citation Analysis</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>IMPACT <span class="header-badge">Gender Analysis</span></h1>
+        <p class="subtitle">Citation Rate Differences by Inferred Author Gender</p>
+        <p class="tagline">Analyzing ~24M PubMed papers (2005–2026) to examine whether papers led by women are cited differently than those led by men</p>
+    </div>
+    <nav>
+        <a href="#overview" class="nav-link active" data-section="overview">Overview</a>
+        <a href="#journal" class="nav-link" data-section="journal">By Journal</a>
+        <a href="#citing" class="nav-link" data-section="citing">Who Cites Whom</a>
+        <a href="#quality" class="nav-link" data-section="quality">Data Quality</a>
+        <a href="#methods" class="nav-link" data-section="methods">Methods</a>
+    </nav>
+</header>
+
+<main>
+
+    <!-- ============ OVERVIEW ============ -->
+    <section id="overview" class="section active">
+        <h2>Gender Composition &amp; Citation Trends</h2>
+        <p class="section-desc">How has the gender composition of first and last authors changed over time, and do citation rates differ by gender pair?</p>
+
+        <div class="card">
+            <h3>Gender Pair Composition Over Time</h3>
+            <p class="chart-note">Papers classified by inferred gender of first author (FA) and last/senior author (LA). WW = woman FA + woman LA, MM = man FA + man LA, etc.</p>
+            <div class="chart-container">
+                <canvas id="composition-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Citation Rate by Gender Pair</h3>
+            <p class="chart-note">Average citations per paper by publication year, stratified by gender pair. Only research articles included.</p>
+            <div class="chart-container">
+                <canvas id="citation-rate-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Normalized Citation Rate (MM = 1.0)</h3>
+            <p class="chart-note">Citation rate of each gender pair relative to MM papers in the same year. Values above 1.0 mean higher citation rates than MM.</p>
+            <div class="chart-container">
+                <canvas id="normalized-rate-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="overview-summary" class="summary-box"></div>
+    </section>
+
+    <!-- ============ BY JOURNAL ============ -->
+    <section id="journal" class="section">
+        <h2>Journal-Level Analysis</h2>
+        <p class="section-desc">Select a journal to see its gender composition and citation rate trends.</p>
+
+        <div class="journal-picker-container">
+            <input type="text" id="journal-search" class="journal-search"
+                   placeholder="Search journals..." autocomplete="off">
+            <div id="journal-dropdown" class="journal-dropdown"></div>
+        </div>
+
+        <div id="journal-detail" style="display:none;">
+            <h3 id="journal-name"></h3>
+
+            <div class="card">
+                <h4>Gender Pair Composition</h4>
+                <div class="chart-container">
+                    <canvas id="journal-composition-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h4>Citation Rate by Gender Pair</h4>
+                <div class="chart-container">
+                    <canvas id="journal-rate-chart"></canvas>
+                </div>
+            </div>
+
+            <div id="journal-summary" class="summary-box"></div>
+        </div>
+    </section>
+
+    <!-- ============ WHO CITES WHOM ============ -->
+    <section id="citing" class="section">
+        <h2>Citing Gender Analysis</h2>
+        <p class="section-desc">When a paper by a given gender pair is cited, what is the gender of the citing author? This reveals potential citation homophily — the tendency to cite authors of the same gender.</p>
+
+        <div class="card">
+            <h3>Gender of Citing First Authors</h3>
+            <p class="chart-note">For each cited gender pair, the percentage of citing papers with a woman vs man first author. Aggregated across all journals.</p>
+            <div class="chart-container chart-container-short">
+                <canvas id="citing-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="citing-summary" class="summary-box"></div>
+    </section>
+
+    <!-- ============ DATA QUALITY ============ -->
+    <section id="quality" class="section">
+        <h2>Gender Inference Quality</h2>
+        <p class="section-desc">How well does the gender-guesser classify names? Accuracy varies by region due to name conventions.</p>
+
+        <div class="card">
+            <h3>Classification Rate by Country</h3>
+            <p class="chart-note">Percentage of authors with an assigned gender (W or M), by first author country. Lower rates indicate more names the algorithm could not classify.</p>
+            <div class="chart-container chart-container-tall">
+                <canvas id="quality-country-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Overall Classification Breakdown</h3>
+            <div class="chart-container chart-container-short">
+                <canvas id="quality-overall-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="quality-summary" class="summary-box"></div>
+    </section>
+
+    <!-- ============ METHODS ============ -->
+    <section id="methods" class="section">
+        <h2>Methodology</h2>
+        <div class="methods-content">
+            <h3>Gender Inference</h3>
+            <p>Author gender is <strong>inferred from first names</strong> using the <code>gender-guesser</code> Python package, which classifies names based on a large international corpus. This is a probabilistic estimate — not self-reported identity.</p>
+
+            <h3>Limitations</h3>
+            <ul>
+                <li><strong>Binary classification</strong>: Only "woman" and "man" categories are assigned. Non-binary identities are not captured.</li>
+                <li><strong>Name-based inference</strong>: Gender is inferred from the name associated with a publication, not the author's actual gender identity.</li>
+                <li><strong>East Asian names</strong>: Chinese, Japanese, and Korean names have significantly higher "unknown" rates (~70-80%) because many names are used by multiple genders or are unfamiliar to the classification algorithm.</li>
+                <li><strong>Initials-only names</strong>: ~5% of papers have only initials (e.g., "J Smith") and cannot be classified.</li>
+                <li><strong>Confidence threshold</strong>: Names classified as "mostly_male" or "mostly_female" are included (probability >= 0.60). Names classified as "androgynous" or "unknown" are excluded.</li>
+            </ul>
+
+            <h3>Gender Pair Categories</h3>
+            <table class="methods-table">
+                <tr><th>Code</th><th>First Author</th><th>Last Author</th></tr>
+                <tr><td><span class="pair-badge pair-ww">WW</span></td><td>Woman</td><td>Woman</td></tr>
+                <tr><td><span class="pair-badge pair-wm">WM</span></td><td>Woman</td><td>Man</td></tr>
+                <tr><td><span class="pair-badge pair-mw">MW</span></td><td>Man</td><td>Woman</td></tr>
+                <tr><td><span class="pair-badge pair-mm">MM</span></td><td>Man</td><td>Man</td></tr>
+            </table>
+
+            <h3>Citation Analysis</h3>
+            <p>Citation counts are from the <a href="https://icite.od.nih.gov/">NIH iCite</a> Open Citation Collection. Only research articles are included (reviews, editorials, etc. are excluded). Citation rates are calculated as total citations divided by number of papers for each gender pair and year.</p>
+
+            <h3>Data Sources</h3>
+            <ul>
+                <li><strong>PubMed Annual Baseline</strong>: ~40M article records with author names</li>
+                <li><strong>iCite Open Citation Collection</strong>: Citation links between PubMed articles</li>
+                <li><strong>gender-guesser</strong>: Open-source name-to-gender classification</li>
+            </ul>
+
+            <h3>Reference</h3>
+            <p>Woitowich NC, et al. (2025) "Assessing the influence of author gender on the integration of sex and gender in COVID-19 publications." <em>PLoS ONE</em>. PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/39970134/">39970134</a></p>
+
+            <p class="methods-footer">
+                <a href="https://github.com/dantyrr/IMPACT">Source code on GitHub</a> |
+                <a href="https://dantyrr.github.io/IMPACT">Main IMPACT site</a>
+            </p>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>IMPACT Gender Analysis — Open-source research tool | Data from PubMed &amp; iCite</p>
+</footer>
+
+<script src="js/data-loader.js"></script>
+<script src="js/chart-manager.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

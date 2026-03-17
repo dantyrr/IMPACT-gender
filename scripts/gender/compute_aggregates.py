@@ -186,6 +186,12 @@ def compute_inference_quality(conn, start_year, end_year):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--skip-citing", action="store_true",
+                        help="Skip citing-gender analysis (very slow on full dataset)")
+    args = parser.parse_args()
+
     output_dir = Path("docs-gender/data/gender")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -196,8 +202,12 @@ def main():
     logger.info("Computing yearly citation rates...")
     rates = compute_yearly_citation_rates(conn, START_YEAR, END_YEAR)
 
-    logger.info("Computing citing-gender analysis...")
-    citing = compute_citing_gender_aggregate(conn, START_YEAR, END_YEAR)
+    citing = {}
+    if not args.skip_citing:
+        logger.info("Computing citing-gender analysis (slow — use --skip-citing to skip)...")
+        citing = compute_citing_gender_aggregate(conn, START_YEAR, END_YEAR)
+    else:
+        logger.info("Skipping citing-gender analysis (--skip-citing)")
 
     logger.info("Computing inference quality stats...")
     quality = compute_inference_quality(conn, START_YEAR, END_YEAR)

@@ -194,6 +194,7 @@ class GenderApp {
 
             const matches = this.journalIndex
                 .filter(j => (j.name || '').toLowerCase().includes(query))
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                 .slice(0, 20);
 
             if (matches.length === 0) {

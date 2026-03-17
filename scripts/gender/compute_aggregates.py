@@ -90,33 +90,31 @@ def compute_yearly_citation_rates(conn, start_year, end_year):
 
 
 def compute_citing_gender_aggregate(conn, start_year, end_year):
-    """Who cites whom — aggregate across all journals."""
-    results = {}
-    for cited_pair in GENDER_PAIRS:
-        rows = conn.execute("""
-            SELECT
-                citing_p.first_author_gender,
-                COUNT(*) as cnt
-            FROM papers cited_p
-            JOIN citations c ON c.cited_pmid = cited_p.pmid
-            JOIN papers citing_p ON citing_p.pmid = c.citing_pmid
-            WHERE cited_p.pub_year BETWEEN ? AND ?
-              AND cited_p.gender_pair = ?
-              AND citing_p.first_author_gender IN ('W', 'M')
-            GROUP BY citing_p.first_author_gender
-        """, (start_year, end_year, cited_pair)).fetchall()
+    """Who cites whom — aggregate across all journals. Single query for efficiency."""
+    rows = conn.execute("""
+        SELECT
+            cited_p.gender_pair,
+            citing_p.first_author_gender,
+            COUNT(*) as cnt
+        FROM papers cited_p
+        JOIN citations c ON c.cited_pmid = cited_p.pmid
+        JOIN papers citing_p ON citing_p.pmid = c.citing_pmid
+        WHERE cited_p.pub_year BETWEEN ? AND ?
+          AND cited_p.gender_pair IN ('WW','WM','MW','MM')
+          AND citing_p.first_author_gender IN ('W', 'M')
+        GROUP BY cited_p.gender_pair, citing_p.first_author_gender
+    """, (start_year, end_year)).fetchall()
 
-        gender_counts = {"W": 0, "M": 0}
-        for gender, count in rows:
-            gender_counts[gender] = count
-        total = sum(gender_counts.values())
-        if total > 0:
-            results[cited_pair] = {
-                "W": gender_counts["W"],
-                "M": gender_counts["M"],
-                "total": total,
-                "pctW": round(gender_counts["W"] / total * 100, 1),
-            }
+    results = {}
+    for cited_pair, citing_gender, cnt in rows:
+        if cited_pair not in results:
+            results[cited_pair] = {"W": 0, "M": 0}
+        results[cited_pair][citing_gender] = cnt
+
+    for pair in results:
+        total = results[pair]["W"] + results[pair]["M"]
+        results[pair]["total"] = total
+        results[pair]["pctW"] = round(results[pair]["W"] / total * 100, 1) if total > 0 else 0
 
     return results
 

@@ -26,17 +26,9 @@ const GenderDataLoader = {
 
     async loadJournalIndex() {
         if (this._cache.index) return this._cache.index;
-        // Load from main IMPACT index
-        const resp = await fetch('../docs/data/index.json').catch(() => null);
-        if (resp && resp.ok) {
-            const data = await resp.json();
-            this._cache.index = data;
-            return data;
-        }
-        // Fallback: try local index
-        const resp2 = await fetch('data/index.json');
-        if (!resp2.ok) return [];
-        const data = await resp2.json();
+        const resp = await fetch('data/index.json');
+        if (!resp.ok) return [];
+        const data = await resp.json();
         this._cache.index = data;
         return data;
     },

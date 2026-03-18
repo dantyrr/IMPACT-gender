@@ -262,7 +262,8 @@ class GenderApp {
         const totalPapers = Object.keys(latest).reduce((s, p) => s + (latest[p]?.p || 0), 0);
 
         let html = `<h4>${data.name || name} (${latestYear})</h4>`;
-        html += `<p>${totalPapers} classified research papers</p>`;
+        html += `<p>${totalPapers.toLocaleString()} research papers with gender-classified authors</p>`;
+        html += `<p class="chart-note" style="margin-top:0">Papers where both first and last author names could be classified. Papers with initials-only or unclassifiable names are excluded.</p>`;
 
         for (const pair of ['WW', 'WM', 'MW', 'MM']) {
             const d = latest[pair];

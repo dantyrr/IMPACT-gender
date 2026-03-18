@@ -399,8 +399,29 @@ const GenderChartManager = {
         this._destroy(canvasId);
         if (!countryData) return;
 
+        // Merge duplicate country names
+        const mergeMap = {
+            'United States': 'USA',
+            'P.R. China': 'China',
+        };
+        const merged = {};
+        for (const [country, d] of Object.entries(countryData)) {
+            const key = mergeMap[country] || country;
+            if (merged[key]) {
+                merged[key].W += d.W;
+                merged[key].M += d.M;
+                merged[key].U += d.U;
+            } else {
+                merged[key] = { ...d };
+            }
+        }
+        for (const d of Object.values(merged)) {
+            const total = d.W + d.M + d.U;
+            d.pctAssigned = total > 0 ? Math.round((d.W + d.M) / total * 1000) / 10 : 0;
+        }
+
         // Sort by assignment rate
-        const sorted = Object.entries(countryData)
+        const sorted = Object.entries(merged)
             .sort((a, b) => b[1].pctAssigned - a[1].pctAssigned);
 
         const labels = sorted.map(([c]) => c);
@@ -431,7 +452,7 @@ const GenderChartManager = {
                         callbacks: {
                             afterLabel: (ctx) => {
                                 const country = labels[ctx.dataIndex];
-                                const d = countryData[country];
+                                const d = merged[country];
                                 return `W: ${d.W.toLocaleString()} | M: ${d.M.toLocaleString()} | Unknown: ${d.U.toLocaleString()}`;
                             },
                         },

@@ -162,16 +162,23 @@ const GenderChartManager = {
      */
     rollingIfChart(canvasId, rollingData) {
         this._destroy(canvasId);
-        const years = Object.keys(rollingData).sort();
-        if (years.length === 0) return;
+        const keys = Object.keys(rollingData).sort();
+        if (keys.length === 0) return;
+
+        // Monthly keys like "2008-01"; show only January labels on x-axis
+        const isMonthly = keys[0].length > 4;
+        const labels = isMonthly
+            ? keys.map(k => k.endsWith('-01') ? k.slice(0, 4) : '')
+            : keys;
 
         const datasets = PAIRS.map(pair => ({
             label: PAIR_LABELS[pair],
-            data: years.map(y => rollingData[y]?.[pair]?.['if'] || null),
+            data: keys.map(k => rollingData[k]?.[pair]?.['if'] || null),
             borderColor: PAIR_COLORS[pair],
             backgroundColor: PAIR_COLORS[pair] + '33',
             borderWidth: 2,
-            pointRadius: 3,
+            pointRadius: isMonthly ? 0 : 3,
+            pointHoverRadius: 4,
             tension: 0.3,
             spanGaps: true,
         }));
@@ -179,7 +186,7 @@ const GenderChartManager = {
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels: years, datasets },
+            data: { labels, datasets },
             options: {
                 ...CHART_DEFAULTS,
                 plugins: {
@@ -187,21 +194,31 @@ const GenderChartManager = {
                     tooltip: {
                         ...CHART_DEFAULTS.plugins.tooltip,
                         callbacks: {
+                            title: (items) => keys[items[0].dataIndex],
                             label: (ctx) => {
-                                const year = ctx.label;
+                                const key = keys[ctx.dataIndex];
                                 const pair = PAIRS[ctx.datasetIndex];
-                                const d = rollingData[year]?.[pair];
+                                const d = rollingData[key]?.[pair];
                                 if (!d) return '';
-                                return `${ctx.dataset.label}: ${d['if'].toFixed(2)} (${d.p} papers, ${d.c} cites)`;
+                                return `${ctx.dataset.label}: ${d['if'].toFixed(2)} (${d.p.toLocaleString()} papers, ${d.c.toLocaleString()} cites)`;
                             },
                         },
                     },
                 },
                 scales: {
                     ...CHART_DEFAULTS.scales,
+                    x: {
+                        ...CHART_DEFAULTS.scales.x,
+                        ticks: {
+                            ...CHART_DEFAULTS.scales.x.ticks,
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: isMonthly ? 20 : undefined,
+                        },
+                    },
                     y: {
                         ...CHART_DEFAULTS.scales.y,
-                        title: { display: true, text: '24-month rolling citation rate', color: '#8b949e' },
+                        title: { display: true, text: 'Rolling citation rate', color: '#8b949e' },
                     },
                 },
             },
@@ -213,15 +230,21 @@ const GenderChartManager = {
      */
     rollingIfNormChart(canvasId, rollingData) {
         this._destroy(canvasId);
-        const years = Object.keys(rollingData).sort();
-        if (years.length === 0) return;
+        const keys = Object.keys(rollingData).sort();
+        if (keys.length === 0) return;
+
+        const isMonthly = keys[0].length > 4;
+        const labels = isMonthly
+            ? keys.map(k => k.endsWith('-01') ? k.slice(0, 4) : '')
+            : keys;
 
         const datasets = PAIRS.map(pair => ({
             label: PAIR_LABELS[pair],
-            data: years.map(y => rollingData[y]?.[pair]?.norm || null),
+            data: keys.map(k => rollingData[k]?.[pair]?.norm || null),
             borderColor: PAIR_COLORS[pair],
             borderWidth: 2,
-            pointRadius: 2,
+            pointRadius: isMonthly ? 0 : 2,
+            pointHoverRadius: 4,
             tension: 0.3,
             borderDash: pair === 'MM' ? [5, 5] : [],
             spanGaps: true,
@@ -230,7 +253,7 @@ const GenderChartManager = {
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels: years, datasets },
+            data: { labels, datasets },
             options: {
                 ...CHART_DEFAULTS,
                 plugins: {
@@ -238,12 +261,22 @@ const GenderChartManager = {
                     tooltip: {
                         ...CHART_DEFAULTS.plugins.tooltip,
                         callbacks: {
+                            title: (items) => keys[items[0].dataIndex],
                             label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(3) || 'N/A'}x`,
                         },
                     },
                 },
                 scales: {
                     ...CHART_DEFAULTS.scales,
+                    x: {
+                        ...CHART_DEFAULTS.scales.x,
+                        ticks: {
+                            ...CHART_DEFAULTS.scales.x.ticks,
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: isMonthly ? 20 : undefined,
+                        },
+                    },
                     y: {
                         ...CHART_DEFAULTS.scales.y,
                         title: { display: true, text: 'Relative to MM', color: '#8b949e' },

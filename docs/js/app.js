@@ -126,6 +126,7 @@ class GenderApp {
         if (!d?.citing_gender) return;
 
         GenderChartManager.citingChart('citing-chart', d.citing_gender);
+        GenderChartManager.citingByYearChart('citing-by-year-chart', d.citing_gender_by_year);
 
         // Summary
         const citing = d.citing_gender;

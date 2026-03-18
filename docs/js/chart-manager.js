@@ -397,6 +397,53 @@ const GenderChartManager = {
     },
 
     /**
+     * Line chart: % cited by women over time, one line per gender pair.
+     */
+    citingByYearChart(canvasId, citingByYear) {
+        this._destroy(canvasId);
+        if (!citingByYear || Object.keys(citingByYear).length === 0) return;
+
+        const years = Object.keys(citingByYear).sort();
+        const datasets = PAIRS.map(pair => ({
+            label: PAIR_LABELS[pair],
+            data: years.map(y => citingByYear[y]?.[pair]?.pctW ?? null),
+            borderColor: PAIR_COLORS[pair],
+            backgroundColor: PAIR_COLORS[pair] + '33',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHitRadius: 10,
+            tension: 0.3,
+            spanGaps: true,
+        }));
+
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        this._charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: years, datasets },
+            options: {
+                ...CHART_DEFAULTS,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...CHART_DEFAULTS.plugins,
+                    tooltip: {
+                        ...CHART_DEFAULTS.plugins.tooltip,
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1) ?? 'N/A'}%`,
+                        },
+                    },
+                },
+                scales: {
+                    ...CHART_DEFAULTS.scales,
+                    y: {
+                        ...CHART_DEFAULTS.scales.y,
+                        title: { display: true, text: '% cited by woman FA', color: '#8b949e' },
+                    },
+                },
+            },
+        });
+    },
+
+    /**
      * Horizontal bar: classification rate by country.
      */
     qualityCountryChart(canvasId, countryData) {

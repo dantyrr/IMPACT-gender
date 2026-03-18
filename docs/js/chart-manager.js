@@ -165,11 +165,7 @@ const GenderChartManager = {
         const keys = Object.keys(rollingData).sort();
         if (keys.length === 0) return;
 
-        // Monthly keys like "2008-01"; show only January labels on x-axis
         const isMonthly = keys[0].length > 4;
-        const labels = isMonthly
-            ? keys.map(k => k.endsWith('-01') ? k.slice(0, 4) : '')
-            : keys;
 
         const datasets = PAIRS.map(pair => ({
             label: PAIR_LABELS[pair],
@@ -177,7 +173,8 @@ const GenderChartManager = {
             borderColor: PAIR_COLORS[pair],
             backgroundColor: PAIR_COLORS[pair] + '33',
             borderWidth: 2,
-            pointRadius: isMonthly ? 0 : 3,
+            pointRadius: 0,
+            pointHitRadius: 10,
             pointHoverRadius: 4,
             tension: 0.3,
             spanGaps: true,
@@ -186,15 +183,17 @@ const GenderChartManager = {
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels, datasets },
+            data: { labels: keys, datasets },
             options: {
                 ...CHART_DEFAULTS,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
                         ...CHART_DEFAULTS.plugins.tooltip,
+                        mode: 'index',
+                        intersect: false,
                         callbacks: {
-                            title: (items) => keys[items[0].dataIndex],
                             label: (ctx) => {
                                 const key = keys[ctx.dataIndex];
                                 const pair = PAIRS[ctx.datasetIndex];
@@ -213,7 +212,7 @@ const GenderChartManager = {
                             ...CHART_DEFAULTS.scales.x.ticks,
                             maxRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: isMonthly ? 20 : undefined,
+                            maxTicksLimit: 12,
                         },
                     },
                     y: {
@@ -233,17 +232,13 @@ const GenderChartManager = {
         const keys = Object.keys(rollingData).sort();
         if (keys.length === 0) return;
 
-        const isMonthly = keys[0].length > 4;
-        const labels = isMonthly
-            ? keys.map(k => k.endsWith('-01') ? k.slice(0, 4) : '')
-            : keys;
-
         const datasets = PAIRS.map(pair => ({
             label: PAIR_LABELS[pair],
             data: keys.map(k => rollingData[k]?.[pair]?.norm || null),
             borderColor: PAIR_COLORS[pair],
             borderWidth: 2,
-            pointRadius: isMonthly ? 0 : 2,
+            pointRadius: 0,
+            pointHitRadius: 10,
             pointHoverRadius: 4,
             tension: 0.3,
             borderDash: pair === 'MM' ? [5, 5] : [],
@@ -253,15 +248,17 @@ const GenderChartManager = {
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels, datasets },
+            data: { labels: keys, datasets },
             options: {
                 ...CHART_DEFAULTS,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
                         ...CHART_DEFAULTS.plugins.tooltip,
+                        mode: 'index',
+                        intersect: false,
                         callbacks: {
-                            title: (items) => keys[items[0].dataIndex],
                             label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(3) || 'N/A'}x`,
                         },
                     },
@@ -274,7 +271,7 @@ const GenderChartManager = {
                             ...CHART_DEFAULTS.scales.x.ticks,
                             maxRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: isMonthly ? 20 : undefined,
+                            maxTicksLimit: 12,
                         },
                     },
                     y: {

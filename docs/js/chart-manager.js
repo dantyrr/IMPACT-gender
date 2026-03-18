@@ -70,6 +70,8 @@ const GenderChartManager = {
             borderColor: PAIR_COLORS[pair],
             borderWidth: 1,
             fill: true,
+            pointRadius: 0,
+            pointHitRadius: 10,
         }));
 
         const ctx = document.getElementById(canvasId).getContext('2d');
@@ -78,6 +80,7 @@ const GenderChartManager = {
             data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {

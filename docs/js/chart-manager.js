@@ -400,13 +400,14 @@ const GenderChartManager = {
         if (!countryData) return;
 
         // Merge duplicate country names
-        const mergeMap = {
-            'United States': 'USA',
-            'P.R. China': 'China',
-        };
         const merged = {};
+        const normalizeCountry = (name) => {
+            if (/^usa/i.test(name) || name === 'United States') return 'USA';
+            if (/china/i.test(name)) return 'China';
+            return name;
+        };
         for (const [country, d] of Object.entries(countryData)) {
-            const key = mergeMap[country] || country;
+            const key = normalizeCountry(country);
             if (merged[key]) {
                 merged[key].W += d.W;
                 merged[key].M += d.M;

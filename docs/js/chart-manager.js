@@ -158,6 +158,102 @@ const GenderChartManager = {
     },
 
     /**
+     * Rolling 24-month citation rate by gender pair (JIF-style).
+     */
+    rollingIfChart(canvasId, rollingData) {
+        this._destroy(canvasId);
+        const years = Object.keys(rollingData).sort();
+        if (years.length === 0) return;
+
+        const datasets = PAIRS.map(pair => ({
+            label: PAIR_LABELS[pair],
+            data: years.map(y => rollingData[y]?.[pair]?.['if'] || null),
+            borderColor: PAIR_COLORS[pair],
+            backgroundColor: PAIR_COLORS[pair] + '33',
+            borderWidth: 2,
+            pointRadius: 3,
+            tension: 0.3,
+            spanGaps: true,
+        }));
+
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        this._charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: years, datasets },
+            options: {
+                ...CHART_DEFAULTS,
+                plugins: {
+                    ...CHART_DEFAULTS.plugins,
+                    tooltip: {
+                        ...CHART_DEFAULTS.plugins.tooltip,
+                        callbacks: {
+                            label: (ctx) => {
+                                const year = ctx.label;
+                                const pair = PAIRS[ctx.datasetIndex];
+                                const d = rollingData[year]?.[pair];
+                                if (!d) return '';
+                                return `${ctx.dataset.label}: ${d['if'].toFixed(2)} (${d.p} papers, ${d.c} cites)`;
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...CHART_DEFAULTS.scales,
+                    y: {
+                        ...CHART_DEFAULTS.scales.y,
+                        title: { display: true, text: '24-month rolling citation rate', color: '#8b949e' },
+                    },
+                },
+            },
+        });
+    },
+
+    /**
+     * Normalized rolling IF (MM = 1.0 baseline).
+     */
+    rollingIfNormChart(canvasId, rollingData) {
+        this._destroy(canvasId);
+        const years = Object.keys(rollingData).sort();
+        if (years.length === 0) return;
+
+        const datasets = PAIRS.map(pair => ({
+            label: PAIR_LABELS[pair],
+            data: years.map(y => rollingData[y]?.[pair]?.norm || null),
+            borderColor: PAIR_COLORS[pair],
+            borderWidth: 2,
+            pointRadius: 2,
+            tension: 0.3,
+            borderDash: pair === 'MM' ? [5, 5] : [],
+            spanGaps: true,
+        }));
+
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        this._charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: years, datasets },
+            options: {
+                ...CHART_DEFAULTS,
+                plugins: {
+                    ...CHART_DEFAULTS.plugins,
+                    tooltip: {
+                        ...CHART_DEFAULTS.plugins.tooltip,
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(3) || 'N/A'}x`,
+                        },
+                    },
+                },
+                scales: {
+                    ...CHART_DEFAULTS.scales,
+                    y: {
+                        ...CHART_DEFAULTS.scales.y,
+                        title: { display: true, text: 'Relative to MM', color: '#8b949e' },
+                    },
+                },
+            },
+        });
+    },
+
+    /**
      * Normalized citation rate (MM = 1.0 baseline).
      */
     normalizedRateChart(canvasId, rateData) {

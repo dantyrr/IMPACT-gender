@@ -40,16 +40,32 @@
         </div>
 
         <div class="card">
-            <h3>Citation Rate by Gender Pair</h3>
-            <p class="chart-note">Average citations per paper by publication year, stratified by gender pair. Only research articles included.</p>
+            <h3>24-Month Rolling Citation Rate by Gender Pair</h3>
+            <p class="chart-note">Rolling citation rate: citations received in year Y by papers published in Y-1 and Y-2, divided by paper count. Same formula as JIF, stratified by gender pair.</p>
+            <div class="chart-container">
+                <canvas id="rolling-if-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Normalized Rolling Citation Rate (MM = 1.0)</h3>
+            <p class="chart-note">Rolling citation rate of each gender pair relative to MM papers in the same year. Values above 1.0 mean higher citation rates than MM.</p>
+            <div class="chart-container">
+                <canvas id="rolling-if-norm-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Cumulative Citations per Paper by Gender Pair</h3>
+            <p class="chart-note">Total citations accumulated per paper by publication year. Older papers have more time to accumulate citations, so this metric favors earlier years.</p>
             <div class="chart-container">
                 <canvas id="citation-rate-chart"></canvas>
             </div>
         </div>
 
         <div class="card">
-            <h3>Normalized Citation Rate (MM = 1.0)</h3>
-            <p class="chart-note">Citation rate of each gender pair relative to MM papers in the same year. Values above 1.0 mean higher citation rates than MM.</p>
+            <h3>Normalized Cumulative Citations (MM = 1.0)</h3>
+            <p class="chart-note">Cumulative citations per paper relative to MM papers in the same year. Values above 1.0 mean more total citations than MM.</p>
             <div class="chart-container">
                 <canvas id="normalized-rate-chart"></canvas>
             </div>
@@ -80,7 +96,15 @@
             </div>
 
             <div class="card">
-                <h4>Citation Rate by Gender Pair</h4>
+                <h4>24-Month Rolling Citation Rate</h4>
+                <div class="chart-container">
+                    <canvas id="journal-rolling-if-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h4>Cumulative Citations per Paper</h4>
+                <p class="chart-note">Total citations accumulated per paper (older papers have more time to accumulate).</p>
                 <div class="chart-container">
                     <canvas id="journal-rate-chart"></canvas>
                 </div>
@@ -155,7 +179,13 @@
             </table>
 
             <h3>Citation Analysis</h3>
-            <p>Citation counts are from the <a href="https://icite.od.nih.gov/">NIH iCite</a> Open Citation Collection. Only research articles are included (reviews, editorials, etc. are excluded). Citation rates are calculated as total citations divided by number of papers for each gender pair and year.</p>
+            <p>Citation counts are from the <a href="https://icite.od.nih.gov/">NIH iCite</a> Open Citation Collection. Only research articles are included (reviews, editorials, etc. are excluded).</p>
+
+            <h4>24-Month Rolling Citation Rate</h4>
+            <p>Uses the same formula as the Journal Impact Factor: for target year Y, count citations received in year Y by papers published in years Y-1 and Y-2, divided by the number of papers in that window. This is computed separately for each gender pair, controlling for publication age so all papers have the same citation accumulation time.</p>
+
+            <h4>Cumulative Citations per Paper</h4>
+            <p>Total citations ever received divided by number of papers, by publication year. This metric is biased by paper age — older papers have more time to accumulate citations — but shows lifetime citation impact.</p>
 
             <h3>Data Sources</h3>
             <ul>

@@ -64,6 +64,14 @@ class GenderApp {
         if (!d) return;
 
         GenderChartManager.compositionChart('composition-chart', d.composition);
+
+        // Rolling 24-month citation rate (JIF-style, age-controlled)
+        if (d.rolling_if_24m) {
+            GenderChartManager.rollingIfChart('rolling-if-chart', d.rolling_if_24m);
+            GenderChartManager.rollingIfNormChart('rolling-if-norm-chart', d.rolling_if_24m);
+        }
+
+        // Cumulative citations per paper (biased by age, but shows lifetime impact)
         GenderChartManager.citationRateChart('citation-rate-chart', d.citation_rates);
         GenderChartManager.normalizedRateChart('normalized-rate-chart', d.citation_rates);
 
@@ -239,6 +247,12 @@ class GenderApp {
         document.getElementById('journal-name').textContent = data.name || name;
 
         GenderChartManager.journalCompositionChart('journal-composition-chart', data.yearly);
+
+        // Rolling IF chart (if data available)
+        if (data.rolling_if) {
+            GenderChartManager.rollingIfChart('journal-rolling-if-chart', data.rolling_if);
+        }
+
         GenderChartManager.journalRateChart('journal-rate-chart', data.yearly);
 
         // Summary

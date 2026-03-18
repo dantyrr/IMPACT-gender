@@ -115,6 +115,7 @@ def compute_citing_gender_aggregate(conn, start_year, end_year):
         total = results[pair]["W"] + results[pair]["M"]
         results[pair]["total"] = total
         results[pair]["pctW"] = round(results[pair]["W"] / total * 100, 1) if total > 0 else 0
+        results[pair]["pctM"] = round(results[pair]["M"] / total * 100, 1) if total > 0 else 0
 
     return results
 

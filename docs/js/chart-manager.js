@@ -337,7 +337,11 @@ const GenderChartManager = {
 
         const labels = PAIRS.map(p => `Papers by ${p}`);
         const wPcts = PAIRS.map(p => citingData[p]?.pctW || 0);
-        const mPcts = PAIRS.map(p => citingData[p]?.pctM || 0);
+        const mPcts = PAIRS.map(p => {
+            const d = citingData[p];
+            if (!d) return 0;
+            return d.pctM != null ? d.pctM : (d.pctW != null ? +(100 - d.pctW).toFixed(1) : 0);
+        });
 
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {

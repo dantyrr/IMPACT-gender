@@ -257,6 +257,19 @@ class GenderApp {
 
         GenderChartManager.journalRateChart('journal-rate-chart', data.yearly);
 
+        // Citing gender charts (if data available)
+        const citingCard = document.getElementById('journal-citing-card');
+        const gapCard = document.getElementById('journal-gap-card');
+        if (data.citing_gender_by_year && Object.keys(data.citing_gender_by_year).length > 0) {
+            citingCard.style.display = '';
+            gapCard.style.display = '';
+            GenderChartManager.citingByYearChart('journal-citing-by-year-chart', data.citing_gender_by_year);
+            GenderChartManager.citingGapChart('journal-citing-gap-chart', data.citing_gender_by_year);
+        } else {
+            citingCard.style.display = 'none';
+            gapCard.style.display = 'none';
+        }
+
         // Summary
         const years = Object.keys(data.yearly).sort();
         const latestYear = years[years.length - 1];

@@ -652,6 +652,7 @@ const GenderChartManager = {
             data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
@@ -694,7 +695,8 @@ const GenderChartManager = {
             borderColor: PAIR_COLORS[pair],
             backgroundColor: PAIR_COLORS[pair] + '33',
             borderWidth: 2,
-            pointRadius: 3,
+            pointRadius: 0,
+            pointHitRadius: 10,
             tension: 0.3,
             spanGaps: true,
         }));
@@ -705,6 +707,7 @@ const GenderChartManager = {
             data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {

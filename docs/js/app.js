@@ -14,9 +14,10 @@ class GenderApp {
         this.genderNames = null;
 
         // Author tab state
-        this._authorPapers = [];       // iCite records for the author's papers
-        this._authorRefData = [];       // iCite records for referenced papers
-        this._authorSearchName = '';    // The searched author name (for self-citation detection)
+        this._authorPapers = [];
+        this._authorRefData = [];
+        this._authorSearchName = '';
+        this._authorExcluded = new Set();  // PMIDs to exclude (unchecked papers)
     }
 
     async init() {
@@ -41,7 +42,6 @@ class GenderApp {
             console.warn('Could not load journal index:', e);
         }
 
-        // Pre-load gender dictionary
         try {
             this.genderNames = await GenderDataLoader.loadGenderNames();
         } catch (e) {
@@ -56,8 +56,7 @@ class GenderApp {
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const section = link.dataset.section;
-                this._switchSection(section);
+                this._switchSection(link.dataset.section);
             });
         });
     }
@@ -65,7 +64,6 @@ class GenderApp {
     _switchSection(section) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-
         document.getElementById(section)?.classList.add('active');
         document.querySelector(`.nav-link[data-section="${section}"]`)?.classList.add('active');
         this.currentSection = section;
@@ -101,14 +99,10 @@ class GenderApp {
 
             let rateSummary = '';
             if (rates) {
-                const pairs = ['WW', 'WM', 'MW', 'MM'];
-                const rateStrs = pairs.map(p =>
+                const rateStrs = ['WW', 'WM', 'MW', 'MM'].map(p =>
                     `${p}: <span class="stat-highlight">${rates[p]?.r?.toFixed(2) || 'N/A'}</span>`
                 ).join(' | ');
-                rateSummary = `
-                    <h4>Citation rates (${rateYear})</h4>
-                    <p>${rateStrs} citations per paper</p>
-                `;
+                rateSummary = `<h4>Citation rates (${rateYear})</h4><p>${rateStrs} citations per paper</p>`;
             }
 
             document.getElementById('overview-summary').innerHTML = `
@@ -136,6 +130,8 @@ class GenderApp {
         if (!d?.citing_gender) return;
 
         GenderChartManager.citingChart('citing-chart', d.citing_gender);
+        GenderChartManager.citingByYearChart('citing-by-year-chart', d.citing_gender_by_year);
+        GenderChartManager.citingGapChart('citing-gap-chart', d.citing_gender_by_year);
 
         const citing = d.citing_gender;
         let html = '<h4>Citing gender patterns</h4>';
@@ -161,36 +157,23 @@ class GenderApp {
 
         const overall = q.overall;
         const total = overall.total || 0;
-        const wPct = overall.W?.pct || 0;
-        const mPct = overall.M?.pct || 0;
-        const uPct = overall.U?.pct || 0;
 
         let countryNote = '';
         if (q.by_country) {
             const highCountries = Object.entries(q.by_country)
-                .filter(([, d]) => d.pctAssigned >= 70)
-                .map(([c]) => c)
-                .slice(0, 5)
-                .join(', ');
+                .filter(([, d]) => d.pctAssigned >= 70).map(([c]) => c).slice(0, 5).join(', ');
             const lowCountries = Object.entries(q.by_country)
-                .filter(([, d]) => d.pctAssigned < 40)
-                .map(([c]) => c)
-                .slice(0, 5)
-                .join(', ');
-            if (highCountries) {
-                countryNote += `<p>Highest classification rates: ${highCountries}</p>`;
-            }
-            if (lowCountries) {
-                countryNote += `<p>Lowest classification rates: ${lowCountries}</p>`;
-            }
+                .filter(([, d]) => d.pctAssigned < 40).map(([c]) => c).slice(0, 5).join(', ');
+            if (highCountries) countryNote += `<p>Highest classification rates: ${highCountries}</p>`;
+            if (lowCountries) countryNote += `<p>Lowest classification rates: ${lowCountries}</p>`;
         }
 
         document.getElementById('quality-summary').innerHTML = `
             <h4>Classification summary</h4>
             <p>Of ${total.toLocaleString()} papers with extractable first names:</p>
-            <p>Woman: <span class="stat-highlight">${wPct}%</span> |
-               Man: <span class="stat-highlight">${mPct}%</span> |
-               Unknown: <span class="stat-highlight">${uPct}%</span></p>
+            <p>Woman: <span class="stat-highlight">${overall.W?.pct || 0}%</span> |
+               Man: <span class="stat-highlight">${overall.M?.pct || 0}%</span> |
+               Unknown: <span class="stat-highlight">${overall.U?.pct || 0}%</span></p>
             ${countryNote}
         `;
     }
@@ -203,20 +186,14 @@ class GenderApp {
 
         input.addEventListener('input', () => {
             const query = input.value.trim().toLowerCase();
-            if (query.length < 2) {
-                dropdown.classList.remove('open');
-                return;
-            }
+            if (query.length < 2) { dropdown.classList.remove('open'); return; }
 
             const matches = this.journalIndex
                 .filter(j => (j.name || '').toLowerCase().includes(query))
                 .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                 .slice(0, 20);
 
-            if (matches.length === 0) {
-                dropdown.classList.remove('open');
-                return;
-            }
+            if (matches.length === 0) { dropdown.classList.remove('open'); return; }
 
             dropdown.innerHTML = matches.map(j =>
                 `<div class="journal-option" data-slug="${j.slug}">${j.name}</div>`
@@ -233,9 +210,7 @@ class GenderApp {
         });
 
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.journal-picker-container')) {
-                dropdown.classList.remove('open');
-            }
+            if (!e.target.closest('.journal-picker-container')) dropdown.classList.remove('open');
         });
     }
 
@@ -262,13 +237,27 @@ class GenderApp {
 
         GenderChartManager.journalRateChart('journal-rate-chart', data.yearly);
 
+        // Citing gender charts
+        const citingCard = document.getElementById('journal-citing-card');
+        const gapCard = document.getElementById('journal-gap-card');
+        if (data.citing_gender_by_year && Object.keys(data.citing_gender_by_year).length > 0) {
+            citingCard.style.display = '';
+            gapCard.style.display = '';
+            GenderChartManager.citingByYearChart('journal-citing-by-year-chart', data.citing_gender_by_year);
+            GenderChartManager.citingGapChart('journal-citing-gap-chart', data.citing_gender_by_year);
+        } else {
+            citingCard.style.display = 'none';
+            gapCard.style.display = 'none';
+        }
+
         const years = Object.keys(data.yearly).sort();
         const latestYear = years[years.length - 1];
         const latest = data.yearly[latestYear];
         const totalPapers = Object.keys(latest).reduce((s, p) => s + (latest[p]?.p || 0), 0);
 
         let html = `<h4>${data.name || name} (${latestYear})</h4>`;
-        html += `<p>${totalPapers} classified research papers</p>`;
+        html += `<p>${totalPapers.toLocaleString()} research papers with gender-classified authors</p>`;
+        html += `<p class="chart-note" style="margin-top:0">Papers where both first and last author names could be classified.</p>`;
 
         for (const pair of ['WW', 'WM', 'MW', 'MM']) {
             const d = latest[pair];
@@ -289,6 +278,10 @@ class GenderApp {
         document.getElementById('author-name-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this._searchAuthorByName();
         });
+        document.getElementById('author-ncbi-btn').addEventListener('click', () => this._loadFromNCBIUrl());
+        document.getElementById('author-ncbi-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this._loadFromNCBIUrl();
+        });
         document.getElementById('author-pmid-btn').addEventListener('click', () => this._loadAuthorPMIDs());
         document.getElementById('author-exclude-self').addEventListener('change', () => this._renderAuthorResults());
     }
@@ -305,11 +298,11 @@ class GenderApp {
     }
 
     async _searchAuthorByName() {
-        const input = document.getElementById('author-name-input');
-        const name = input.value.trim();
+        const name = document.getElementById('author-name-input').value.trim();
         if (!name) return;
 
         this._authorSearchName = name;
+        this._authorExcluded = new Set();
         document.getElementById('author-results').style.display = 'none';
         this._showAuthorStatus(`Searching PubMed for "${name}"...`);
 
@@ -319,18 +312,103 @@ class GenderApp {
                 this._showAuthorStatus(`No papers found for "${name}" on PubMed.`, true);
                 return;
             }
-
             this._showAuthorStatus(`Found ${totalFound} papers. Fetching data from iCite...`);
-            await this._processAuthorPMIDs(pmids, totalFound);
+            await this._processAuthorPMIDs(pmids);
         } catch (e) {
             console.error('Author search failed:', e);
             this._showAuthorStatus(`Search failed: ${e.message}`, true);
         }
     }
 
+    async _loadFromNCBIUrl() {
+        const val = document.getElementById('author-ncbi-input').value.trim();
+        if (!val) return;
+
+        this._authorSearchName = '';
+        this._authorExcluded = new Set();
+        document.getElementById('author-results').style.display = 'none';
+        this._showAuthorStatus('Fetching NCBI bibliography...');
+
+        try {
+            const baseUrl = val.replace(/[?#].*$/, '').replace(/\/+$/, '');
+
+            const fetchProxy = async (url, json) => {
+                const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const body = json ? (await resp.json()).contents : await resp.text();
+                if (!body || !body.includes('pubmed')) throw new Error('no pubmed links');
+                return body;
+            };
+
+            const fetchPage = (pageNum) => {
+                const pageUrl = pageNum === 1 ? val : `${baseUrl}?page=${pageNum}`;
+                const enc = encodeURIComponent(pageUrl);
+                return Promise.any([
+                    fetchProxy(`https://corsproxy.io/?url=${enc}`, false),
+                    fetchProxy(`https://api.allorigins.win/get?url=${enc}`, true),
+                    fetchProxy(`https://api.codetabs.com/v1/proxy?quest=${enc}`, false),
+                ]);
+            };
+
+            const extractPmids = html => [...html.matchAll(/\/pubmed\/(\d+)/g)].map(m => m[1]);
+
+            const page1Html = await fetchPage(1).catch(() => {
+                throw new Error('All CORS proxies failed — try again in a moment.');
+            });
+
+            const page1Pmids = extractPmids(page1Html);
+            if (!page1Pmids.length) {
+                this._showAuthorStatus('No PMIDs found. Make sure the bibliography is set to public.', true);
+                return;
+            }
+
+            const allPmids = new Set(page1Pmids);
+
+            const totalMatch =
+                page1Html.match(/\((\d[\d,]*)\s+publications?\)/i) ||
+                page1Html.match(/(\d[\d,]*)\s+publications?/i) ||
+                page1Html.match(/"count"\s*:\s*(\d+)/i);
+            const totalCount = totalMatch ? parseInt(totalMatch[1].replace(/,/g, ''), 10) : null;
+
+            const PAGE_SIZE = page1Pmids.length || 50;
+            const MAX_PAGES = 40;
+
+            if (totalCount && totalCount > allPmids.size) {
+                const pagesNeeded = Math.min(Math.ceil(totalCount / PAGE_SIZE), MAX_PAGES);
+                this._showAuthorStatus(`${totalCount} papers found — loading ${pagesNeeded} pages...`);
+
+                for (let p = 2; p <= pagesNeeded; p += 3) {
+                    const batch = [p, p + 1, p + 2].filter(n => n <= pagesNeeded);
+                    this._showAuthorStatus(`Loading pages ${batch[0]}–${batch[batch.length - 1]} of ${pagesNeeded}... (${allPmids.size} papers so far)`);
+                    const batchHtml = await Promise.all(
+                        batch.map(n => fetchPage(n).then(extractPmids).catch(() => []))
+                    );
+                    batchHtml.flat().forEach(id => allPmids.add(id));
+                }
+            } else if (!totalCount && page1Pmids.length >= PAGE_SIZE) {
+                for (let p = 2; p <= MAX_PAGES; p++) {
+                    const pageHtml = await fetchPage(p).catch(() => null);
+                    if (!pageHtml) break;
+                    const pids = extractPmids(pageHtml);
+                    if (!pids.length) break;
+                    const before = allPmids.size;
+                    pids.forEach(id => allPmids.add(id));
+                    if (allPmids.size === before) break;
+                    this._showAuthorStatus(`${allPmids.size} papers loaded (page ${p})...`);
+                }
+            }
+
+            const pmids = [...allPmids];
+            this._showAuthorStatus(`Found ${pmids.length} papers. Fetching data from iCite...`);
+            await this._processAuthorPMIDs(pmids);
+        } catch (e) {
+            console.error('NCBI bibliography load error:', e);
+            this._showAuthorStatus(`Error: ${e.message}`, true);
+        }
+    }
+
     async _loadAuthorPMIDs() {
-        const textarea = document.getElementById('author-pmid-input');
-        const text = textarea.value.trim();
+        const text = document.getElementById('author-pmid-input').value.trim();
         if (!text) return;
 
         const pmids = [...new Set(text.split(/[\s,;]+/).map(s => s.replace(/\D/g, '')).filter(s => s.length >= 5))];
@@ -340,19 +418,19 @@ class GenderApp {
         }
 
         this._authorSearchName = '';
+        this._authorExcluded = new Set();
         document.getElementById('author-results').style.display = 'none';
         this._showAuthorStatus(`Loading ${pmids.length} PMIDs from iCite...`);
 
         try {
-            await this._processAuthorPMIDs(pmids, pmids.length);
+            await this._processAuthorPMIDs(pmids);
         } catch (e) {
             console.error('PMID load failed:', e);
             this._showAuthorStatus(`Load failed: ${e.message}`, true);
         }
     }
 
-    async _processAuthorPMIDs(pmids, totalFound) {
-        // Step 1: Fetch iCite for the author's papers
+    async _processAuthorPMIDs(pmids) {
         const papers = await GenderDataLoader.fetchICite(pmids);
         this._authorPapers = papers;
 
@@ -361,73 +439,50 @@ class GenderApp {
             return;
         }
 
-        // Step 2: Collect all referenced PMIDs
+        // Collect all referenced PMIDs
         const refPmidSet = new Set();
         for (const p of papers) {
             if (p.references && Array.isArray(p.references)) {
                 for (const r of p.references) refPmidSet.add(String(r));
             }
         }
-        const refPmids = [...refPmidSet];
 
-        if (refPmids.length === 0) {
+        if (refPmidSet.size === 0) {
             this._showAuthorStatus('No reference data available from iCite for these papers.', true);
             return;
         }
 
-        this._showAuthorStatus(`Found ${papers.length} papers with ${refPmids.length} unique references. Fetching reference data...`);
+        this._showAuthorStatus(`Found ${papers.length} papers with ${refPmidSet.size} unique references. Fetching reference data...`);
 
-        // Step 3: Fetch iCite for all referenced papers (to get author names)
-        const refData = await GenderDataLoader.fetchICite(refPmids);
-        this._authorRefData = refData;
+        this._authorRefData = await GenderDataLoader.fetchICite([...refPmidSet]);
 
-        this._showAuthorStatus(`Analyzing gender of ${refData.length} referenced papers...`);
-
-        // Step 4: Render results
+        this._showAuthorStatus(`Analyzing gender of ${this._authorRefData.length} referenced papers...`);
         this._renderAuthorResults();
         this._hideAuthorStatus();
         document.getElementById('author-results').style.display = '';
     }
 
-    /**
-     * Extract the first usable first name from an iCite author's firstName field.
-     * iCite returns names like "John M" or "A B" — we need the first token
-     * and it must not be a single initial.
-     */
     _extractFirstName(authorObj) {
         if (!authorObj || !authorObj.firstName) return null;
         const parts = authorObj.firstName.trim().split(/\s+/);
         for (const part of parts) {
-            // Skip single initials like "J" or "J."
             const clean = part.replace(/\.$/, '');
             if (clean.length > 1) return clean.toLowerCase();
         }
         return null;
     }
 
-    /**
-     * Infer gender from a first name using the bundled dictionary.
-     * Returns 'W', 'M', or null.
-     */
     _inferGender(firstName) {
         if (!firstName || !this.genderNames) return null;
         return this.genderNames[firstName.toLowerCase()] || null;
     }
 
-    /**
-     * Check if a paper's author list contains the searched author name.
-     * Matches on last name (case-insensitive).
-     */
     _isSelfCitation(refPaper) {
         if (!this._authorSearchName || !refPaper.authors) return false;
-        // Parse search name: "Tyrrell DJ" → lastName = "Tyrrell"
         const searchParts = this._authorSearchName.trim().split(/\s+/);
         const searchLast = searchParts[0].toLowerCase();
-
         if (Array.isArray(refPaper.authors)) {
-            return refPaper.authors.some(a =>
-                a.lastName && a.lastName.toLowerCase() === searchLast
-            );
+            return refPaper.authors.some(a => a.lastName && a.lastName.toLowerCase() === searchLast);
         }
         return false;
     }
@@ -437,21 +492,17 @@ class GenderApp {
         const refData = this._authorRefData;
         const includeSelf = document.getElementById('author-exclude-self').checked;
 
-        // Build a map of referenced paper PMID → iCite record
         const refMap = new Map();
-        for (const r of refData) {
-            refMap.set(String(r.pmid), r);
-        }
+        for (const r of refData) refMap.set(String(r.pmid), r);
 
-        // Classify each referenced paper
         const counts = { WW: 0, WM: 0, MW: 0, MM: 0, unknown: 0 };
         let totalRefs = 0;
         let selfCitCount = 0;
-
-        // Build paper-level data for the table
         const paperRows = [];
 
         for (const paper of papers) {
+            // Skip excluded papers
+            if (this._authorExcluded.has(String(paper.pmid))) continue;
             if (!paper.references || !Array.isArray(paper.references)) continue;
 
             let paperWW = 0, paperWM = 0, paperMW = 0, paperMM = 0, paperUnk = 0, paperSelf = 0;
@@ -464,7 +515,6 @@ class GenderApp {
                     continue;
                 }
 
-                // Check self-citation
                 const isSelf = this._isSelfCitation(ref);
                 if (isSelf) paperSelf++;
                 if (isSelf && !includeSelf) {
@@ -476,12 +526,8 @@ class GenderApp {
 
                 const fa = ref.authors[0];
                 const la = ref.authors.length > 1 ? ref.authors[ref.authors.length - 1] : fa;
-
-                const faName = this._extractFirstName(fa);
-                const laName = this._extractFirstName(la);
-
-                const faGender = this._inferGender(faName);
-                const laGender = this._inferGender(laName);
+                const faGender = this._inferGender(this._extractFirstName(fa));
+                const laGender = this._inferGender(this._extractFirstName(la));
 
                 if (faGender && laGender) {
                     const pair = faGender + laGender;
@@ -507,19 +553,14 @@ class GenderApp {
             });
         }
 
-        // Compute percentages
         const classified = counts.WW + counts.WM + counts.MW + counts.MM;
         const pct = (v) => classified > 0 ? (v / classified * 100).toFixed(1) : '0.0';
 
-        // Update note
         const noteEl = document.getElementById('author-breakdown-note');
         let noteText = `${classified.toLocaleString()} references with classifiable gender pairs out of ${totalRefs.toLocaleString()} total.`;
-        if (!includeSelf && selfCitCount > 0) {
-            noteText += ` ${selfCitCount} self-citations excluded.`;
-        }
+        if (!includeSelf && selfCitCount > 0) noteText += ` ${selfCitCount} self-citations excluded.`;
         noteEl.textContent = noteText;
 
-        // Update metrics
         const metricsEl = document.getElementById('author-metrics');
         metricsEl.innerHTML = ['WW', 'WM', 'MW', 'MM'].map(pair =>
             `<div class="author-metric">
@@ -534,27 +575,42 @@ class GenderApp {
                 <span class="author-metric-pct">unknown</span>
             </div>`;
 
-        // Chart
         GenderChartManager.authorGenderChart('author-gender-chart', counts);
 
-        // Papers table
-        document.getElementById('author-paper-count').textContent = paperRows.length;
+        document.getElementById('author-paper-count').textContent =
+            `${paperRows.length}` + (this._authorExcluded.size > 0 ? ` of ${this._authorPapers.length}` : '');
         this._renderAuthorPapersTable(paperRows);
     }
 
     _renderAuthorPapersTable(rows) {
         const container = document.getElementById('author-papers-table');
-        if (rows.length === 0) {
+        if (rows.length === 0 && this._authorPapers.length === 0) {
             container.innerHTML = '<p style="color:var(--text-muted)">No papers with reference data.</p>';
             return;
         }
 
-        // Sort by year desc
-        rows.sort((a, b) => b.year - a.year);
+        // Build all rows (included + excluded) sorted by year desc
+        const allRows = [];
+        for (const paper of this._authorPapers) {
+            const existing = rows.find(r => String(r.pmid) === String(paper.pmid));
+            allRows.push({
+                pmid: paper.pmid,
+                title: paper.title || 'Untitled',
+                journal: paper.journal || '',
+                year: paper.year || 0,
+                refs: paper.references ? paper.references.length : 0,
+                ww: existing?.ww || 0, wm: existing?.wm || 0,
+                mw: existing?.mw || 0, mm: existing?.mm || 0,
+                unk: existing?.unk || 0,
+                included: !this._authorExcluded.has(String(paper.pmid)),
+            });
+        }
+        allRows.sort((a, b) => b.year - a.year);
 
         let html = `<table class="author-table">
             <thead>
                 <tr>
+                    <th class="cb-cell"></th>
                     <th>Title</th>
                     <th>Journal</th>
                     <th>Year</th>
@@ -568,26 +624,44 @@ class GenderApp {
             </thead>
             <tbody>`;
 
-        for (const r of rows) {
-            html += `<tr class="author-paper-row" data-pmid="${r.pmid}">
+        for (const r of allRows) {
+            const checked = r.included ? 'checked' : '';
+            const dimClass = r.included ? '' : ' author-row-excluded';
+            html += `<tr class="author-paper-row${dimClass}" data-pmid="${r.pmid}">
+                <td class="cb-cell"><input type="checkbox" class="author-paper-cb" data-pmid="${r.pmid}" ${checked}></td>
                 <td class="author-title-cell">${this._escapeHtml(r.title)}</td>
                 <td>${this._escapeHtml(r.journal)}</td>
                 <td>${r.year}</td>
                 <td>${r.refs}</td>
-                <td>${r.ww || ''}</td>
-                <td>${r.wm || ''}</td>
-                <td>${r.mw || ''}</td>
-                <td>${r.mm || ''}</td>
-                <td>${r.unk || ''}</td>
+                <td>${r.included ? (r.ww || '') : ''}</td>
+                <td>${r.included ? (r.wm || '') : ''}</td>
+                <td>${r.included ? (r.mw || '') : ''}</td>
+                <td>${r.included ? (r.mm || '') : ''}</td>
+                <td>${r.included ? (r.unk || '') : ''}</td>
             </tr>`;
         }
 
         html += '</tbody></table>';
         container.innerHTML = html;
 
-        // Click to open PubMed
+        // Checkbox handlers
+        container.querySelectorAll('.author-paper-cb').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const pmid = cb.dataset.pmid;
+                if (cb.checked) {
+                    this._authorExcluded.delete(pmid);
+                } else {
+                    this._authorExcluded.add(pmid);
+                }
+                this._renderAuthorResults();
+            });
+        });
+
+        // Click row to open PubMed (but not on checkbox)
         container.querySelectorAll('.author-paper-row').forEach(row => {
-            row.addEventListener('click', () => {
+            row.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT') return;
                 window.open(`https://pubmed.ncbi.nlm.nih.gov/${row.dataset.pmid}/`, '_blank');
             });
         });

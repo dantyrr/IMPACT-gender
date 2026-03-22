@@ -91,6 +91,7 @@
 
             <div class="card">
                 <h4>Gender Pair Composition</h4>
+                <p class="chart-note">Percentage of research papers by gender pair each year. Only includes papers where both first and last author names could be gender-classified — papers with initials-only or unclassifiable names (common with East Asian names) are excluded.</p>
                 <div class="chart-container">
                     <canvas id="journal-composition-chart"></canvas>
                 </div>
@@ -111,6 +112,22 @@
                 </div>
             </div>
 
+            <div class="card" id="journal-citing-card" style="display:none;">
+                <h4>% Cited by Woman First Author Over Time</h4>
+                <p class="chart-note">For this journal's papers by each gender pair, the percentage of citations each year from a woman first author.</p>
+                <div class="chart-container">
+                    <canvas id="journal-citing-by-year-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card" id="journal-gap-card" style="display:none;">
+                <h4>Citation Gender Gap Over Time</h4>
+                <p class="chart-note">The gap between % cited by man first author and % cited by woman first author for this journal.</p>
+                <div class="chart-container">
+                    <canvas id="journal-citing-gap-chart"></canvas>
+                </div>
+            </div>
+
             <div id="journal-summary" class="summary-box"></div>
         </div>
     </section>
@@ -118,19 +135,36 @@
     <!-- ============ AUTHOR ============ -->
     <section id="author" class="section">
         <h2>Author Citation Gender Analysis</h2>
-        <p class="section-desc">Look up an author to see the gender breakdown of the papers they cite. How do their citation patterns compare to the field average?</p>
+        <p class="section-desc">Search by name, load from an NCBI bibliography URL, or paste a list of PMIDs to analyze the gender breakdown of papers an author cites.</p>
 
-        <div class="card">
-            <h3>Search by Author Name</h3>
-            <p class="chart-note">Enter an author name as it appears on PubMed (e.g., "Tyrrell DJ" or "Smith J"). Searches PubMed for their papers, then analyzes the gender pairs of cited references.</p>
-            <div class="author-search-row">
-                <input type="text" id="author-name-input" class="journal-search" placeholder="Lastname AB" autocomplete="off">
-                <button id="author-search-btn" class="author-btn">Search</button>
+        <div class="author-search-modes">
+            <div class="author-mode-block">
+                <label class="author-mode-label">Search by name</label>
+                <p class="author-mode-hint">May return multiple authors with similar names. Use "Lastname AB" format for best results.</p>
+                <div class="author-search-bar">
+                    <input type="text" id="author-name-input" placeholder='e.g. "Tyrrell DJ"' autocomplete="off">
+                    <button id="author-search-btn" class="author-btn">Search</button>
+                </div>
             </div>
-            <p class="chart-note" style="margin-top:0.5rem;">Or paste PMIDs (one per line or comma-separated):</p>
-            <div class="author-search-row">
-                <textarea id="author-pmid-input" class="author-textarea" rows="2" placeholder="12345678, 23456789, ..."></textarea>
-                <button id="author-pmid-btn" class="author-btn">Load PMIDs</button>
+
+            <div class="author-mode-divider">or</div>
+
+            <div class="author-mode-block">
+                <label class="author-mode-label">Load from NCBI bibliography URL</label>
+                <p class="author-mode-hint">Paste your public MyNCBI bibliography URL. All pages are fetched automatically. Find yours at <a href="https://www.ncbi.nlm.nih.gov/myncbi/" target="_blank" rel="noopener">ncbi.nlm.nih.gov/myncbi</a>.</p>
+                <div class="author-search-bar">
+                    <input type="text" id="author-ncbi-input" placeholder="https://www.ncbi.nlm.nih.gov/myncbi/..." autocomplete="off">
+                    <button id="author-ncbi-btn" class="author-btn">Load</button>
+                </div>
+            </div>
+
+            <div class="author-mode-divider">or</div>
+
+            <div class="author-mode-block">
+                <label class="author-mode-label">Paste PMID list</label>
+                <p class="author-mode-hint">Paste PMIDs one per line or comma-separated (e.g. exported via NCBI "Manage Citations &rarr; Export File").</p>
+                <textarea id="author-pmid-input" class="author-textarea" rows="4" placeholder="41177156&#10;40504687&#10;39757022&#10;..."></textarea>
+                <button id="author-pmid-btn" class="author-btn" style="margin-top:0.4rem;">Load PMIDs</button>
             </div>
         </div>
 
@@ -154,6 +188,7 @@
 
             <div class="card">
                 <h3>Papers (<span id="author-paper-count">0</span>)</h3>
+                <p class="chart-note">Uncheck papers to exclude them from the analysis (e.g. papers by a different author with the same name).</p>
                 <div id="author-papers-table" class="author-table-container"></div>
             </div>
         </div>
@@ -169,6 +204,22 @@
             <p class="chart-note">For each cited gender pair, the percentage of citing papers with a woman vs man first author. Aggregated across all journals.</p>
             <div class="chart-container chart-container-short">
                 <canvas id="citing-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>% Cited by Woman First Author Over Time</h3>
+            <p class="chart-note">For each cited gender pair, the percentage of citations in a given year that come from a paper with a woman first author.</p>
+            <div class="chart-container">
+                <canvas id="citing-by-year-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Citation Gender Gap Over Time</h3>
+            <p class="chart-note">The gap between % cited by man first author and % cited by woman first author. Positive values mean more citations from men; negative means more from women.</p>
+            <div class="chart-container">
+                <canvas id="citing-gap-chart"></canvas>
             </div>
         </div>
 

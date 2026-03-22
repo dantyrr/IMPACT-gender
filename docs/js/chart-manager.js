@@ -70,8 +70,6 @@ const GenderChartManager = {
             borderColor: PAIR_COLORS[pair],
             borderWidth: 1,
             fill: true,
-            pointRadius: 0,
-            pointHitRadius: 10,
         }));
 
         const ctx = document.getElementById(canvasId).getContext('2d');
@@ -80,7 +78,6 @@ const GenderChartManager = {
             data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
@@ -113,7 +110,6 @@ const GenderChartManager = {
     citationRateChart(canvasId, rateData) {
         this._destroy(canvasId);
         const years = Object.keys(rateData).sort();
-        // Skip last 2 years (incomplete citation data)
         const displayYears = years.slice(0, -2);
         if (displayYears.length === 0) return;
 
@@ -165,20 +161,16 @@ const GenderChartManager = {
      */
     rollingIfChart(canvasId, rollingData) {
         this._destroy(canvasId);
-        const keys = Object.keys(rollingData).sort();
-        if (keys.length === 0) return;
-
-        const isMonthly = keys[0].length > 4;
+        const years = Object.keys(rollingData).sort();
+        if (years.length === 0) return;
 
         const datasets = PAIRS.map(pair => ({
             label: PAIR_LABELS[pair],
-            data: keys.map(k => rollingData[k]?.[pair]?.['if'] || null),
+            data: years.map(y => rollingData[y]?.[pair]?.['if'] || null),
             borderColor: PAIR_COLORS[pair],
             backgroundColor: PAIR_COLORS[pair] + '33',
             borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 10,
-            pointHoverRadius: 4,
+            pointRadius: 3,
             tension: 0.3,
             spanGaps: true,
         }));
@@ -186,41 +178,29 @@ const GenderChartManager = {
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels: keys, datasets },
+            data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
                         ...CHART_DEFAULTS.plugins.tooltip,
-                        mode: 'index',
-                        intersect: false,
                         callbacks: {
                             label: (ctx) => {
-                                const key = keys[ctx.dataIndex];
+                                const year = ctx.label;
                                 const pair = PAIRS[ctx.datasetIndex];
-                                const d = rollingData[key]?.[pair];
+                                const d = rollingData[year]?.[pair];
                                 if (!d) return '';
-                                return `${ctx.dataset.label}: ${d['if'].toFixed(2)} (${d.p.toLocaleString()} papers, ${d.c.toLocaleString()} cites)`;
+                                return `${ctx.dataset.label}: ${d['if'].toFixed(2)} (${d.p} papers, ${d.c} cites)`;
                             },
                         },
                     },
                 },
                 scales: {
                     ...CHART_DEFAULTS.scales,
-                    x: {
-                        ...CHART_DEFAULTS.scales.x,
-                        ticks: {
-                            ...CHART_DEFAULTS.scales.x.ticks,
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 12,
-                        },
-                    },
                     y: {
                         ...CHART_DEFAULTS.scales.y,
-                        title: { display: true, text: 'Rolling citation rate', color: '#8b949e' },
+                        title: { display: true, text: '24-month rolling citation rate', color: '#8b949e' },
                     },
                 },
             },
@@ -232,17 +212,15 @@ const GenderChartManager = {
      */
     rollingIfNormChart(canvasId, rollingData) {
         this._destroy(canvasId);
-        const keys = Object.keys(rollingData).sort();
-        if (keys.length === 0) return;
+        const years = Object.keys(rollingData).sort();
+        if (years.length === 0) return;
 
         const datasets = PAIRS.map(pair => ({
             label: PAIR_LABELS[pair],
-            data: keys.map(k => rollingData[k]?.[pair]?.norm || null),
+            data: years.map(y => rollingData[y]?.[pair]?.norm || null),
             borderColor: PAIR_COLORS[pair],
             borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 10,
-            pointHoverRadius: 4,
+            pointRadius: 2,
             tension: 0.3,
             borderDash: pair === 'MM' ? [5, 5] : [],
             spanGaps: true,
@@ -251,16 +229,13 @@ const GenderChartManager = {
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels: keys, datasets },
+            data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
                         ...CHART_DEFAULTS.plugins.tooltip,
-                        mode: 'index',
-                        intersect: false,
                         callbacks: {
                             label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(3) || 'N/A'}x`,
                         },
@@ -268,15 +243,6 @@ const GenderChartManager = {
                 },
                 scales: {
                     ...CHART_DEFAULTS.scales,
-                    x: {
-                        ...CHART_DEFAULTS.scales.x,
-                        ticks: {
-                            ...CHART_DEFAULTS.scales.x.ticks,
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 12,
-                        },
-                    },
                     y: {
                         ...CHART_DEFAULTS.scales.y,
                         title: { display: true, text: 'Relative to MM', color: '#8b949e' },
@@ -340,11 +306,7 @@ const GenderChartManager = {
 
         const labels = PAIRS.map(p => `Papers by ${p}`);
         const wPcts = PAIRS.map(p => citingData[p]?.pctW || 0);
-        const mPcts = PAIRS.map(p => {
-            const d = citingData[p];
-            if (!d) return 0;
-            return d.pctM != null ? d.pctM : (d.pctW != null ? +(100 - d.pctW).toFixed(1) : 0);
-        });
+        const mPcts = PAIRS.map(p => citingData[p]?.pctM || 0);
 
         const ctx = document.getElementById(canvasId).getContext('2d');
         this._charts[canvasId] = new Chart(ctx, {
@@ -397,139 +359,13 @@ const GenderChartManager = {
     },
 
     /**
-     * Line chart: % cited by women over time, one line per gender pair.
-     */
-    citingByYearChart(canvasId, citingByYear) {
-        this._destroy(canvasId);
-        if (!citingByYear || Object.keys(citingByYear).length === 0) return;
-
-        const years = Object.keys(citingByYear).sort();
-        const datasets = PAIRS.map(pair => ({
-            label: PAIR_LABELS[pair],
-            data: years.map(y => citingByYear[y]?.[pair]?.pctW ?? null),
-            borderColor: PAIR_COLORS[pair],
-            backgroundColor: PAIR_COLORS[pair] + '33',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 10,
-            tension: 0.3,
-            spanGaps: true,
-        }));
-
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        this._charts[canvasId] = new Chart(ctx, {
-            type: 'line',
-            data: { labels: years, datasets },
-            options: {
-                ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    ...CHART_DEFAULTS.plugins,
-                    tooltip: {
-                        ...CHART_DEFAULTS.plugins.tooltip,
-                        callbacks: {
-                            label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1) ?? 'N/A'}%`,
-                        },
-                    },
-                },
-                scales: {
-                    ...CHART_DEFAULTS.scales,
-                    y: {
-                        ...CHART_DEFAULTS.scales.y,
-                        title: { display: true, text: '% cited by woman FA', color: '#8b949e' },
-                    },
-                },
-            },
-        });
-    },
-
-    /**
-     * Line chart: citation gender gap over time (% man FA - % woman FA).
-     * Positive = men cite more, negative = women cite more.
-     */
-    citingGapChart(canvasId, citingByYear) {
-        this._destroy(canvasId);
-        if (!citingByYear || Object.keys(citingByYear).length === 0) return;
-
-        const years = Object.keys(citingByYear).sort();
-        const datasets = PAIRS.map(pair => ({
-            label: PAIR_LABELS[pair],
-            data: years.map(y => {
-                const pctW = citingByYear[y]?.[pair]?.pctW;
-                return pctW != null ? +((100 - 2 * pctW).toFixed(1)) : null;
-            }),
-            borderColor: PAIR_COLORS[pair],
-            backgroundColor: PAIR_COLORS[pair] + '33',
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 10,
-            tension: 0.3,
-            spanGaps: true,
-        }));
-
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        this._charts[canvasId] = new Chart(ctx, {
-            type: 'line',
-            data: { labels: years, datasets },
-            options: {
-                ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    ...CHART_DEFAULTS.plugins,
-                    tooltip: {
-                        ...CHART_DEFAULTS.plugins.tooltip,
-                        callbacks: {
-                            label: (ctx) => {
-                                const v = ctx.parsed.y;
-                                if (v == null) return `${ctx.dataset.label}: N/A`;
-                                const dir = v > 0 ? 'more men' : v < 0 ? 'more women' : 'equal';
-                                return `${ctx.dataset.label}: ${v > 0 ? '+' : ''}${v.toFixed(1)}pp (${dir})`;
-                            },
-                        },
-                    },
-                },
-                scales: {
-                    ...CHART_DEFAULTS.scales,
-                    y: {
-                        ...CHART_DEFAULTS.scales.y,
-                        title: { display: true, text: 'Gap (% man FA − % woman FA)', color: '#8b949e' },
-                    },
-                },
-            },
-        });
-    },
-
-    /**
      * Horizontal bar: classification rate by country.
      */
     qualityCountryChart(canvasId, countryData) {
         this._destroy(canvasId);
         if (!countryData) return;
 
-        // Merge duplicate country names
-        const merged = {};
-        const normalizeCountry = (name) => {
-            if (/^usa/i.test(name) || name === 'United States') return 'USA';
-            if (/china/i.test(name)) return 'China';
-            return name;
-        };
-        for (const [country, d] of Object.entries(countryData)) {
-            const key = normalizeCountry(country);
-            if (merged[key]) {
-                merged[key].W += d.W;
-                merged[key].M += d.M;
-                merged[key].U += d.U;
-            } else {
-                merged[key] = { ...d };
-            }
-        }
-        for (const d of Object.values(merged)) {
-            const total = d.W + d.M + d.U;
-            d.pctAssigned = total > 0 ? Math.round((d.W + d.M) / total * 1000) / 10 : 0;
-        }
-
-        // Sort by assignment rate
-        const sorted = Object.entries(merged)
+        const sorted = Object.entries(countryData)
             .sort((a, b) => b[1].pctAssigned - a[1].pctAssigned);
 
         const labels = sorted.map(([c]) => c);
@@ -560,7 +396,7 @@ const GenderChartManager = {
                         callbacks: {
                             afterLabel: (ctx) => {
                                 const country = labels[ctx.dataIndex];
-                                const d = merged[country];
+                                const d = countryData[country];
                                 return `W: ${d.W.toLocaleString()} | M: ${d.M.toLocaleString()} | Unknown: ${d.U.toLocaleString()}`;
                             },
                         },
@@ -652,7 +488,6 @@ const GenderChartManager = {
             data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
@@ -695,8 +530,7 @@ const GenderChartManager = {
             borderColor: PAIR_COLORS[pair],
             backgroundColor: PAIR_COLORS[pair] + '33',
             borderWidth: 2,
-            pointRadius: 0,
-            pointHitRadius: 10,
+            pointRadius: 3,
             tension: 0.3,
             spanGaps: true,
         }));
@@ -707,7 +541,6 @@ const GenderChartManager = {
             data: { labels: years, datasets },
             options: {
                 ...CHART_DEFAULTS,
-                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     ...CHART_DEFAULTS.plugins,
                     tooltip: {
@@ -728,6 +561,48 @@ const GenderChartManager = {
                     y: {
                         ...CHART_DEFAULTS.scales.y,
                         title: { display: true, text: 'Citations per paper', color: '#8b949e' },
+                    },
+                },
+            },
+        });
+    },
+
+    /**
+     * Author tab: doughnut chart showing WW/WM/MW/MM breakdown of cited references.
+     */
+    authorGenderChart(canvasId, counts) {
+        this._destroy(canvasId);
+
+        const data = PAIRS.map(p => counts[p] || 0);
+        const total = data.reduce((a, b) => a + b, 0);
+
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        this._charts[canvasId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: PAIRS.map(p => PAIR_LABELS[p]),
+                datasets: [{
+                    data,
+                    backgroundColor: PAIRS.map(p => PAIR_COLORS[p] + 'CC'),
+                    borderColor: PAIRS.map(p => PAIR_COLORS[p]),
+                    borderWidth: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#e6edf3', font: { size: 12 } },
+                    },
+                    tooltip: {
+                        ...CHART_DEFAULTS.plugins.tooltip,
+                        callbacks: {
+                            label: (ctx) => {
+                                const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : '0.0';
+                                return `${ctx.label}: ${ctx.parsed.toLocaleString()} (${pct}%)`;
+                            },
+                        },
                     },
                 },
             },

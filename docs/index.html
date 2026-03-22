@@ -18,6 +18,7 @@
     <nav>
         <a href="#overview" class="nav-link active" data-section="overview">Overview</a>
         <a href="#journal" class="nav-link" data-section="journal">By Journal</a>
+        <a href="#author" class="nav-link" data-section="author">Author</a>
         <a href="#citing" class="nav-link" data-section="citing">Who Cites Whom</a>
         <a href="#quality" class="nav-link" data-section="quality">Data Quality</a>
         <a href="#methods" class="nav-link" data-section="methods">Methods</a>
@@ -41,7 +42,7 @@
 
         <div class="card">
             <h3>24-Month Rolling Citation Rate by Gender Pair</h3>
-            <p class="chart-note">Monthly rolling citation rate using the same formula as the main IMPACT site: for each target month, citations received in the 12-month window by papers published in the preceding 24-month window, divided by paper count. Stratified by gender pair.</p>
+            <p class="chart-note">Rolling citation rate: citations received in year Y by papers published in Y-1 and Y-2, divided by paper count. Same formula as JIF, stratified by gender pair.</p>
             <div class="chart-container">
                 <canvas id="rolling-if-chart"></canvas>
             </div>
@@ -49,7 +50,7 @@
 
         <div class="card">
             <h3>Normalized Rolling Citation Rate (MM = 1.0)</h3>
-            <p class="chart-note">Rolling citation rate of each gender pair relative to MM papers in the same month. Values above 1.0 mean higher citation rates than MM.</p>
+            <p class="chart-note">Rolling citation rate of each gender pair relative to MM papers in the same year. Values above 1.0 mean higher citation rates than MM.</p>
             <div class="chart-container">
                 <canvas id="rolling-if-norm-chart"></canvas>
             </div>
@@ -90,7 +91,6 @@
 
             <div class="card">
                 <h4>Gender Pair Composition</h4>
-                <p class="chart-note">Percentage of research papers by gender pair each year. Only includes papers where both first and last author names could be gender-classified — papers with initials-only or unclassifiable names (common with East Asian names) are excluded.</p>
                 <div class="chart-container">
                     <canvas id="journal-composition-chart"></canvas>
                 </div>
@@ -111,23 +111,51 @@
                 </div>
             </div>
 
-            <div class="card" id="journal-citing-card" style="display:none;">
-                <h4>% Cited by Woman First Author Over Time</h4>
-                <p class="chart-note">For this journal's papers by each gender pair, the percentage of citations each year from a woman first author.</p>
-                <div class="chart-container">
-                    <canvas id="journal-citing-by-year-chart"></canvas>
-                </div>
-            </div>
-
-            <div class="card" id="journal-gap-card" style="display:none;">
-                <h4>Citation Gender Gap Over Time</h4>
-                <p class="chart-note">The gap between % cited by man first author and % cited by woman first author for this journal.</p>
-                <div class="chart-container">
-                    <canvas id="journal-citing-gap-chart"></canvas>
-                </div>
-            </div>
-
             <div id="journal-summary" class="summary-box"></div>
+        </div>
+    </section>
+
+    <!-- ============ AUTHOR ============ -->
+    <section id="author" class="section">
+        <h2>Author Citation Gender Analysis</h2>
+        <p class="section-desc">Look up an author to see the gender breakdown of the papers they cite. How do their citation patterns compare to the field average?</p>
+
+        <div class="card">
+            <h3>Search by Author Name</h3>
+            <p class="chart-note">Enter an author name as it appears on PubMed (e.g., "Tyrrell DJ" or "Smith J"). Searches PubMed for their papers, then analyzes the gender pairs of cited references.</p>
+            <div class="author-search-row">
+                <input type="text" id="author-name-input" class="journal-search" placeholder="Lastname AB" autocomplete="off">
+                <button id="author-search-btn" class="author-btn">Search</button>
+            </div>
+            <p class="chart-note" style="margin-top:0.5rem;">Or paste PMIDs (one per line or comma-separated):</p>
+            <div class="author-search-row">
+                <textarea id="author-pmid-input" class="author-textarea" rows="2" placeholder="12345678, 23456789, ..."></textarea>
+                <button id="author-pmid-btn" class="author-btn">Load PMIDs</button>
+            </div>
+        </div>
+
+        <div id="author-status" class="author-status" style="display:none;"></div>
+
+        <div id="author-results" style="display:none;">
+            <div class="card">
+                <div class="author-controls">
+                    <label class="author-checkbox-label">
+                        <input type="checkbox" id="author-exclude-self" checked>
+                        Include self-citations
+                    </label>
+                </div>
+                <h3>Citation Gender Breakdown</h3>
+                <p class="chart-note" id="author-breakdown-note"></p>
+                <div class="author-metrics-row" id="author-metrics"></div>
+                <div class="chart-container chart-container-short">
+                    <canvas id="author-gender-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Papers (<span id="author-paper-count">0</span>)</h3>
+                <div id="author-papers-table" class="author-table-container"></div>
+            </div>
         </div>
     </section>
 
@@ -141,22 +169,6 @@
             <p class="chart-note">For each cited gender pair, the percentage of citing papers with a woman vs man first author. Aggregated across all journals.</p>
             <div class="chart-container chart-container-short">
                 <canvas id="citing-chart"></canvas>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>% Cited by Woman First Author Over Time</h3>
-            <p class="chart-note">For each cited gender pair, the percentage of citations in a given year that come from a paper with a woman first author.</p>
-            <div class="chart-container">
-                <canvas id="citing-by-year-chart"></canvas>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Citation Gender Gap Over Time</h3>
-            <p class="chart-note">The gap between % cited by man first author and % cited by woman first author. Positive values mean more citations from men; negative means more from women. A value of zero means equal citation rates.</p>
-            <div class="chart-container">
-                <canvas id="citing-gap-chart"></canvas>
             </div>
         </div>
 
@@ -215,10 +227,13 @@
             <p>Citation counts are from the <a href="https://icite.od.nih.gov/">NIH iCite</a> Open Citation Collection. Only research articles are included (reviews, editorials, etc. are excluded).</p>
 
             <h4>24-Month Rolling Citation Rate</h4>
-            <p>Uses the same monthly rolling formula as the main IMPACT site: for each target month T, count citations received in the 12-month window ending at T by papers published in the preceding 24-month window (months T-36 through T-13), divided by the number of papers. This is computed monthly for each gender pair, controlling for publication age so all papers have the same citation accumulation time.</p>
+            <p>Uses the same formula as the Journal Impact Factor: for target year Y, count citations received in year Y by papers published in years Y-1 and Y-2, divided by the number of papers in that window. This is computed separately for each gender pair, controlling for publication age so all papers have the same citation accumulation time.</p>
 
             <h4>Cumulative Citations per Paper</h4>
             <p>Total citations ever received divided by number of papers, by publication year. This metric is biased by paper age — older papers have more time to accumulate citations — but shows lifetime citation impact.</p>
+
+            <h3>Author Tab</h3>
+            <p>The Author tab searches PubMed for an author's papers, then fetches reference data from iCite. For each referenced paper, the gender of the first and last authors is inferred from their first names using the same <code>gender-guesser</code> dictionary. References are classified into WW, WM, MW, MM pairs. Self-citations can be toggled — a self-citation is any referenced paper where the searched author appears in the author list.</p>
 
             <h3>Data Sources</h3>
             <ul>

@@ -431,6 +431,17 @@ class GenderApp {
     }
 
     async _processAuthorPMIDs(pmids) {
+        // Ensure gender_names.json is loaded before rendering — init() loads it
+        // last (after aggregate + index), so a fast NCBI flow can race it.
+        if (!this.genderNames || Object.keys(this.genderNames).length === 0) {
+            try {
+                this.genderNames = await GenderDataLoader.loadGenderNames();
+            } catch (e) {
+                console.warn('Could not load gender names:', e);
+                this.genderNames = {};
+            }
+        }
+
         const papers = await GenderDataLoader.fetchICite(pmids);
         this._authorPapers = papers;
 
@@ -510,6 +521,7 @@ class GenderApp {
             for (const refPmid of paper.references) {
                 const ref = refMap.get(String(refPmid));
                 if (!ref || !ref.authors || !Array.isArray(ref.authors) || ref.authors.length === 0) {
+                    counts.unknown++;
                     paperUnk++;
                     totalRefs++;
                     continue;
